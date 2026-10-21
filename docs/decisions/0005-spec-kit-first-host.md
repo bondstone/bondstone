@@ -1,37 +1,34 @@
 ---
 type: decision
 id: ADR-0005
-title: Make Spec Kit the first host, plugged in through a host pack and a bundle
-description: Spec Kit is the first host; everything Bondstone knows about it lives in a host pack and a Spec Kit bundle, and the active change is found with a fixed set of locators.
+title: Make Spec Kit the first host, plugged in through a host pack
+description: Bondstone integrates with GitHub Spec Kit first; everything Spec Kit-specific lives in the speckit host pack and the Spec Kit extension and preset, so the core stays host-agnostic.
 status: proposed
 ---
 
-# Make Spec Kit the first host, plugged in through a host pack and a bundle
+# Make Spec Kit the first host, plugged in through a host pack
 
 ## Context and Problem Statement
 
-Bondstone needs a spec workflow to plug into first, without tying the core to it; BMAD and OpenSpec should follow without command changes. `next` and `context` also need to know which change is in progress, without Bondstone storing a session focus. Which host comes first, and how is it plugged in?
+Bondstone needs one spec-driven tool to integrate with first. The candidates were compared in October 2026 on stable IDs, extension points and lifecycle hooks. BMAD and OpenSpec should follow later without command changes, and `next` must know which change is in progress without Bondstone storing a session focus. Which host comes first, and how is it plugged in?
 
 ## Considered Options
 
-- Spec Kit first, through a YAML host pack and a Spec Kit bundle
-- Spec Kit first, through a Python adapter module in the core
-- OpenSpec or BMAD first
-- For the active change: a stored session focus
-- For the active change: a fixed set of locators that host packs choose from
+- GitHub Spec Kit
+- OpenSpec
+- No host: plain Markdown only
 
 ## Decision Outcome
 
-Chosen option: "Spec Kit first, through a YAML host pack and a Spec Kit bundle", with "a fixed set of locators", because Spec Kit has stable feature folders, extensions, presets and hooks, and user zero already uses it.
+Chosen option: "GitHub Spec Kit", because its feature folders give stable IDs, and it has extensions, presets and lifecycle hooks. In that comparison, OpenSpec lost front-matter on archive and had no lifecycle hooks.
 
-- The host pack declares the change folders (`specs/NNN-slug/` or `specs/YYYYMMDD-HHMMSS-slug/`), the change ID taken from the folder name, the `## Spec changes` section, the IDs to ignore (`FR-`, `SC-`), and what makes a change finished.
-- The bundle (extension and preset) adds the four commands, the `## Spec changes` section in the spec template and the test-naming step in the tasks command. It pins Spec Kit `>=1.2.0,<2.0.0`.
-- Locators: a field in a JSON or YAML file, the current git branch matched against change IDs, or the item whose status field has a given value. Spec Kit uses the file field `feature_directory` in `.specify/feature.json`. If no change, or more than one, is found, there is no active change.
-- Bondstone never runs a host's own tools to ask.
+- Everything Spec Kit-specific lives in the `speckit` host pack, which is data shipped with the other packs, and in the Spec Kit extension and preset. The pack declares the change folders (`specs/NNN-slug/` or `specs/YYYYMMDD-HHMMSS-slug/`), the `## Spec changes` section, each change's steps, and when a change is finished. Spec Kit's own `FR-` and `SC-` IDs stay plain text.
+- A Spec Kit change is finished when every task in its `tasks.md` is checked. The core offers a small set of finish conditions that host packs choose from: every checkbox in a declared file is checked, a declared field has a given value, or the change folder has moved under a declared path. `next` starts from the first unfinished change in ID order. Bondstone never runs a host's own tools to ask.
 
 ### Consequences
 
-- Good, because a second host needs a host pack and its own bundle, not a command change.
-- Good, because the active change follows what the host already records, so there is no focus to store or merge.
-- Bad, because Spec Kit changes fast (0.10 removed the `--ai` flag; Claude now installs commands as skills, typed as `/speckit-bondstone-next`), so CI runs an install smoke test.
-- Bad, because a host whose active work fits none of the locators needs a new locator in the core and a new pack schema version.
+- Good, because Spec Kit has a large user base and a community catalog to be listed in.
+- Good, because the change in progress comes from tracked files, so every clone and every session agrees on it.
+- Bad, because Spec Kit's feature specs describe one change, not the system, so Bondstone provides the living spec itself (ADR-0008).
+- Bad, because Spec Kit releases often: 0.10 removed the `--ai` flag of `specify init`, and Claude Code now installs commands as skills. The extension pins `>=1.2.0,<2.0.0`, and CI tests the install against new versions.
+- Bad, because a host whose changes finish in another way needs a new finish condition in the core and a new pack schema version, though no new command.

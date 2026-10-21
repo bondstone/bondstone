@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0003
 title: Compute stages on every run and store only approvals
-description: The stage, statuses and next step are computed from the files on every run; only approvals and manual checks are stored, in the documents, with a versioned hash.
+description: Bondstone derives stages, progress and the next step on every run, and stores only approvals and manual verifications, on the items they approve.
 status: proposed
 ---
 
@@ -10,28 +10,30 @@ status: proposed
 
 ## Context and Problem Statement
 
-Every session, on every branch, must get the same stage and next step from the same files. Some facts cannot be computed, though: that a person approved a document, or checked a requirement by hand. What is stored, and where?
+Bondstone must tell any session, on any branch, where the project stands and what to do next. Recording progress in a versioned file creates merge conflicts between branches and drifts from the documents it describes. Some facts can't be computed, though: that a person approved a document, or checked a requirement by hand. What is stored, and where?
 
 ## Considered Options
 
-- Compute everything on every run; store only approvals and manual checks, in the documents themselves
-- Keep project state (stage, focus, progress) in a state file that commands update
-- Compute stages, but keep approvals in a separate ledger file
+- A versioned progress file
+- Computed stages, with approvals on the approved items
+- Computed stages, with approvals on the items and a focus file
+- Computed stages, with approvals in a separate ledger
 
 ## Decision Outcome
 
-Chosen option: "Compute everything on every run; store only approvals and manual checks, in the documents themselves", because a state file must be merged between branches and drifts from the documents it describes.
+Chosen option: "Computed stages, with approvals on the approved items", because nothing then needs merging, and every session computes the same answer from the same files. The only state Bondstone writes is:
 
-- An approval is the document's `status` plus a `verified` record (actor, time, hash) in its front-matter.
-- A manual check is a `Verified:` line under a `Check: manual` requirement.
-- The hash covers the whole document after normalization (UTF-8 without a BOM, LF endings, Unicode NFC, no trailing whitespace, one final newline, front-matter without `status` and `verified`). It is stored with a version prefix, such as `sha256-n1:`.
-- An approval is current while its hash matches and stale after any edit.
-- There is no session focus; the active change comes from the host (ADR-0005).
+- an approval in the approved document's front-matter: `status`, plus `verified` with the actor, the time and a hash;
+- a `Verified:` line, with the actor, the time and a hash, under a requirement checked by hand.
+
+A stage names the items it needs approved as a list of selectors, so the same mechanism covers one document or many. When approved text changes, its approval goes stale and the stage reopens. The hash covers a canonical form of the text that leaves out `status`, `verified`, `Verified:` lines, front-matter comments and key order, so approving or verifying never makes anything else stale (APPROVE-4).
+
+The focus file, a gitignored `.bondstone/state.json` that `context` would set, was dropped on 2026-10-21: it differed between clones of the same repository. The first unfinished change gives the next step its starting point instead (ADR-0005).
 
 ### Consequences
 
-- Good, because nothing needs merging between branches, and any session computes the same answer.
+- Good, because nothing needs merging between branches, and every session computes the same answer.
 - Good, because an approval travels with the document it approves and shows in its diff.
-- Bad, because `approve` changes the approved file, so approving makes a commit.
+- Bad, because editing an approved document needs a new approval, and `approve` changes the approved file, so approving makes a commit.
 - Bad, because the hash detects change but is not a signature; ADR-0006 covers who may write it.
-- Bad, because changing the normalization needs a new hash version, or every approval goes stale at once.
+- Bad, because a new canonical form needs a new hash version, and Bondstone must keep checking the old ones.

@@ -2,7 +2,7 @@
 type: brief
 id: BRIEF
 title: Bondstone
-description: A deterministic CLI and Spec Kit bundle that says which approved requirements are proven by passing tests, and what to do next.
+description: A deterministic CLI, with a Spec Kit extension and preset, that says which approved requirements are proven by passing tests, and what to do next.
 status: draft
 release: REL-0.0
 ---
@@ -38,7 +38,7 @@ With Bondstone, the sync redesign could not have been finished until the current
 - Release 0.2 with Bondstone's own repository passing its release gate.
 - Give every requirement its evidence status.
 - Compute the project's stage and one next step on every run, identically in every session, from release 0.0.
-- `next` names the right step in at least 8 of 10 logged sessions.
+- `next` names the right step in at least 9 of 10 logged sessions.
 - Keep the pre-commit check under 1 s, start-up included.
 
 **Within a year**
@@ -46,7 +46,7 @@ With Bondstone, the sync redesign could not have been finished until the current
 - A second host integration (BMAD or OpenSpec) works without changing any command.
 - A team profile is used by at least one team other than user zero.
 - Ten repositories other than Bondstone's run `bondstone check` in CI.
-- The Bondstone bundle is listed in the Spec Kit community catalog.
+- The Bondstone extension and preset are listed in the Spec Kit community catalog.
 
 ## Principles
 
@@ -64,27 +64,21 @@ With Bondstone, the sync redesign could not have been finished until the current
 Three releases, about 27 focused days, each built with the one before. Each of the extension's four commands (`status`, `next`, `write`, `check`) keeps its name from 0.0 on; only its body moves from the bootstrap to the CLI, so nothing migrates. A capability is listed under the release that starts it; requirements that land later carry their own `Release:` line. Moving the brief to the next release makes its approval stale, on purpose: each release re-confirms the frame.
 
 ### REL-0.0 Bootstrap
+Capabilities: SPECKIT · Appetite: 5 focused days
 
-Capabilities: SPECKIT\
-Appetite: 5 focused days
-
-The Spec Kit extension and preset, with the four commands under their final names. A stopgap script applies the simple-app rules, reads the JUnit report, and computes each requirement's status, the stage and the next step as JSON. `check`, `status` and `next` relay its output; `write` is a prompt. Approvals are made by setting `status` by hand, and manual checks by writing a `Verified:` line by hand. A pre-commit hook runs the stopgap check and rejects changes to `status` or `verified` made from an agent's shell. Each session is logged with whether `next` was right.
+The Spec Kit extension and preset, with the four commands under their final names. A stopgap script applies the simple-app rules for IDs, links, examples, evidence and changes, reads the JUnit report, and computes each requirement's status, the stage and the next step as JSON. `check`, `status` and `next` relay its output; `write` is a prompt. Approvals are made by setting `status` by hand, and manual checks by writing a `Verified:` line by hand. A pre-commit hook runs the stopgap check and rejects changes to `status` or `verified` made from an agent's shell. Each session is logged with whether `next` was right.
 
 **No-gos:** the CLI and its PyPI package, recorded approvals, Claude Code hooks, CI.
 
 ### REL-0.1 Checker
-
-Capabilities: GRAPH, PROFILE, CHECK, EVIDENCE, SETUP\
-Appetite: 12 focused days
+Capabilities: GRAPH, PROFILE, CHECK, EVIDENCE, SETUP · Appetite: 12 focused days
 
 Built through the bootstrap. The extension's `check` runs `bondstone check`, and the CLI is published to PyPI. The stopgap keeps only the stage and the next step, computed from `bondstone check --json`. Includes `init`, the pre-commit hook, a CI example and the spec-gates recipe.
 
 **No-gos:** CLI-backed `status`, `next` and `write`, `approve` and `verify`, Claude Code hooks, the release gate.
 
 ### REL-0.2 Agent loop
-
-Capabilities: WRITE, APPROVE, FLOW\
-Appetite: 10 focused days
+Capabilities: WRITE, APPROVE, FLOW · Appetite: 10 focused days
 
 `status`, `next` and `write` call the CLI, and the stopgap script is deleted. `approve` and `verify` record approvals and manual checks with an actor, time and hash, and refuse to run from an agent's shell. Adds profile stages, Claude Code hooks and the release gate; 0.2 gates its own release.
 
@@ -94,7 +88,7 @@ Appetite: 10 focused days
 
 - **Agents don't follow the flow.** This is the riskiest assumption, and 0.0 exists to test it. The session log records whether the agent started from `next`, stayed on its step, named tests after IDs and filled in `## Spec changes`. If it follows the step unprompted in fewer than 8 of 10 sessions, the flow is rethought before 0.2.
 - **Empty tests.** An agent can name a test after a requirement and assert nothing. Console examples run as tests, and the person reviews test names; Bondstone does not judge test quality.
-- **Spec Kit moves fast.** Version 0.10 removed `init` flags, and Claude now installs its commands as skills. The bundle pins the Spec Kit versions it supports, and CI runs an install smoke test.
+- **Spec Kit moves fast.** Version 0.10 removed `init` flags, and Claude now installs its commands as skills. The extension pins the Spec Kit versions it supports, and CI runs an install smoke test.
 - **Appetite.** 0.1 holds about 50 requirements in 12 days. If time runs out, the spec-gates recipe goes first, then the CI example.
 
 ## Later

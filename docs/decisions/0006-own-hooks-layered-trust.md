@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0006
 title: Ship minimal own hooks with a layered trust model
-description: Bondstone ships its own git, Claude Code and CI hooks that keep agents from approving through supported paths and make any other change visible; spec-gates is optional.
+description: Only a person approves or verifies; Bondstone ships a small set of git, Claude Code and CI hooks to keep it that way, and a recipe for running as a spec-gates custom gate.
 status: proposed
 ---
 
@@ -10,28 +10,28 @@ status: proposed
 
 ## Context and Problem Statement
 
-Only a person may approve or verify; an agent that grades its own work makes every gate meaningless. Hooks cannot stop a determined agent with shell access, and the approval hash is not a signature. How does Bondstone enforce this, and what does it promise?
+An agent that can approve its own documents, or mark its own work verified, makes every gate meaningless. Checks must also hold at the agent, commit and merge boundaries. The spec-gates extension already enforces one policy identically at all three, with self-testing, protected files and commit-message rules. No hook can stop a determined agent with shell access, and the approval hash is not a signature. How does Bondstone keep approvals human, and what does it promise?
 
 ## Considered Options
 
-- Bondstone's own minimal hooks (git pre-commit, Claude Code, CI), layered by release
-- Depend on spec-gates for all enforcement
-- No hooks; rely on the agent guide
+- Trust agents to follow an instruction not to approve
+- Build full enforcement into Bondstone
+- Require spec-gates
+- Ship minimal own hooks, layered by release, and a spec-gates recipe
 
 ## Decision Outcome
 
-Chosen option: "Bondstone's own minimal hooks, layered by release", because it works without other tools, and it promises only what it can keep: agents cannot approve through supported paths, and any other change shows up in CI.
+Chosen option: "Ship minimal own hooks, layered by release, and a spec-gates recipe", because it needs no other tool, and it promises only what hooks can keep: agents can't approve or verify through any supported path, and any other change shows up in review.
 
-1. From 0.0, the pre-commit hook rejects staged changes to `status` or `verified` when `CLAUDE_CODE_CHILD_SESSION` is set.
-2. From 0.2, `approve` and `verify` refuse to run in that environment or without a terminal. Claude Code hooks compare each edit's front-matter before and after, and a per-turn snapshot catches and restores changes made through the shell. The hooks block when they fail.
-3. In CI, hashes are re-checked, and changes to approvals, packs, overrides or hook settings are reported as review signals.
+1. From 0.0, the pre-commit hook refuses staged changes to `status`, `verified` or `Verified:` lines when `CLAUDE_CODE_CHILD_SESSION` is set, as Claude Code does in the shells it runs.
+2. From 0.2, `approve` and `verify` refuse to run without a terminal unless `--yes` is given, and always in an agent's shell. Claude Code's PreToolUse hook refuses Bash calls to both commands, and edits that would change those fields. Its SessionStart hook shows `bondstone context --brief`, and its Stop hook keeps the agent working while its uncommitted changes have errors. `bondstone hooks run` is the adapter these hooks call.
+3. In CI, `check --all --release` re-checks every hash, and changes to approvals, `rules.yml` and hook settings show in the pull request's diff.
 
-spec-gates stays optional: a recipe shows how to run Bondstone as one of its gates.
+`bondstone hooks install --gates` prints the spec-gates policy entry; spec-gates is never a dependency.
 
 ### Consequences
 
-- Good, because the claim matches what the hooks can actually do.
-- Good, because the 0.0 block protects approvals from day one, before Claude Code hooks exist.
-- Bad, because `CLAUDE_CODE_CHILD_SESSION` only identifies Claude Code; other agents are caught only by CI and review.
-- Bad, because an agent with shell access can still write a valid `verified` record; the person must review it.
-- Bad, because `hooks install` must merge into `.claude/settings.json` without overwriting other entries.
+- Good, because the 0.0 hook protects approvals from the first release, before Claude Code hooks exist.
+- Good, because the small scope adds no heavy dependencies; teams that want stronger enforcement get it from spec-gates.
+- Bad, because spec-gates policy can protect files but not refuse specific commands, so Bondstone keeps its own PreToolUse hook.
+- Bad, because `CLAUDE_CODE_CHILD_SESSION` identifies only Claude Code; other agents, or an agent that writes a valid `verified` record with a script, are caught only in review.

@@ -2,7 +2,7 @@
 type: decision
 id: ADR-0002
 title: Read evidence from requirement IDs in JUnit test names
-description: A requirement is proven by a passing test whose name carries its ID, read from JUnit XML reports; production code is never read.
+description: A requirement is proven by reported test results whose names carry its ID; production code is never tagged or read.
 status: proposed
 ---
 
@@ -10,24 +10,23 @@ status: proposed
 
 ## Context and Problem Statement
 
-Bondstone must say, for every requirement, whether a test proves it, in any language and without reading production code. A requirement ID that is merely mentioned in a test file says nothing about whether the test passed. Where should evidence come from?
+Bondstone must decide, for every requirement and in any language, whether it is proven, without parsing each language. Where does the evidence come from?
 
 ## Considered Options
 
-- Requirement IDs in test names, with results read from JUnit XML reports
-- Requirement IDs anywhere in test files (presence only)
-- Per-language markers, such as pytest marks or annotations
-- Coverage data or production code
+- Tags in production code that point at requirements, as in OpenFastTrace
+- Requirement IDs anywhere in test files, counted by presence, as in DocGuard and spec-kit-trace
+- Requirement IDs in test names, read from JUnit XML reports
 
 ## Decision Outcome
 
-Chosen option: "Requirement IDs in test names, with results read from JUnit XML reports", because nearly every test runner can write JUnit XML, and a result there means the test ran and passed. Presence in test files is still used, but only to mark a requirement as linked (tests exist, no result yet).
+Chosen option: "Requirement IDs in test names, read from JUnit XML reports", because nearly every test runner can write JUnit XML and a test's name reaches the report, so Bondstone gets pass or fail per requirement without knowing the language. A plain-text search of the lines that declare tests is an early signal: a test found only there makes a requirement `linked`, not `passing`. Production code is read by path only, for component ownership.
 
 ### Consequences
 
-- Good, because it works in any language with a JUnit reporter, and needs no per-language parser.
-- Good, because pass and fail come from the run, not from a mention.
-- Bad, because some toolchains need a converter (Xcode with `xcbeautify`, Flutter with `tojunit`), and Gradle may report each retry as a separate test.
+- Good, because evidence means a test passed, not that an ID was mentioned.
+- Good, because there are no tags in production code to keep current.
+- Bad, because each stack needs a naming convention, some reporters drop display names, and some toolchains need a converter to write JUnit XML, such as xcbeautify for Xcode or tojunit for Flutter. The templates document the conventions, and the `not-reported` review signal catches reporters that lose the ID.
 - Bad, because naming rules such as pep8-naming's N802 flag `test_SYNC_2_…`, so test files need a lint exception.
-- Bad, because reports are build output that is missing or out of date at commit time, so evidence rules run with `--all` and in CI, not in the pre-commit hook.
-- Bad, because a test name is a claim: Bondstone proves the named test passed, not that it tests the requirement.
+- Bad, because a local report can be old or missing, so the pre-commit check skips the evidence rules, and the release gate runs in CI right after the tests.
+- Bad, because a test name is a claim: Bondstone proves that the named test ran and passed, not that it tests the requirement.

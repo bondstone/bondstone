@@ -1,0 +1,19 @@
+# Bondstone configuration for this repository.
+# The profile is specified in docs/spec/profile.md, evidence in docs/spec/evidence.md.
+bondstone: 1
+profile: simple-app
+host: speckit
+
+# Document paths use the profile defaults:
+# docs/brief.md, docs/architecture.md, docs/spec/*.md, docs/decisions/*.md, CHANGELOG.md
+
+# Files every component's Paths must cover (code-has-owner).
+code: [src/**, integrations/**]
+
+evidence:
+  reports: [build/test-results/*.xml]
+  tests: [tests/**/*.py]
+  style: pytest
+  case_insensitive: false
+
+overrides: {}
