@@ -3,14 +3,14 @@ type: decision
 id: ADR-0008
 title: Keep one living spec per capability, changed in the same commit
 description: In simple-app, behavior is specified once per capability and updated together with the tests and code that change it.
-status: proposed
+status: draft
 ---
 
 # Keep one living spec per capability, changed in the same commit
 
 ## Context and Problem Statement
 
-Spec Kit writes one spec per change, which describes that change rather than the system and goes stale once the change ships. Without a living spec, neither people nor agents can tell what the app is supposed to do now. This is a simple-app decision: the core only requires that approved behavior lives in current documents with stable requirement IDs (ADR-0004).
+Spec Kit writes one spec per change, which describes that change rather than the system and goes stale once the change ships. Without a living spec, neither people nor agents can tell what the app is supposed to do now. This is a simple-app decision: the core only requires that approved behavior lives in current documents with stable requirement IDs, as the brief's principles say.
 
 ## Considered Options
 

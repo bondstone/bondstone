@@ -7,12 +7,12 @@ Bondstone keeps AI-built software tied to what you approved. You approve the beh
 ## Read more
 
 - [Brief](docs/brief.md): the problem, goals and releases
-- [Architecture](docs/architecture.md): components, flows, decisions and risks
+- [Architecture](docs/architecture.md): concepts, components, trust model and decisions
 - [Living specs](docs/spec/): what each capability does, with examples that run as tests
 - [Decisions](docs/decisions/)
 - [Agent guide](AGENTS.md): how agents work in this repository
 
-Bondstone is built with Bondstone. This repository follows its own simple-app profile, described in the [PROFILE spec](docs/spec/profile.md).
+Bondstone is built with Bondstone: this repository follows its own simple-app profile from release 0.0.
 
 ## License
 

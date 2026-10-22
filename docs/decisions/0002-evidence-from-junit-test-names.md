@@ -3,7 +3,7 @@ type: decision
 id: ADR-0002
 title: Read evidence from requirement IDs in JUnit test names
 description: A requirement is proven by reported test results whose names carry its ID; production code is never tagged or read.
-status: proposed
+status: draft
 ---
 
 # Read evidence from requirement IDs in JUnit test names
@@ -26,7 +26,7 @@ Chosen option: "Requirement IDs in test names, read from JUnit XML reports", bec
 
 - Good, because evidence means a test passed, not that an ID was mentioned.
 - Good, because there are no tags in production code to keep current.
-- Bad, because each stack needs a naming convention, some reporters drop display names, and some toolchains need a converter to write JUnit XML, such as xcbeautify for Xcode or tojunit for Flutter. The templates document the conventions, and the `not-reported` review signal catches reporters that lose the ID.
+- Bad, because each stack needs a naming convention, some reporters drop display names, and some toolchains need a converter to write JUnit XML, such as xcbeautify for Xcode or tojunit for Flutter. The conventions are documented per stack, and a review signal can flag test files whose IDs never reach a report.
 - Bad, because naming rules such as pep8-naming's N802 flag `test_SYNC_2_…`, so test files need a lint exception.
 - Bad, because a local report can be old or missing, so the pre-commit check skips the evidence rules, and the release gate runs in CI right after the tests.
 - Bad, because a test name is a claim: Bondstone proves that the named test ran and passed, not that it tests the requirement.

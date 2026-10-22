@@ -57,7 +57,7 @@ With Bondstone, the sync redesign could not have been finished until the current
 - Stages are computed, never stored; only approvals and `Verified:` lines are stored.
 - Approved behavior lives in current documents with stable requirement IDs; a change isn't finished until those documents reflect it.
 - A profile is a set of YAML packs; larger profiles add packs, never commands.
-- The core stays host-agnostic; Spec Kit is the first host, plugged in through a host pack.
+- The core stays host-agnostic; Spec Kit is the first host, kept outside the core.
 
 ## Releases
 
@@ -66,7 +66,7 @@ Three releases, about 27 focused days, each built with the one before. Each of t
 ### REL-0.0 Bootstrap
 Capabilities: SPECKIT · Appetite: 5 focused days
 
-The Spec Kit extension and preset, with the four commands under their final names. A stopgap script applies the simple-app rules for IDs, links, examples, evidence and changes, reads the JUnit report, and computes each requirement's status, the stage and the next step as JSON. `check`, `status` and `next` relay its output; `write` is a prompt. Approvals are made by setting `status` by hand, and manual checks by writing a `Verified:` line by hand. A pre-commit hook runs the stopgap check and rejects changes to `status` or `verified` made from an agent's shell. Each session is logged with whether `next` was right.
+The Spec Kit extension and preset, with the four commands under their final names. A stopgap script applies the simple-app rules for IDs, links, examples, evidence and changes, reads the JUnit report, and computes each requirement's status, the stage and the next step as JSON. `check`, `status` and `next` relay its output; `write` is a prompt. Approvals are made by setting `status` by hand, and manual checks by writing a `Verified:` line by hand. A pre-commit hook runs the stopgap check and rejects changes to `status`, `verified` or `Verified:` lines made from an agent's shell. Each session is logged with whether `next` was right.
 
 **No-gos:** the CLI and its PyPI package, recorded approvals, Claude Code hooks, CI.
 
@@ -89,7 +89,7 @@ Capabilities: WRITE, APPROVE, FLOW · Appetite: 10 focused days
 - **Agents don't follow the flow.** This is the riskiest assumption, and 0.0 exists to test it. The session log records whether the agent started from `next`, stayed on its step, named tests after IDs and filled in `## Spec changes`. If it follows the step unprompted in fewer than 8 of 10 sessions, the flow is rethought before 0.2.
 - **Empty tests.** An agent can name a test after a requirement and assert nothing. Console examples run as tests, and the person reviews test names; Bondstone does not judge test quality.
 - **Spec Kit moves fast.** Version 0.10 removed `init` flags, and Claude now installs its commands as skills. The extension pins the Spec Kit versions it supports, and CI runs an install smoke test.
-- **Appetite.** 0.1 holds about 50 requirements in 12 days. If time runs out, the spec-gates recipe goes first, then the CI example.
+- **Appetite.** 0.0 holds 16 requirements in 5 days, and 0.1 about 50 in 12. If 0.1 runs out of time, the spec-gates recipe goes first, then the CI example.
 
 ## Later
 
@@ -110,5 +110,4 @@ Not scheduled. Profiles, packs, templates and hosts arrive without new commands;
 | [spec-validate](https://github.com/aeltayeb/spec-kit-spec-validate) | A Spec Kit extension that gates reviews and keeps hook-enforced approval state with a SHA-256 hash | Overlaps on approvals; Bondstone ties them to test evidence and stages |
 | [spec-gates](https://github.com/schwichtgit/spec-gates) | Runs one quality gate identically at Claude Code hooks, git hooks and CI; also runs acceptance checks and requires approval trailers on protected files | Complementary, with some overlap on approvals: Bondstone can run as one of its gates |
 | [spec-kit-archive](https://github.com/stn1slv/spec-kit-archive) | An agent merges each finished feature spec into one project spec after the merge | Bondstone checks deterministically that every finished change is reflected in the current documents; a compatibility pack may come later |
-| [spec-kit-trace](https://github.com/Quratulain-bilal/spec-kit-trace) | An agent prompt that builds a requirement-to-test matrix | Bondstone computes the matrix in code from test results |
 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) | Keeps living specs with WHEN/THEN scenarios and merges change deltas into them on archive | A planned host rather than a rival: Bondstone adds test evidence and stages on top |

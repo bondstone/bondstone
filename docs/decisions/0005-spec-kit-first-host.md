@@ -1,12 +1,12 @@
 ---
 type: decision
 id: ADR-0005
-title: Make Spec Kit the first host, plugged in through a host pack
-description: Bondstone integrates with GitHub Spec Kit first; everything Spec Kit-specific lives in the speckit host pack and the Spec Kit extension and preset, so the core stays host-agnostic.
-status: proposed
+title: Make Spec Kit the first host
+description: Bondstone integrates with GitHub Spec Kit first, and keeps everything Spec Kit-specific out of the core.
+status: draft
 ---
 
-# Make Spec Kit the first host, plugged in through a host pack
+# Make Spec Kit the first host
 
 ## Context and Problem Statement
 
@@ -22,7 +22,7 @@ Bondstone needs one spec-driven tool to integrate with first. The candidates wer
 
 Chosen option: "GitHub Spec Kit", because its feature folders give stable IDs, and it has extensions, presets and lifecycle hooks. In that comparison, OpenSpec lost front-matter on archive and had no lifecycle hooks.
 
-- Everything Spec Kit-specific lives in the `speckit` host pack, which is data shipped with the other packs, and in the Spec Kit extension and preset. The pack declares the change folders (`specs/NNN-slug/` or `specs/YYYYMMDD-HHMMSS-slug/`), the `## Spec changes` section, each change's steps, and when a change is finished. Spec Kit's own `FR-` and `SC-` IDs stay plain text.
+- Everything Spec Kit-specific lives in the Spec Kit extension and preset and, from 0.1, in a `speckit` host pack that is data, not code. It covers the change folders (`specs/NNN-slug/` or `specs/YYYYMMDD-HHMMSS-slug/`), the `## Spec changes` section, each change's steps, and when a change is finished. Spec Kit's own `FR-` and `SC-` IDs stay plain text.
 - A Spec Kit change is finished when every task in its `tasks.md` is checked. The core offers a small set of finish conditions that host packs choose from: every checkbox in a declared file is checked, a declared field has a given value, or the change folder has moved under a declared path. `next` starts from the first unfinished change in ID order. Bondstone never runs a host's own tools to ask.
 
 ### Consequences

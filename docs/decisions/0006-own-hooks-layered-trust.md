@@ -3,7 +3,7 @@ type: decision
 id: ADR-0006
 title: Ship minimal own hooks with a layered trust model
 description: Only a person approves or verifies; Bondstone ships a small set of git, Claude Code and CI hooks to keep it that way, and a recipe for running as a spec-gates custom gate.
-status: proposed
+status: draft
 ---
 
 # Ship minimal own hooks with a layered trust model
@@ -24,8 +24,8 @@ An agent that can approve its own documents, or mark its own work verified, make
 Chosen option: "Ship minimal own hooks, layered by release, and a spec-gates recipe", because it needs no other tool, and it promises only what hooks can keep: agents can't approve or verify through any supported path, and any other change shows up in review.
 
 1. From 0.0, the pre-commit hook refuses staged changes to `status`, `verified` or `Verified:` lines when `CLAUDE_CODE_CHILD_SESSION` is set, as Claude Code does in the shells it runs.
-2. From 0.2, `approve` and `verify` refuse to run without a terminal unless `--yes` is given, and always in an agent's shell. Claude Code's PreToolUse hook refuses Bash calls to both commands, and edits that would change those fields. Its SessionStart hook shows `bondstone context --brief`, and its Stop hook keeps the agent working while its uncommitted changes have errors. `bondstone hooks run` is the adapter these hooks call.
-3. In CI, `check --all --release` re-checks every hash, and changes to approvals, `rules.yml` and hook settings show in the pull request's diff.
+2. From 0.2, `approve` and `verify` refuse to run without a terminal unless `--yes` is given, and always in an agent's shell. A Claude Code hook refuses agent calls to both commands, and edits that would change those fields.
+3. In CI, from 0.1, every check runs again, and changes to approvals and hook settings show in the pull request's diff.
 
 `bondstone hooks install --gates` prints the spec-gates policy entry; spec-gates is never a dependency.
 

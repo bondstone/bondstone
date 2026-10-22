@@ -3,7 +3,7 @@ type: decision
 id: ADR-0010
 title: Ship the Spec Kit extension before the CLI
 description: Release 0.0 ships the Spec Kit extension and preset with a stopgap behind their commands; the CLI replaces the stopgap in 0.1 and 0.2.
-status: proposed
+status: draft
 ---
 
 # Ship the Spec Kit extension before the CLI
@@ -25,5 +25,5 @@ Chosen option: "The Spec Kit extension and preset first, with a stopgap behind t
 
 - Good, because agent behavior is measured from the first release, and each session's log says whether `next` was right.
 - Good, because Bondstone's own repository follows its rules from release 0.0.
-- Bad, because the stopgap duplicates part of CHECK and FLOW for two releases and must be deleted on time (SPECKIT-11), and 0.0 grows from about 3 to about 5 focused days.
-- Bad, because until 0.2 an approval is a bare `status` without a hash (SPECKIT-5), so each approved document is approved again with `bondstone approve` in 0.2.
+- Bad, because the stopgap duplicates part of the CLI's checks for two releases and must be deleted on time, and 0.0 grows from about 3 to about 5 focused days.
+- Bad, because until 0.2 an approval is a bare `status: stable` without a hash (SPECKIT-12), so each approved document is approved again with `bondstone approve` in 0.2.

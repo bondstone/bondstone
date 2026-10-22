@@ -3,7 +3,7 @@ type: decision
 id: ADR-0009
 title: Make simple-app the first profile
 description: Bondstone's first profile is simple-app, which replaces the earlier solo-lite design.
-status: proposed
+status: draft
 ---
 
 # Make simple-app the first profile
@@ -19,9 +19,11 @@ The earlier first profile, solo-lite, needed a PRD and a building-blocks documen
 
 ## Decision Outcome
 
-Chosen option: "simple-app", because it fits Bondstone itself and small apps, with one place for behavior and a computed backlog. It has four computed stages (frame, shape, build and release), ten rules, and components that carry both their contract (the architecture building block) and their chosen technology (the solution building block). The PROFILE spec defines it.
+Chosen option: "simple-app", because it fits Bondstone itself and small apps, with one place for behavior and a computed backlog. It has four computed stages (frame, shape, build and release), ten rules, and components that carry both their contract (the architecture building block) and their chosen technology (the solution building block). Its documents in `docs/` form an Open Knowledge Format 0.2 bundle and use OKF's status values, so any OKF tool can read them. In 0.0 the SPECKIT spec states what the stopgap applies; the PROFILE spec arrives with 0.1.
 
 ### Consequences
 
 - Good, because one place holds each capability's behavior, and the backlog is computed rather than kept by hand.
+- Good, because OKF tools can read the documents without knowing Bondstone.
 - Bad, because architecture and solution building blocks share one component entry; a larger profile can split them again.
+- Bad, because OKF has no `proposed` or `accepted`, so decisions use `draft`, `stable` and `deprecated` instead of MADR's status words.
