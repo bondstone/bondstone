@@ -115,7 +115,7 @@ The hash detects staleness; it is not a signature. Evidence has the same limit: 
 
 ## Decisions
 
-Each decision's status lives in its own front-matter. ADR-0001, ADR-0004 and ADR-0007 are kept for the decisions that release 0.1 brings back: the CLI's language, the pack format, and one repository for the CLI and its integrations.
+Each decision's status lives in its own front-matter. ADR-0001, ADR-0004 and ADR-0007 are kept for the decisions that release 0.1 brings back: the CLI's language, the pack format, and one repository for the CLI and its integrations. Their drafts, and drafts of every later spec, are in the git tag `design-draft`, for example `git show design-draft:docs/decisions/0001-python-typer-uv.md` or `git show design-draft:docs/spec/check.md`. They predate the Open Knowledge Format statuses and the release 0.0 decisions, so each is reviewed when its release starts.
 
 | ID | Decision |
 | --- | --- |
