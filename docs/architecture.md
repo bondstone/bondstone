@@ -44,13 +44,14 @@ These concepts are the core's whole vocabulary. Document names, ID prefixes, rul
 - **Link:** a typed reference from one item to another, read only from item lines, change sections and front-matter fields. An ID in prose is never a link.
 - **Owner:** every requirement has exactly one owner, the document it is written in.
 - **Grouping:** a link type the profile declares to group requirements. The profile also names the *work unit*, which `next` names work on ("build GRAPH-1 to GRAPH-6"), and the *scope carrier*, whose release puts requirements in scope.
-- **Scope:** a requirement is in scope when its release is the current one or an earlier one, in the brief's order. Its own `Release:` line wins over its scope carrier's release; a requirement with neither is backlog.
+- **Release:** a planned delivery that the profile declares, with an order and one current release. A profile may declare none.
+- **Scope:** a requirement is in scope when its release is the current one or comes before it. The requirement's own release wins over its scope carrier's; a requirement with neither is backlog. When the profile declares no releases, every requirement is in scope.
 - **Stage:** a condition computed on every run, never stored.
 - **Evidence:** a requirement's status: untested, linked, passing, failing or manual.
 - **Approval:** a person's `status: stable`; from 0.2 also a `verified` record (see Documents).
 - **Change:** a host's unit of work in progress. The host declares when a change is finished, choosing from conditions the core offers: every checkbox in a file is checked, a field has a given value, or the folder has moved. `next` works on the first unfinished change before anything but errors. A host whose changes finish another way needs a new condition in the core, but no new command.
 
-In simple-app, a capability spec is the owner, the work unit and the scope carrier of its requirements, and a requirement's prefix equals its spec's ID. The brief's `Capabilities:` line gives each capability the release that starts it, even before its spec is written.
+In simple-app, a capability spec is the owner, the work unit and the scope carrier of its requirements, and a requirement's prefix equals its spec's ID. Releases are the brief's `REL-…` headings, in the brief's order, and its `release` field names the current one. A release's `Capabilities:` line gives each capability the release that starts it, even before its spec is written, and a requirement's `Release:` line overrides that.
 
 ## Documents
 
