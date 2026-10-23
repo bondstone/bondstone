@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0009
+id: ADR-0006
 title: Make simple-app the first profile
 description: Bondstone's first profile is simple-app, which replaces the earlier solo-lite design.
 status: draft

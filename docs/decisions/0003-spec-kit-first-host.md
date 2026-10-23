@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0005
+id: ADR-0003
 title: Make Spec Kit the first host
 description: Bondstone integrates with GitHub Spec Kit first, and keeps everything Spec Kit-specific out of the core.
 status: draft
@@ -29,6 +29,6 @@ Chosen option: "GitHub Spec Kit", because its feature folders give stable IDs, a
 
 - Good, because Spec Kit has a large user base and a community catalog to be listed in.
 - Good, because the change in progress comes from tracked files, so every clone and every session agrees on it.
-- Bad, because Spec Kit's feature specs describe one change, not the system, so Bondstone provides the living spec itself (ADR-0008).
+- Bad, because Spec Kit's feature specs describe one change, not the system, so Bondstone provides the living spec itself (ADR-0005).
 - Bad, because Spec Kit releases often: 0.10 removed the `--ai` flag of `specify init`, and Claude Code now installs commands as skills. The extension pins `>=1.2.0,<2.0.0`, and CI tests the install against new versions.
 - Bad, because a host whose changes finish in another way needs a new finish condition in the core and a new pack schema version, though no new command.

@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0010
+id: ADR-0007
 title: Ship the Spec Kit extension before the CLI
 description: Release 0.0 ships the Spec Kit extension and preset with a stopgap behind their commands; the CLI replaces the stopgap in 0.1 and 0.2.
 status: draft

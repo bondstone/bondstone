@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0006
+id: ADR-0004
 title: Ship minimal own hooks with a layered trust model
 description: Only a person approves or verifies; Bondstone ships a small set of git, Claude Code and CI hooks to keep it that way, and a recipe for running as a spec-gates custom gate.
 status: draft

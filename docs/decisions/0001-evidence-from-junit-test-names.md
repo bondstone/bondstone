@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0002
+id: ADR-0001
 title: Read evidence from requirement IDs in JUnit test names
 description: A requirement is proven by reported test results whose names carry its ID; production code is never tagged or read.
 status: draft

@@ -69,37 +69,19 @@ The hash covers the front-matter without `status` and `verified`, as JSON with s
 ## Components
 
 ### COMP-SPECKIT Spec Kit integration
-Paths: `integrations/speckit/**` · Technology: a Spec Kit 1.2 extension and preset, Bash, Python · Decided by: ADR-0002, ADR-0003, ADR-0005, ADR-0006, ADR-0008, ADR-0009, ADR-0010
+Paths: `integrations/speckit/**` · Technology: a Spec Kit 1.2 extension and preset, Bash, Python · Decided by: ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007
 
 Four agent commands with a wrapper script, and a preset that adds the `## Spec changes` section and test naming to Spec Kit's spec and tasks steps. Until 0.2, the extension also ships the stopgap and the pre-commit hook script. The extension and the preset each keep their manifest at the root of their own folder, `integrations/speckit/extension/` and `integrations/speckit/preset/`. The [SPECKIT spec](spec/speckit.md) states the behavior.
 
-Planned components, each specified when its release starts:
-
-| Component | Does | Release |
-| --- | --- | --- |
-| Command layer | Parses arguments, renders text and JSON, maps outcomes to exit codes | 0.1 |
-| Configuration and packs | Loads `.bondstone/rules.yml` and the YAML packs of the profile | 0.1 |
-| Document graph | Finds items and links in documents and change folders | 0.1 |
-| Rule engine | Applies the profile's rules | 0.1 |
-| Test evidence | Turns JUnit reports and test files into evidence statuses | 0.1 |
-| Hooks and CI | The git hook and a CI example; Claude Code hooks in 0.2 | 0.1 |
-| Stages and flow | Computes stages, the next step and context | 0.2 |
-| Writers | Creates documents, IDs and links; records approvals | 0.2 |
+The CLI's components are designed when release 0.1 starts.
 
 ## Bootstrap
 
-The extension's four commands keep their names from 0.0; what runs behind them moves to the CLI (ADR-0010).
-
-| Behind | 0.0 | 0.1 | 0.2 |
-| --- | --- | --- | --- |
-| `check` | Stopgap | `bondstone check` | `bondstone check` |
-| `status`, `next` | Stopgap | Stopgap, reading `bondstone check --json` | `bondstone status`, `bondstone next` |
-| `write` | Prompt | Prompt | Prompt calling `new`, `id next` and `link` |
-| Pre-commit hook | Stopgap check and the agent block | `bondstone hooks run pre-commit` | `bondstone hooks run pre-commit` |
+The extension's four commands keep their names from 0.0 (ADR-0007). In 0.0 the stopgap answers `check`, `status` and `next`, and `write` is a prompt. From 0.1 the CLI takes over what it can, and by 0.2 the stopgap is deleted; which CLI commands serve them is decided with each release.
 
 ## Trust model
 
-Bondstone can't stop a determined agent. It makes an agent's approval hard to make by accident and impossible to hide (ADR-0006).
+Bondstone can't stop a determined agent. It makes an agent's approval hard to make by accident and impossible to hide (ADR-0004).
 
 1. **From 0.0:** the pre-commit hook refuses staged changes to `status`, `verified` or `Verified:` lines when `CLAUDE_CODE_CHILD_SESSION` is set, as Claude Code does in the shells it runs.
 2. **From 0.2:** `approve` and `verify` refuse to run in an agent's shell, or without a terminal unless `--yes` is given, and Claude Code hooks refuse agent calls to them and edits to those fields.
@@ -115,17 +97,17 @@ The hash detects staleness; it is not a signature. Evidence has the same limit: 
 
 ## Decisions
 
-Each decision's status lives in its own front-matter. ADR-0001, ADR-0004 and ADR-0007 are kept for the decisions that release 0.1 brings back: the CLI's language, the pack format, and one repository for the CLI and its integrations. Their drafts, and drafts of every later spec, are in the git tag `design-draft`, for example `git show design-draft:docs/decisions/0001-python-typer-uv.md` or `git show design-draft:docs/spec/check.md`. They predate the Open Knowledge Format statuses and the release 0.0 decisions, so each is reviewed when its release starts.
+Each decision's status lives in its own front-matter. Later decisions are made when their release needs them.
 
 | ID | Decision |
 | --- | --- |
-| [ADR-0002](decisions/0002-evidence-from-junit-test-names.md) | Read evidence from requirement IDs in JUnit test names |
-| [ADR-0003](decisions/0003-computed-stages-stored-approvals.md) | Compute stages on every run and store only approvals |
-| [ADR-0005](decisions/0005-spec-kit-first-host.md) | Make Spec Kit the first host |
-| [ADR-0006](decisions/0006-own-hooks-layered-trust.md) | Ship minimal own hooks with a layered trust model |
-| [ADR-0008](decisions/0008-living-spec-per-capability.md) | Keep one living spec per capability, changed in the same commit |
-| [ADR-0009](decisions/0009-simple-app-profile.md) | Make simple-app the first profile |
-| [ADR-0010](decisions/0010-extension-before-cli.md) | Ship the Spec Kit extension before the CLI |
+| [ADR-0001](decisions/0001-evidence-from-junit-test-names.md) | Read evidence from requirement IDs in JUnit test names |
+| [ADR-0002](decisions/0002-computed-stages-stored-approvals.md) | Compute stages on every run and store only approvals |
+| [ADR-0003](decisions/0003-spec-kit-first-host.md) | Make Spec Kit the first host |
+| [ADR-0004](decisions/0004-own-hooks-layered-trust.md) | Ship minimal own hooks with a layered trust model |
+| [ADR-0005](decisions/0005-living-spec-per-capability.md) | Keep one living spec per capability, changed in the same commit |
+| [ADR-0006](decisions/0006-simple-app-profile.md) | Make simple-app the first profile |
+| [ADR-0007](decisions/0007-extension-before-cli.md) | Ship the Spec Kit extension before the CLI |
 
 ## Repository layout
 
@@ -138,9 +120,6 @@ Each decision's status lives in its own front-matter. ADR-0001, ADR-0004 and ADR
 | `.specify/`, `.claude/` | Files that `specify init` and `specify extension add` generate |
 | `AGENTS.md`, `CLAUDE.md`, `README.md`, `CHANGELOG.md` | The agent guide, the readme and the changelog |
 | `build/` | Test reports; not committed |
-
-Release 0.1 adds `src/bondstone/` for the CLI.
-
 ## Open points
 
 To confirm before this page is approved:

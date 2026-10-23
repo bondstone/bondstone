@@ -1,6 +1,6 @@
 ---
 type: decision
-id: ADR-0008
+id: ADR-0005
 title: Keep one living spec per capability, changed in the same commit
 description: In simple-app, behavior is specified once per capability and updated together with the tests and code that change it.
 status: draft
