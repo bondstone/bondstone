@@ -89,7 +89,7 @@ Capabilities: WRITE, APPROVE, FLOW · Appetite: 10 focused days
 - **Agents don't follow the flow.** This is the riskiest assumption, and 0.0 exists to test it. The session log records whether the agent started from `next`, stayed on its step, named tests after IDs and filled in `## Spec changes`. If it follows the step unprompted in fewer than 8 of 10 sessions, the flow is rethought before 0.2.
 - **Empty tests.** An agent can name a test after a requirement and assert nothing. Console examples run as tests, and the person reviews test names; Bondstone does not judge test quality.
 - **Spec Kit moves fast.** Version 0.10 removed `init` flags, and Claude now installs its commands as skills. The extension pins the Spec Kit versions it supports, and CI runs an install smoke test.
-- **Appetite.** 0.0 holds 18 requirements in 5 days, and 0.1 about 50 in 12. If 0.1 runs out of time, the spec-gates recipe goes first, then the CI example.
+- **Appetite.** 0.0 holds 19 requirements in 5 days, and 0.1 about 50 in 12. If 0.1 runs out of time, the spec-gates recipe goes first, then the CI example.
 
 ## Later
 

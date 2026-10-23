@@ -10,7 +10,7 @@ fixture: speckit-project
 
 # Spec Kit integration
 
-The `bondstone` extension gives agents four commands, and the `bondstone` preset adds the `## Spec changes` section and test naming to Spec Kit. Behind the commands, a stopgap script applies the simple-app profile (the PROFILE spec) and the Spec Kit rules below, reads the JUnit report, and computes each requirement's status, the stage and the next step, so the agent never computes them. Later releases move this work into the CLI and delete the stopgap.
+The `bondstone` extension gives agents four commands, and the `bondstone` preset adds the `## Spec changes` section and test naming to Spec Kit. Behind the commands, a stopgap script applies the simple-app profile (the PROFILE spec) to the documents and Spec Kit's changes, reads the JUnit report, and computes each requirement's status, the stage and the next step, so the agent never computes them. Later releases move this work into the CLI and delete the stopgap.
 
 ## Requirements
 
@@ -37,25 +37,12 @@ errors: 0 · warnings: 0
 
 ### SPECKIT-4 Spec Kit changes
 
-Each folder under `specs/` whose name starts with a number or a `YYYYMMDD-HHMMSS` timestamp, then a hyphen, shall be a change named after the folder. Its `spec.md` ends with a `## Spec changes` section that lists requirement IDs under `Implements:` (built unchanged), `Adds:`, `Changes:` or `Removes:`, or gives a reason after `No behavior change:`. A change shall be finished when its `tasks.md` exists and every task in it is checked. Spec Kit's own `FR-` and `SC-` IDs are text.
+Each folder under `specs/` whose name starts with a number or a `YYYYMMDD-HHMMSS` timestamp, then a hyphen, shall be a change named after the folder. A change shall be finished when its `tasks.md` exists and every task in it is checked. The change's links (PROFILE-7) shall be read from a `## Spec changes` section at the end of its `spec.md`. Spec Kit's own `FR-` and `SC-` IDs are text.
 
 - WHEN `specs/007-photo-upload/tasks.md` has 6 checked and 5 unchecked tasks THEN the change `007-photo-upload` is unfinished.
+- WHEN `specs/007-photo-upload/spec.md` ends with `## Spec changes` and the line `Adds: SYNC-9` THEN the change adds SYNC-9.
 
-### SPECKIT-5 Change rules
-
-The stopgap shall add these rules to the profile's:
-
-| Rule | Checks | Severity |
-| --- | --- | --- |
-| `change-lists-spec-changes` | Every change has a `## Spec changes` section | error |
-| `change-reflected` | A finished change's `Implements:`, `Adds:` and `Changes:` IDs exist or are retired, and its `Removes:` IDs are retired | error |
-
-`unique-ids` shall also report two unfinished changes that add the same ID. `no-dangling-links` shall also check change links, except the `Adds:` targets of an unfinished change, any `Removes:` target and any link of a finished change.
-
-- WHEN an unfinished change says `Adds: SYNC-9` before SYNC-9 is written THEN no `no-dangling-links` error is reported.
-- WHEN every task of `specs/007-photo-upload` is checked and its `Adds: SYNC-9` names no requirement THEN the stopgap reports a `change-reflected` error for SYNC-9.
-
-### SPECKIT-6 Evidence
+### SPECKIT-5 Evidence
 
 The stopgap shall read the JUnit XML report `build/test-results/junit.xml` and the test files `tests/**/*.py`, and never production code. It shall find a requirement ID in a reported test case's class and name, and on test-file lines with `def test` or `class Test`: an existing capability prefix with no capital letter or digit before it, then `-` or `_`, then the number, with no digit after it. Each requirement shall be:
 
@@ -68,9 +55,9 @@ The stopgap shall read the JUnit XML report `build/test-results/junit.xml` and t
 - WHEN `test_SYNC_2_uploads_once` passed in the report THEN SYNC-2 is `passing`.
 - WHEN a test is named `test_ASYNC_2_retry` THEN no test is linked to SYNC-2.
 
-### SPECKIT-7 Check report
+### SPECKIT-6 Check report
 
-`check` shall apply the profile's rules and the change rules, and print one line per finding, `<file>:<line>: <severity> <rule>: <message>`, sorted by file, line and rule, then a summary line; with `--json`, it shall print one JSON object with `schema_version`, `summary`, `findings` and `requirements` instead. It shall exit with 0 when there is no error, 1 when there is one, 2 on a usage error and 3 on an internal error. With `--staged`, it shall check the files as they are in the git index and skip `requirement-covered` and `requirement-passing`. Two runs on the same files shall print the same bytes.
+`check` shall apply the profile's rules and print one line per finding, `<file>:<line>: <severity> <rule>: <message>`, sorted by file, line and rule, then a summary line; with `--json`, it shall print one JSON object with `schema_version`, `summary`, `findings` and `requirements` instead. It shall exit with 0 when there is no error, 1 when there is one, 2 on a usage error and 3 on an internal error. With `--staged`, it shall check the files as they are in the git index and skip `requirement-covered` and `requirement-passing`. Two runs on the same files shall print the same bytes.
 
 ```console fixture=speckit-violations
 $ bash .specify/extensions/bondstone/scripts/bash/bondstone.sh check
@@ -81,13 +68,13 @@ $ bash .specify/extensions/bondstone/scripts/bash/bondstone.sh check
 errors: [..] · warnings: [..]
 ```
 
-### SPECKIT-8 Status
+### SPECKIT-7 Status
 
 `status` shall show the current release, each of the profile's stages as done or with what is open, each in-scope capability with its requirement counts by evidence status, and each unfinished change with its task count. With `--json`, it shall print the same as one object.
 
 - WHEN the brief is approved and the architecture page is a draft THEN `status` shows `frame` done and `shape` open on the architecture page.
 
-### SPECKIT-9 Next step
+### SPECKIT-8 Next step
 
 `next` shall return exactly one action with a reason, the first that applies:
 
@@ -103,21 +90,21 @@ With `--json`, it shall print the action as one object.
 - WHEN the brief, the architecture page and every decision are approved and the SPECKIT spec is a draft THEN `next` returns `approve SPECKIT`.
 - WHEN SYNC has four open requirements and AUTH has one THEN `next` returns `build` with `speckit.specify` for SYNC's four.
 
-### SPECKIT-10 Pre-commit hook
+### SPECKIT-9 Pre-commit hook
 
 A pre-commit hook script shipped with the extension shall run `check --staged` and refuse the commit on errors. When `CLAUDE_CODE_CHILD_SESSION` is set, as Claude Code does in the shells it runs, it shall also refuse staged changes to `status` or `verified` in front-matter, or to `Verified:` lines, and say that approvals are for people.
 
 - WHEN a shell where `CLAUDE_CODE_CHILD_SESSION` is set commits a change from `status: draft` to `status: stable` THEN the commit is refused.
 - WHEN the person commits the same change from their own terminal THEN the commit goes through.
 
-### SPECKIT-11 Preset
+### SPECKIT-10 Preset
 
 The preset shall append to Spec Kit's spec template a `## Spec changes` section with `Implements:`, `Adds:`, `Changes:` and `Removes:` lines and a comment that behavior lives in `docs/spec/`. It shall append to the tasks template a note that every test proving a requirement carries the requirement's ID in its name, and extend the `speckit.tasks` command so that those tests are always among the tasks, although Spec Kit treats tests as optional. It shall use the `append` strategy only.
 
 - WHEN `/speckit-specify` creates `specs/008-export/spec.md` THEN the file ends with the `## Spec changes` section.
 - WHEN `/speckit-tasks` creates `tasks.md` for a change that implements SYNC-2 THEN the tasks include a test named after SYNC-2.
 
-### SPECKIT-12 Agent behavior
+### SPECKIT-11 Agent behavior
 Check: manual
 
 `/speckit-bondstone-next` shall do the action the next step names, after reading the documents it names, or tell the person what to approve or verify. Every extension command, run a second time on an unchanged repository, shall change no files.

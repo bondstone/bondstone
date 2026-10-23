@@ -2,7 +2,7 @@
 type: spec
 id: PROFILE
 title: simple-app profile
-description: The documents, items, scope, rules and stages of the simple-app profile.
+description: The documents, items, scope, stages, changes and rules of the simple-app profile.
 status: draft
 components: [COMP-SPECKIT]
 fixture: simple-app
@@ -78,3 +78,23 @@ The profile shall have four stages, each done or open, computed on every run. A 
 
 - WHEN the brief has `status: stable` and no errors THEN `frame` is done.
 - WHEN `build` is done and `CHANGELOG.md` has only `## [Unreleased]` THEN `release` is open.
+
+### PROFILE-7 Changes
+
+A change is a host's unit of work in progress; the host says where changes are, where their links are written, and when a change is finished. A change shall list the requirements it touches on `Implements:` (built unchanged), `Adds:`, `Changes:` and `Removes:` lines, or give a reason on a `No behavior change:` line. Without a host, there are no changes.
+
+- WHEN a change says `Implements: SYNC-2, SYNC-3` THEN it links to SYNC-2 and SYNC-3 without changing them.
+
+### PROFILE-8 Change rules
+
+The profile shall have these rules for changes:
+
+| Rule | Checks | Severity |
+| --- | --- | --- |
+| `change-lists-requirements` | Every change has at least one of the lines of PROFILE-7 | error |
+| `change-reflected` | A finished change's `Implements:`, `Adds:` and `Changes:` IDs exist or are retired, and its `Removes:` IDs are retired | error |
+
+`unique-ids` shall also report two unfinished changes that add the same ID. `no-dangling-links` shall also check change links, except the `Adds:` targets of an unfinished change, any `Removes:` target, and any link of a finished change.
+
+- WHEN an unfinished change says `Adds: SYNC-9` before SYNC-9 is written THEN no `no-dangling-links` error is reported.
+- WHEN a finished change says `Adds: SYNC-9` and no requirement SYNC-9 exists THEN a `change-reflected` error is reported for SYNC-9.

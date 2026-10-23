@@ -49,7 +49,7 @@ These concepts are the core's whole vocabulary. Document names, ID prefixes, rul
 - **Stage:** a condition computed on every run, never stored.
 - **Evidence:** a requirement's status: untested, linked, passing, failing or manual.
 - **Approval:** a person's `status: stable`; from 0.2 also a `verified` record (see Documents).
-- **Change:** a host's unit of work in progress. The host declares when a change is finished, choosing from conditions the core offers: every checkbox in a file is checked, a field has a given value, or the folder has moved. `next` works on the first unfinished change before anything but errors. A host whose changes finish another way needs a new condition in the core, but no new command.
+- **Change:** a host's unit of work in progress. The host declares when a change is finished, choosing from conditions the core offers: every checkbox in a file is checked, a field has a given value, or the folder has moved. `next` works on the first unfinished change before anything but errors. A host whose changes finish another way needs a new condition in the core, but no new command. A host supplies changes, their links and their finished state, never rules; the profile's rules decide how changes must relate to requirements.
 
 In simple-app, a capability spec is the owner, the work unit and the scope carrier of its requirements, and a requirement's prefix equals its spec's ID. Releases are the brief's `REL-…` headings, in the brief's order, and its `release` field names the current one. A release's `Capabilities:` line gives each capability the release that starts it, even before its spec is written, and a requirement's `Release:` line overrides that.
 
@@ -91,7 +91,7 @@ The hash detects staleness; it is not a signature. Evidence has the same limit: 
 
 ## How Bondstone is tested
 
-- Tests in `tests/` carry requirement IDs in their names, such as `test_SPECKIT_5_unfinished_adds_are_not_dangling`.
+- Tests in `tests/` carry requirement IDs in their names, such as `test_PROFILE_8_unfinished_adds_are_not_dangling`.
 - Console examples in the specs run as tests. A pytest collector in `tests/conftest.py` runs each one in a fresh copy of `tests/fixtures/<name>/`, named by the block's `fixture=` option or the spec's `fixture` front-matter field, and names each result after its requirement.
 - `pytest --junitxml=build/test-results/junit.xml` writes the report that the stopgap reads.
 
@@ -126,4 +126,4 @@ To confirm before this page is approved:
 
 - Specs have no `release` field; the brief's `Capabilities:` lines are the only source of a capability's release.
 - The architecture page needs approval in the `shape` stage, like the specs.
-- In 0.0 the profile has five rules and Spec Kit adds two; checks on ID shapes, components and code ownership are decided with 0.1.
+- In 0.0 the profile has seven rules; checks on ID shapes, components and code ownership are decided with 0.1.
