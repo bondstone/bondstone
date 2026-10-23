@@ -19,7 +19,7 @@ The earlier first profile, solo-lite, needed a PRD and a building-blocks documen
 
 ## Decision Outcome
 
-Chosen option: "simple-app", because it fits Bondstone itself and small apps, with one place for behavior and a computed backlog. It has four computed stages (frame, shape, build and release), ten rules, and components that carry both their contract (the architecture building block) and their chosen technology (the solution building block). Its documents in `docs/` form an Open Knowledge Format 0.2 bundle and use OKF's status values, so any OKF tool can read them. In 0.0 the SPECKIT spec states what the stopgap applies; the PROFILE spec arrives with 0.1.
+Chosen option: "simple-app", because it fits Bondstone itself and small apps, with one place for behavior and a computed backlog. It has four computed stages (frame, shape, build and release), its own rules, and components that carry both their contract (the architecture building block) and their chosen technology (the solution building block). Its documents in `docs/` form an Open Knowledge Format 0.2 bundle and use OKF's status values, so any OKF tool can read them. The PROFILE spec defines it; in 0.0 the Spec Kit extension's stopgap applies it.
 
 ### Consequences
 

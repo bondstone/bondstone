@@ -26,4 +26,4 @@ Chosen option: "The Spec Kit extension and preset first, with a stopgap behind t
 - Good, because agent behavior is measured from the first release, and each session's log says whether `next` was right.
 - Good, because Bondstone's own repository follows its rules from release 0.0.
 - Bad, because the stopgap duplicates part of the CLI's checks for two releases and must be deleted on time, and 0.0 grows from about 3 to about 5 focused days.
-- Bad, because until 0.2 an approval is a bare `status: stable` without a hash (SPECKIT-12), so each approved document is approved again with `bondstone approve` in 0.2.
+- Bad, because until 0.2 an approval is a bare `status: stable` without a hash (PROFILE-6), so each approved document is approved again with `bondstone approve` in 0.2.

@@ -71,7 +71,7 @@ The hash covers the front-matter without `status` and `verified`, as JSON with s
 ### COMP-SPECKIT Spec Kit integration
 Paths: `integrations/speckit/**` · Technology: a Spec Kit 1.2 extension and preset, Bash, Python · Decided by: ADR-0001, ADR-0002, ADR-0003, ADR-0004, ADR-0005, ADR-0006, ADR-0007
 
-Four agent commands with a wrapper script, and a preset that adds the `## Spec changes` section and test naming to Spec Kit's spec and tasks steps. Until 0.2, the extension also ships the stopgap and the pre-commit hook script. The extension and the preset each keep their manifest at the root of their own folder, `integrations/speckit/extension/` and `integrations/speckit/preset/`. The [SPECKIT spec](spec/speckit.md) states the behavior.
+Four agent commands with a wrapper script, and a preset that adds the `## Spec changes` section and test naming to Spec Kit's spec and tasks steps. Until 0.2, the extension also ships the stopgap and the pre-commit hook script. The extension and the preset each keep their manifest at the root of their own folder, `integrations/speckit/extension/` and `integrations/speckit/preset/`. The [SPECKIT spec](spec/speckit.md) states its behavior, and the stopgap applies the [PROFILE spec](spec/profile.md).
 
 The CLI's components are designed when release 0.1 starts.
 
@@ -91,7 +91,7 @@ The hash detects staleness; it is not a signature. Evidence has the same limit: 
 
 ## How Bondstone is tested
 
-- Tests in `tests/` carry requirement IDs in their names, such as `test_SPECKIT_9_unfinished_adds_are_not_dangling`.
+- Tests in `tests/` carry requirement IDs in their names, such as `test_SPECKIT_5_unfinished_adds_are_not_dangling`.
 - Console examples in the specs run as tests. A pytest collector in `tests/conftest.py` runs each one in a fresh copy of `tests/fixtures/<name>/`, named by the block's `fixture=` option or the spec's `fixture` front-matter field, and names each result after its requirement.
 - `pytest --junitxml=build/test-results/junit.xml` writes the report that the stopgap reads.
 
@@ -126,4 +126,4 @@ To confirm before this page is approved:
 
 - Specs have no `release` field; the brief's `Capabilities:` lines are the only source of a capability's release.
 - The architecture page needs approval in the `shape` stage, like the specs.
-- In 0.0 the stopgap applies seven rules; `valid-ids`, `component-complete` and `code-has-owner` wait for `bondstone check` in 0.1.
+- In 0.0 the profile has five rules and Spec Kit adds two; checks on ID shapes, components and code ownership are decided with 0.1.
