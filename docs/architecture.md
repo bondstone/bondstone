@@ -34,7 +34,7 @@ Bondstone never opens a network connection, calls a model, runs project code or 
 | Fast | The pre-commit check finishes in under 1 s, start-up included |
 | Visible approvals | Agents can't approve or verify through any supported path, and any other change to an approval shows in review |
 | Host-agnostic | A second host needs no command change |
-| Small | 13 commands when complete; larger profiles add packs, never commands |
+| Small | The extension's four commands keep their names in every release; larger profiles add packs, never commands |
 
 ## Core concepts
 
