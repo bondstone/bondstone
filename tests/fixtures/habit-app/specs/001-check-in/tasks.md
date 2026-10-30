@@ -1,0 +1,3 @@
+- [x] T001 Write failing tests test_HABIT_1_1, test_HABIT_1_2
+- [x] T002 Implement toggle
+- [x] T003 Update the living docs

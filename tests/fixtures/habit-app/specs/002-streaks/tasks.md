@@ -1,0 +1,3 @@
+- [x] T001 Write failing test test_HABIT_2_1_streak_counts_days
+- [ ] T002 Compute streaks
+- [ ] T003 Update the living docs

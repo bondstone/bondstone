@@ -1,0 +1,105 @@
+schema_version: "1.0"
+
+extension:
+  id: bondstone
+  name: "Bondstone"
+  version: "0.0.1"
+  description: "Simple-app workflow: living docs, version PRDs, stories as specs, test evidence, and one computed next step"
+  author: "Bondstone"
+  repository: "https://github.com/bondstone/bondstone"
+  license: "MIT"
+  homepage: "https://github.com/bondstone/bondstone"
+
+requires:
+  speckit_version: ">=1.2.0"
+  tools:
+    - name: python3
+      version: ">=3.9"
+      required: true
+    - name: git
+      required: false
+
+provides:
+  commands:
+    - name: speckit.bondstone.status
+      file: commands/status.md
+      description: "Show the version, phase, evidence per capability and story progress"
+    - name: speckit.bondstone.next
+      file: commands/next.md
+      description: "Do the one next step Bondstone computes"
+    - name: speckit.bondstone.write
+      file: commands/write.md
+      description: "Write or update the document the next step names"
+    - name: speckit.bondstone.check
+      file: commands/check.md
+      description: "Check docs, stories and test evidence against the simple-app rules"
+
+  templates:
+    - name: bondstone-brief
+      file: templates/brief.md
+      description: "Brief: problem, users, value, non-goals, success measures"
+    - name: bondstone-glossary
+      file: templates/glossary.md
+      description: "Glossary of domain terms"
+    - name: bondstone-ideas
+      file: templates/ideas.md
+      description: "Idea inbox"
+    - name: bondstone-roadmap
+      file: templates/roadmap.md
+      description: "Roadmap: versions extended in place"
+    - name: bondstone-architecture
+      file: templates/architecture.md
+      description: "Architecture overview: components, NFRs"
+    - name: bondstone-data-model
+      file: templates/data-model.md
+      description: "Living data model"
+    - name: bondstone-capability
+      file: templates/capability.md
+      description: "Capability spec: requirements with scoped examples"
+    - name: bondstone-decision
+      file: templates/decision.md
+      description: "Architecture decision record"
+    - name: bondstone-screens
+      file: templates/screens.md
+      description: "Screen map, navigation and design tokens"
+    - name: bondstone-runbook
+      file: templates/runbook.md
+      description: "Runbook: build, release, monitor, roll back"
+    - name: bondstone-prd
+      file: templates/prd.md
+      description: "Version PRD with deltas and story table"
+    - name: bondstone-epic
+      file: templates/epic.md
+      description: "Optional epic with its own story table"
+    - name: bondstone-release
+      file: templates/release.md
+      description: "Release checklist with drift audit and retro"
+    - name: bondstone-spike
+      file: templates/spike.md
+      description: "Spike note"
+
+  scripts:
+    - name: bondstone
+      file: scripts/bash/bondstone.sh
+      description: "Runs the stopgap with a command and passes its exit code through"
+      runtimes: [bash]
+    - name: bondstone-pre-commit
+      file: scripts/bash/pre-commit.sh
+      description: "Pre-commit hook: staged check and approval guard"
+      runtimes: [bash]
+
+hooks:
+  after_analyze:
+    command: speckit.bondstone.check
+    optional: false
+    description: "Bondstone's deterministic analyze checks for the active story"
+  before_implement:
+    command: speckit.bondstone.check
+    optional: false
+    description: "Refuse to implement while Bondstone reports errors"
+
+tags:
+  - "living-docs"
+  - "traceability"
+  - "testing"
+  - "workflow"
