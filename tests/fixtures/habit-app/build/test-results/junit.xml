@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites><testsuite name="pytest" tests="3">
+<testcase classname="tests.test_habits" name="test_HABIT_1_1_tap_marks_today"/>
+<testcase classname="tests.test_habits" name="test_HABIT_1_2_second_tap_unmarks"/>
+<testcase classname="tests.test_habits" name="test_HABIT_2_1_streak_counts_days"><failure message="assert 0 == 3"/></testcase>
+</testsuite></testsuites>
