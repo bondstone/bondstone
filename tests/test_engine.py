@@ -1,0 +1,189 @@
+import datetime as dt
+import json
+
+import pytest
+
+from bondstone.cli import main
+from bondstone.loader import load_config, version_matches
+from bondstone.graph import build_graph
+from bondstone.scaffold import new_document
+
+from .conftest import adr
+
+
+@pytest.mark.parametrize("version,spec,ok", [
+    ("1.2.0", "1", True), ("2.0.0", "1", False), ("1.2.0", "^1.3", False),
+    ("1.4.1", "1.3", True), ("1.0.0", ">=1,<2", True), ("1.0.0", None, True),
+])
+def test_version_matches(version, spec, ok):
+    assert version_matches(version, spec) is ok
+
+
+def test_missing_pack_and_unmet_bridge(project):
+    project.profile(packs=["adr@1", "nope@1"], bridges=["adr-capability@1"])
+    messages = [d.message for d in project.check() if d.rule == "bondstone/profile"]
+    assert any("'nope' not found" in m for m in messages)
+    assert any("requires pack 'capability'" in m for m in messages)
+
+
+def test_version_mismatch(project):
+    project.profile(packs=["adr@2"])
+    assert any("no version matches" in d.message for d in project.check())
+
+
+def test_unbridged_packs_warning(project):
+    project.profile(packs=["adr@1", "ost@1"], overrides={"bondstone/view-stale": "off"})
+    assert project.rules() == ["bondstone/unbridged-packs"]
+
+
+def test_unknown_key_and_broken_link(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "supersedes: ADR-009\ncolour: red\n"))
+    assert project.rules() == ["bondstone/field-unknown", "bondstone/link-broken"]
+
+
+def test_explicit_type_outside_paths(project):
+    project.profile(packs=["adr@1"], scan=["notes/**/*.md"], overrides={"bondstone/view-stale": "off"})
+    project.write("notes/x.md", adr("ADR-001", "accepted").replace("---\nid", "---\ntype: adr:Decision\nid", 1))
+    project.write("notes/plain.md", "# not a bondstone doc\n")
+    graph = build_graph(load_config(project.root))
+    assert [n.id for n in graph.nodes] == ["ADR-001"]
+    assert project.rules() == []
+
+
+def test_overrides_waivers_and_locks(project):
+    tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+    project.profile(
+        packs=["adr@1"],
+        overrides={"bondstone/view-stale": "off", "adr/alternatives-considered": "error"},
+        waivers=[
+            {"rule": "bondstone/field-unknown", "node": "ADR-001", "reason": "legacy", "expires": tomorrow},
+            {"rule": "bondstone/link-broken", "reason": "x", "expires": "2020-01-01"},
+            {"rule": "bondstone/id-format", "reason": "never matches"},
+            {"rule": "bondstone/section-missing"},
+        ],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "colour: red\n",
+                                               body="## Context\n\n## Decision\n\n## Consequences\n"))
+    diags = {d.rule: d.severity for d in project.check()}
+    assert diags == {
+        "adr/alternatives-considered": "error",      # raised by override
+        "bondstone/waiver-expired": "error",
+        "bondstone/waiver-unused": "warn",
+        "bondstone/waiver-invalid": "error",          # no reason
+    }
+
+
+def test_locked_rule_cannot_be_loosened(project):
+    project.write(".bondstone/packs/strict/pack.yaml", """
+        id: strict
+        version: 1.0.0
+        types:
+          Note:
+            paths: ["notes/*.md"]
+        rules:
+          - id: has-summary
+            locked: true
+            when: {type: Note}
+            require: [{section: Summary}]
+    """)
+    project.profile(packs=["strict@1"], sources=[".bondstone/packs"],
+                    overrides={"strict/has-summary": "off"},
+                    waivers=[{"rule": "strict/has-summary", "reason": "please"}])
+    project.write("notes/a.md", "---\nid: N1\ntitle: A note\n---\n# Body\n")
+    rules = project.rules()
+    assert "strict/has-summary" in rules
+    assert "bondstone/profile" in rules  # override rejected
+
+
+def test_roles_from_bridges_and_profile_role_rule(project):
+    project.profile(
+        packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        roles={"spec": ["capability:Capability"]},
+        overrides={"bondstone/view-stale": "off"},
+        rules=[{"id": "specs-have-owner-team", "when": {"role": "spec"}, "require": [{"field": "owner"}]}],
+    )
+    cfg = load_config(project.root)
+    assert cfg.roles["living-spec"] == ["capability:Capability"]  # deduplicated across bridges
+    assert cfg.roles["spec"] == ["capability:Capability"]
+
+
+def test_diff_lifecycle_immutability_and_diff_rule(project):
+    project.profile(
+        packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/**/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.write("docs/capabilities/a.md", """
+        ---
+        id: CAP-a
+        title: Capability A
+        status: active
+        owner: me
+        code: AA
+        constrained_by: [ADR-001]
+        ---
+        ## Purpose
+
+        p
+
+        ## Requirements
+
+        ### REQ-AA-001: Thing
+
+        The system SHALL do the thing.
+
+        #### Scenario: ok
+
+        - Then fine
+    """)
+    project.write("src/app.py", "x = 1\n")
+    project.git("init", "-q")
+    project.commit()
+    assert project.rules(base="HEAD") == []
+
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted").replace("\nc\n", "\nchanged\n"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "deprecated"))
+    project.write("src/app.py", "x = 2  # bondstone: REQ-AA-001\n")
+    assert project.rules(base="HEAD") == [
+        "bondstone/immutable", "bondstone/status-transition", "profile/code-needs-spec"]
+
+    # status-only change of an accepted ADR is allowed; touching the spec satisfies the diff rule
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "deprecated"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    text = (project.root / "docs/capabilities/a.md").read_text()
+    project.write("docs/capabilities/a.md", text.replace("do the thing", "do the thing well"))
+    assert project.rules(base="HEAD", severity="error") == ["adr-capability/constrained-by-live-decision"]
+
+
+def test_new_document_is_valid_after_filling_todos(project):
+    project.profile(packs=["adr@1"], defaults={"owner": "me"}, overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-007-old.md", adr("ADR-007", "accepted"))
+    cfg = load_config(project.root)
+    path = new_document(cfg, build_graph(cfg), "Decision", "Use SQLite", {})
+    assert path.name == "ADR-008-use-sqlite.md"
+    assert "status: proposed" in path.read_text()
+    assert project.rules() == ["bondstone/todo-left"]
+    assert [d.severity for d in project.check()] == ["warn"]  # still a draft
+    path.write_text(path.read_text().replace("proposed", "accepted"))
+    assert [d.severity for d in project.check()] == ["error"]  # accepted with placeholders
+
+
+def test_cli_json_and_exit_codes(project, capsys):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "colour: red\n"))
+    code = main(["--root", str(project.root), "check", "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert payload["summary"]["errors"] == 1
+    assert payload["diagnostics"][0]["rule"] == "bondstone/field-unknown"
+    assert payload["diagnostics"][0]["line"] == 7
+
+    assert main(["--root", str(project.root), "gen"]) == 0
+    assert (project.root / "docs/generated/decisions.md").exists()
+    assert main(["--root", str(project.root), "explain", "adr/alternatives-considered"]) == 0
+    assert main(["--root", str(project.root), "explain", "nope"]) == 2

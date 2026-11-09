@@ -1,0 +1,57 @@
+id: ost-capability
+version: 1.0.0
+description: Hands committed discovery solutions over to living capability specs.
+
+requires:
+  ost: "^1"
+  capability: "^1"
+
+links:
+  realized_by:
+    from: ost:Solution
+    to: capability:Capability
+    description: Capabilities whose specs describe the delivered solution.
+
+roles:
+  intent: [ost:Opportunity]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: committed-solution-is-realized
+    description: A committed solution names the capability spec(s) that describe it.
+    when: {type: ost:Solution, status: committed}
+    require:
+      - link: realized_by
+        min: 1
+    hint: "Add `realized_by: [CAP-...]` and update that capability's requirements."
+
+  - id: realized-capability-is-not-draft
+    description: A solution is only realized by capabilities that are active.
+    severity: warn
+    when: {type: ost:Solution, status: committed}
+    require:
+      - link: realized_by
+        all: true
+        to: {type: capability:Capability, status: active}
+
+  - id: capability-traces-to-discovery
+    description: An active capability traces back to at least one committed solution.
+    severity: warn
+    when: {type: capability:Capability, status: active}
+    require:
+      - incoming: realized_by
+        from: {type: ost:Solution, status: committed}
+        min: 1
+
+views:
+  - id: outcome-to-capability
+    title: From outcomes to capabilities
+    output: docs/generated/outcome-to-capability.md
+    render: tree
+    select: {type: ost:Outcome}
+    levels:
+      - {incoming: serves}
+      - {incoming: addresses}
+      - {link: realized_by}
+
+instructions: instructions.md
