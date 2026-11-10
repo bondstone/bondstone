@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pack.schema.json",
+  "title": "bondstone pack.yaml",
+  "description": "One method: its types, links, rules, views, templates and agent guidance.",
+  "type": "object",
+  "properties": {
+    "id": {"$ref": "common.schema.json#/$defs/componentId"},
+    "version": {"$ref": "common.schema.json#/$defs/version"},
+    "bondstone": {
+      "description": "Engine versions this pack works with, such as \">=1.0\".",
+      "type": "string"
+    },
+    "description": {"type": "string"},
+    "types": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Z][A-Za-z0-9]*$",
+        "x-error": "type names start with a capital letter and contain only letters and digits"
+      },
+      "additionalProperties": {"$ref": "#/$defs/type"}
+    },
+    "links": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "x-error": "link names are lower-case with underscores, such as constrained_by"
+      },
+      "additionalProperties": {"$ref": "common.schema.json#/$defs/link"}
+    },
+    "rules": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/rule"}},
+    "views": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/view"}},
+    "instructions": {"type": "string"}
+  },
+  "required": ["id", "version"],
+  "additionalProperties": false,
+  "$defs": {
+    "statuses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "type": {
+      "description": "What a node must look like.",
+      "type": "object",
+      "properties": {
+        "description": {"type": "string"},
+        "id": {
+          "description": "Id template such as \"ADR-{n:03d}\"; the id pattern is derived from it.",
+          "type": "string"
+        },
+        "id_pattern": {
+          "description": "Regular expression that overrides the pattern derived from `id`.",
+          "type": "string"
+        },
+        "path": {
+          "description": "Path template such as \"docs/adr/{id}-{slug}.md\"; the match glob is derived from it.",
+          "type": "string"
+        },
+        "template": {"type": "string"},
+        "fields": {
+          "description": "JSON Schema properties of the frontmatter fields.",
+          "type": "object",
+          "additionalProperties": {"type": "object"}
+        },
+        "required": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "sections": {"type": "array", "items": {"type": "string"}},
+        "embedded": {
+          "description": "True for a type whose nodes are items inside another type's documents.",
+          "type": "boolean"
+        },
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {"type": "string"},
+            "section": {"type": "string"},
+            "heading": {
+              "description": "Heading template such as \"### {id}: {title}\".",
+              "type": "string"
+            },
+            "id": {
+              "description": "Id template; placeholders other than {n} and {slug} are fields of the parent document.",
+              "type": "string"
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false
+        },
+        "traits": {
+          "type": "object",
+          "properties": {
+            "lifecycle": {
+              "type": "object",
+              "properties": {
+                "statuses": {"$ref": "#/$defs/statuses", "minItems": 1},
+                "initial": {"type": "string"},
+                "default": {"type": "string"},
+                "transitions": {
+                  "type": "object",
+                  "additionalProperties": {"$ref": "#/$defs/statuses"}
+                }
+              },
+              "required": ["statuses"],
+              "additionalProperties": false
+            },
+            "owned": {"type": ["object", "null"], "maxProperties": 0},
+            "indexed": {"type": ["object", "null"], "maxProperties": 0},
+            "supersedable": {
+              "type": ["object", "null"],
+              "properties": {"link": {"type": "string"}},
+              "additionalProperties": false
+            },
+            "immutable": {
+              "type": ["object", "null"],
+              "properties": {
+                "when": {"$ref": "#/$defs/statuses"},
+                "allow": {"type": "array", "items": {"type": "string"}}
+              },
+              "additionalProperties": false
+            },
+            "code-traceable": {
+              "type": ["object", "null"],
+              "properties": {
+                "coverage": {"$ref": "common.schema.json#/$defs/severity"},
+                "when": {"$ref": "#/$defs/statuses"},
+                "retired": {"$ref": "#/$defs/statuses"}
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

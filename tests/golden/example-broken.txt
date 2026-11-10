@@ -1,0 +1,7 @@
+app/lib/habits.dart:10: error bondstone/code-ref-unknown: code references unknown id 'REQ-HAB-009'
+docs/discovery/solutions/SOL-2-streak-freeze.md:6: error bondstone/link-broken: addresses -> 'OPP-9': no such document
+docs/generated/opportunity-solution-tree.md: error bondstone/view-stale: generated view ost/tree is out of date
+    hint: Run `bondstone gen`.
+docs/generated/outcome-to-capability.md: error bondstone/view-stale: generated view ost-capability/outcome-to-capability is out of date
+    hint: Run `bondstone gen`.
+✗ 4 error(s), 0 warning(s), 15 nodes

@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "summary": {
+    "errors": 4,
+    "warnings": 0,
+    "info": 0,
+    "nodes": 15
+  },
+  "diagnostics": [
+    {
+      "rule": "bondstone/code-ref-unknown",
+      "severity": "error",
+      "path": "app/lib/habits.dart",
+      "line": 10,
+      "message": "code references unknown id 'REQ-HAB-009'"
+    },
+    {
+      "rule": "bondstone/link-broken",
+      "severity": "error",
+      "path": "docs/discovery/solutions/SOL-2-streak-freeze.md",
+      "line": 6,
+      "node": "SOL-2",
+      "message": "addresses -> 'OPP-9': no such document"
+    },
+    {
+      "rule": "bondstone/view-stale",
+      "severity": "error",
+      "path": "docs/generated/opportunity-solution-tree.md",
+      "message": "generated view ost/tree is out of date",
+      "hint": "Run `bondstone gen`.",
+      "fix": {
+        "command": [
+          "bondstone",
+          "gen"
+        ]
+      }
+    },
+    {
+      "rule": "bondstone/view-stale",
+      "severity": "error",
+      "path": "docs/generated/outcome-to-capability.md",
+      "message": "generated view ost-capability/outcome-to-capability is out of date",
+      "hint": "Run `bondstone gen`.",
+      "fix": {
+        "command": [
+          "bondstone",
+          "gen"
+        ]
+      }
+    }
+  ]
+}

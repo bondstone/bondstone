@@ -1,0 +1,23 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv run pytest -q
+      - name: bondstone check on the example
+        run: uv run bondstone --root examples/habit-tracker check
+      - name: gen leaves the example's views unchanged
+        run: |
+          uv run bondstone --root examples/habit-tracker gen
+          git diff --exit-code -- examples/habit-tracker

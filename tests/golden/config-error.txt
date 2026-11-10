@@ -1,0 +1,2 @@
+.bondstone/profile.yaml: error bondstone/profile: overrides.adr/alternatives-considered: severity is the YAML boolean false (YAML reads off/no/on/yes as booleans); write error, warn, info or ignore; `ignore` switches a rule off
+✗ 1 error(s), 0 warning(s)

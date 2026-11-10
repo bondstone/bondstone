@@ -1,0 +1,4 @@
+bondstone: 1
+packs: [ost@1]
+overrides:
+  bondstone/view-stale: ignore

@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "summary": {
+    "errors": 6,
+    "warnings": 3,
+    "info": 1,
+    "nodes": 4
+  },
+  "diagnostics": [
+    {
+      "rule": "bondstone/supersede-orphan",
+      "severity": "info",
+      "path": "docs/adr/ADR-001-a.md",
+      "line": 5,
+      "node": "ADR-001",
+      "message": "ADR-001 is superseded but nothing supersedes it"
+    },
+    {
+      "rule": "adr-capability/accepted-decision-is-applied",
+      "severity": "warn",
+      "path": "docs/adr/ADR-002-b.md",
+      "line": 1,
+      "node": "ADR-002",
+      "message": "An accepted decision constrains at least one capability. (needs 1 incoming 'constrained_by' link(s), has 0)"
+    },
+    {
+      "rule": "adr/alternatives-considered",
+      "severity": "warn",
+      "path": "docs/adr/ADR-002-b.md",
+      "line": 1,
+      "node": "ADR-002",
+      "message": "Accepted decisions record the alternatives that were considered. (body must match /(?im)^#{2,3}\\s+(Alternatives|Options)/)",
+      "hint": "Add a \"## Alternatives considered\" section."
+    },
+    {
+      "rule": "bondstone/field-unknown",
+      "severity": "error",
+      "path": "docs/adr/ADR-002-b.md",
+      "line": 8,
+      "node": "ADR-002",
+      "message": "unknown key(s) colour for adr:Decision",
+      "hint": "Fields: date, deciders, owner, status, title. Links: supersedes."
+    },
+    {
+      "rule": "bondstone/link-broken",
+      "severity": "error",
+      "path": "docs/adr/ADR-002-b.md",
+      "line": 9,
+      "node": "ADR-002",
+      "message": "supersedes -> 'ADR-009': no such document"
+    },
+    {
+      "rule": "adr-capability/constrained-by-live-decision",
+      "severity": "error",
+      "path": "docs/capabilities/a.md",
+      "line": 1,
+      "node": "CAP-a",
+      "message": "Capabilities are constrained only by proposed or accepted decisions. ('constrained_by' targets not allowed: ADR-001)",
+      "hint": "Point to the decision that superseded it."
+    },
+    {
+      "rule": "bondstone/code-coverage",
+      "severity": "warn",
+      "path": "docs/capabilities/a.md",
+      "line": 16,
+      "node": "REQ-AA-001",
+      "message": "REQ-AA-001 is not referenced from code",
+      "hint": "Add a `bondstone: REQ-AA-001` comment where it is implemented."
+    },
+    {
+      "rule": "bondstone/view-stale",
+      "severity": "error",
+      "path": "docs/generated/decisions.md",
+      "message": "generated view adr/decision-log is out of date",
+      "hint": "Run `bondstone gen`.",
+      "fix": {
+        "command": [
+          "bondstone",
+          "gen"
+        ]
+      }
+    },
+    {
+      "rule": "bondstone/untyped-document",
+      "severity": "error",
+      "path": "docs/notes.md",
+      "line": 1,
+      "message": "file is under `docs` but at no type's path",
+      "hint": "Move it to a type's path, or narrow `docs` in the profile."
+    },
+    {
+      "rule": "bondstone/code-ref-unknown",
+      "severity": "error",
+      "path": "src/a.py",
+      "line": 1,
+      "message": "code references unknown id 'REQ-ZZ-009'"
+    }
+  ]
+}

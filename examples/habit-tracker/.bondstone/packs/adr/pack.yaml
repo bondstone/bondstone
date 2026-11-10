@@ -1,0 +1,56 @@
+id: adr
+version: 1.0.0
+bondstone: ">=1.0"
+description: Architecture Decision Records with a lifecycle, supersession and immutability.
+
+types:
+  Decision:
+    description: One architecturally significant decision and its rationale.
+    id: "ADR-{n:03d}"
+    path: "docs/adr/{id}-{slug}.md"
+    template: templates/decision.md
+    fields:
+      title: {type: string, minLength: 3}
+      date: {type: string, format: date}
+      deciders: {type: array, items: {type: string}}
+      tags: {type: array, items: {type: string}}
+    required: [title, date]
+    sections: [Context, Decision, Consequences]
+    traits:
+      lifecycle:
+        statuses: [proposed, accepted, rejected, deprecated, superseded]
+        initial: proposed
+        transitions:
+          proposed: [accepted, rejected]
+          accepted: [deprecated, superseded]
+          deprecated: [superseded]
+      owned: {}
+      supersedable: {link: supersedes}
+      immutable: {when: [accepted, rejected, deprecated, superseded], allow: [status]}
+      indexed: {}
+
+links:
+  supersedes:
+    from: Decision
+    to: Decision
+    max: 1
+    description: This decision replaces an earlier one.
+
+rules:
+  - id: alternatives-considered
+    description: Accepted decisions record the alternatives that were considered.
+    severity: warn
+    when: {type: Decision, status: accepted}
+    require:
+      - contains: "(?im)^#{2,3}\\s+(Alternatives|Options)"
+    hint: Add a "## Alternatives considered" section.
+
+views:
+  - id: decision-log
+    title: Decision log
+    output: docs/generated/decisions.md
+    render: table
+    select: {type: Decision}
+    columns: [id, title, status, date, owner]
+
+instructions: instructions.md

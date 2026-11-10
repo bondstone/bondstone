@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bridge.schema.json",
+  "title": "bondstone bridge.yaml",
+  "description": "What connects two or more packs: cross-pack links, roles, hand-off rules and views. A bridge defines no types.",
+  "type": "object",
+  "properties": {
+    "id": {"$ref": "common.schema.json#/$defs/componentId"},
+    "version": {"$ref": "common.schema.json#/$defs/version"},
+    "bondstone": {
+      "description": "Engine versions this bridge works with, such as \">=1.0\".",
+      "type": "string"
+    },
+    "description": {"type": "string"},
+    "requires": {
+      "description": "The packs this bridge connects, each with a version range such as \"^1\".",
+      "type": "object",
+      "additionalProperties": {"type": "string"},
+      "minProperties": 1
+    },
+    "links": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_]*$",
+        "x-error": "link names are lower-case with underscores, such as constrained_by"
+      },
+      "additionalProperties": {"$ref": "common.schema.json#/$defs/link"}
+    },
+    "roles": {"$ref": "common.schema.json#/$defs/roles"},
+    "rules": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/rule"}},
+    "views": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/view"}},
+    "instructions": {"type": "string"}
+  },
+  "required": ["id", "version", "requires"],
+  "additionalProperties": false
+}

@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "profile.schema.json",
+  "title": "bondstone profile.yaml",
+  "description": "What one repository uses: packs, bridges, presets, code paths, repository rules, overrides and waivers.",
+  "type": "object",
+  "properties": {
+    "bondstone": {
+      "description": "Format version of this file.",
+      "const": 1,
+      "x-error": "expected the format version 1"
+    },
+    "extends": {"type": "array", "items": {"type": "string"}},
+    "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "bridges": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "sources": {
+      "description": "Folders searched for local packs and bridges; default: .bondstone/packs.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "docs": {
+      "description": "Globs of managed documents: a file here that matches no type is an error.",
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "code": {
+      "type": "object",
+      "properties": {
+        "include": {"type": "array", "items": {"type": "string"}},
+        "exclude": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": false
+    },
+    "defaults": {"type": "object"},
+    "roles": {"$ref": "common.schema.json#/$defs/roles"},
+    "rules": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/rule"}},
+    "views": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/view"}},
+    "overrides": {
+      "description": "Severity per qualified rule id, such as adr/alternatives-considered: warn.",
+      "type": "object",
+      "additionalProperties": {"$ref": "common.schema.json#/$defs/severity"}
+    },
+    "waivers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rule": {"type": "string"},
+          "node": {"type": "string"},
+          "reason": {"type": "string"},
+          "expires": {"type": "string"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["bondstone"],
+  "additionalProperties": false
+}

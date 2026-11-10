@@ -1,0 +1,2 @@
+.bondstone/profile.yaml: warn bondstone/unbridged-packs: packs form disconnected groups (adr; capability); add a bridge to connect them
+✓ 0 error(s), 1 warning(s)

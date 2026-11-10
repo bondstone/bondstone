@@ -1,0 +1,31 @@
+# Solo developer, mobile app: discovery (OST) -> living capability specs, plus ADRs.
+bondstone: 1
+packs: [adr@1, ost@1, capability@1]
+bridges: [ost-capability@1, adr-capability@1]
+sources: [.bondstone/packs]
+docs: ["docs/**/*.md"]
+defaults:
+  owner: dawid
+code:
+  include: ["app/lib/**/*.dart"]
+
+rules:
+  - id: code-change-updates-living-spec
+    description: Changes to app code come with an update to the living specs they implement.
+    severity: warn
+    on_change: {paths: ["app/lib/**"]}
+    require:
+      # the specs tagged in the changed code must change; untagged code needs any living spec
+      - changed: {role: living-spec}
+        traced: true
+        min: 1
+
+overrides:
+  # Solo project: evidence is nice to have, not a gate.
+  ost/committed-solution-has-evidence: warn
+
+waivers:
+  - rule: ost-capability/capability-traces-to-discovery
+    node: CAP-habits
+    reason: Core capability that predates discovery work.
+    expires: 2027-06-30
