@@ -1,7 +1,7 @@
 ---
 id: CAP-rules
 title: Rules and traits
-status: draft
+status: active
 owner: dworek
 code: RUL
 depends_on: [CAP-graph]

@@ -1,7 +1,7 @@
 ---
 id: CAP-profiles
 title: Profiles, packs and bridges
-status: draft
+status: active
 owner: dworek
 code: PRF
 constrained_by: [ADR-002, ADR-003, ADR-004]

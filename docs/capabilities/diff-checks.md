@@ -1,7 +1,7 @@
 ---
 id: CAP-diff-checks
 title: Checks against a git base
-status: draft
+status: active
 owner: dworek
 code: DIF
 depends_on: [CAP-graph, CAP-rules]

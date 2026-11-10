@@ -1,7 +1,7 @@
 ---
 id: CAP-code-traceability
 title: Code traceability
-status: draft
+status: active
 owner: dworek
 code: TRC
 depends_on: [CAP-graph]

@@ -1,7 +1,7 @@
 ---
 id: CAP-pack-testing
 title: Pack testing
-status: draft
+status: active
 owner: dworek
 code: PKT
 depends_on: [CAP-profiles]

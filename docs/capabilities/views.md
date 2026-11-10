@@ -1,7 +1,7 @@
 ---
 id: CAP-views
 title: Generated views
-status: draft
+status: active
 owner: dworek
 code: VIE
 depends_on: [CAP-graph]

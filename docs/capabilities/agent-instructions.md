@@ -1,7 +1,7 @@
 ---
 id: CAP-agent-instructions
 title: Agent support
-status: draft
+status: active
 owner: dworek
 code: AGT
 depends_on: [CAP-profiles]

@@ -1,7 +1,7 @@
 ---
 id: CAP-scaffolding
 title: Document scaffolding
-status: draft
+status: active
 owner: dworek
 code: SCF
 depends_on: [CAP-graph]

@@ -2,7 +2,7 @@
 id: CHG-001
 title: Self-host bondstone documentation (phase 1)
 kind: docs
-status: draft
+status: accepted
 owner: dworek
 decided_by: [ADR-001, ADR-002, ADR-003, ADR-004, ADR-005, ADR-006, ADR-007]
 ---

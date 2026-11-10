@@ -1,7 +1,7 @@
 ---
 id: CAP-graph
 title: Document graph
-status: draft
+status: active
 owner: dworek
 code: GRA
 constrained_by: [ADR-001]
