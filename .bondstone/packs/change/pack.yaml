@@ -1,0 +1,48 @@
+id: change
+version: 0.1.0
+description: Change proposals - reviewed before code changes, closed only when the living spec reflects them.
+
+types:
+  Proposal:
+    description: A proposed change to the system, its motivation and scope.
+    id_format: "CHG-{n:03d}"
+    id_pattern: "^CHG-\\d{3,}$"
+    paths: ["docs/changes/*.md"]
+    dir: docs/changes
+    filename: "{id}-{slug}.md"
+    fields:
+      title: {type: string, minLength: 5}
+      kind: {enum: [feature, fix, refactor, docs, breaking]}
+    required_fields: [title, kind]
+    sections: [Why, What changes, Out of scope]
+    traits:
+      lifecycle:
+        statuses: [draft, accepted, implemented, rejected, withdrawn]
+        initial: draft
+        transitions:
+          draft: [accepted, rejected, withdrawn]
+          accepted: [implemented, withdrawn]
+      owned: {}
+      immutable: {when: [implemented, rejected, withdrawn]}
+      indexed: {}
+
+rules:
+  - id: breaking-change-has-migration
+    description: Breaking changes explain how users migrate.
+    when: {type: Proposal, where: {kind: breaking}}
+    require:
+      - section: Migration
+
+views:
+  - id: open
+    title: Open proposals
+    output: docs/generated/changes-open.md
+    select: {type: Proposal, status: [draft, accepted]}
+    columns: [id, title, kind, status, owner]
+  - id: done
+    title: Implemented proposals
+    output: docs/generated/changes-done.md
+    select: {type: Proposal, status: implemented}
+    columns: [id, title, kind]
+
+instructions: instructions.md

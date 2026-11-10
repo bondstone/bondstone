@@ -18,6 +18,7 @@ class CaseResult:
     detail: str
 
 
+# bondstone: REQ-PKT-001, REQ-PKT-002
 def run_fixtures(component_dir: Path) -> list[CaseResult]:
     fixtures = component_dir / "fixtures"
     if not fixtures.is_dir():

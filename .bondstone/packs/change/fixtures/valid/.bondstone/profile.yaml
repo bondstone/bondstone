@@ -1,0 +1,6 @@
+bondstone: 0.1
+packs:
+- change@0.1
+bridges: []
+overrides:
+  bondstone/view-stale: 'off'

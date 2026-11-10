@@ -26,6 +26,7 @@ def _config(args: argparse.Namespace) -> Config:
     return load_config(root)
 
 
+# bondstone: REQ-AGT-003
 def _emit(diags: list[Diagnostic], fmt: str, extra: dict[str, Any] | None = None) -> None:
     errors = sum(d.severity == ERROR for d in diags)
     warnings = sum(d.severity == WARN for d in diags)
@@ -42,6 +43,7 @@ def _emit(diags: list[Diagnostic], fmt: str, extra: dict[str, Any] | None = None
     print(("✗ " if errors else "✓ ") + summary)
 
 
+# bondstone: REQ-AGT-003
 def cmd_check(args: argparse.Namespace) -> int:
     cfg = _config(args)
     graph = build_graph(cfg)
@@ -94,6 +96,7 @@ def cmd_supersede(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: REQ-SCF-005
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
     packs = [p for p in (args.packs or "").split(",") if p]
@@ -128,6 +131,7 @@ def cmd_rules(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: REQ-AGT-002
 def cmd_explain(args: argparse.Namespace) -> int:
     cfg = _config(args)
     text = explain_rule(cfg, args.rule)
@@ -172,6 +176,7 @@ def cmd_packs(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: REQ-PKT-001
 def cmd_pack_test(args: argparse.Namespace) -> int:
     failed = 0
     for directory in args.dirs:

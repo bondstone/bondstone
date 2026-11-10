@@ -57,6 +57,7 @@ def parse_ref(ref: str) -> tuple[str, str | None]:
     return ref.strip(), None
 
 
+# bondstone: REQ-PRF-001
 def version_matches(version: str, spec: str | None) -> bool:
     if not spec:
         return True
@@ -138,6 +139,7 @@ class Config:
     def links_to(self, type_qname: str) -> list[LinkDef]:
         return [l for l in self.links.values() if type_qname in l.to_types]
 
+    # bondstone: REQ-GRA-004
     def resolve_link_key(self, type_qname: str, key: str) -> tuple[LinkDef | None, str | None]:
         """Map a frontmatter key to a link def available for this type.
 
@@ -165,6 +167,7 @@ def _problem(message: str, rule: str = "bondstone/profile", severity: str = ERRO
     return Diagnostic(rule, severity, message, path=str(PROFILE_PATH))
 
 
+# bondstone: REQ-PRF-001, REQ-PRF-002, REQ-PRF-003, REQ-PRF-006
 def load_config(root: Path, extra_sources: list[Path] | None = None) -> Config:
     profile_file = root / PROFILE_PATH
     if not profile_file.is_file():

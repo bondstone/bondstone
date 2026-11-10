@@ -56,6 +56,7 @@ def has_errors(diags: list[Diagnostic], fail_on: str = ERROR) -> bool:
 # =========================================================================== profile
 
 
+# bondstone: REQ-PRF-005
 def profile_problems(cfg: Config) -> list[Diagnostic]:
     out = list(cfg.problems)
 
@@ -134,6 +135,7 @@ def profile_problems(cfg: Config) -> list[Diagnostic]:
 # =========================================================================== nodes
 
 
+# bondstone: REQ-GRA-002, REQ-RUL-003
 def _schema_for(cfg: Config, type_qname: str) -> dict[str, Any]:
     tdef = cfg.types[type_qname]
     props = dict(tdef.spec.get("fields") or {})
@@ -154,6 +156,7 @@ def _schema_for(cfg: Config, type_qname: str) -> dict[str, Any]:
     }
 
 
+# bondstone: REQ-GRA-006, REQ-RUL-005, REQ-RUL-006
 def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     seen: dict[str, Node] = {}
@@ -202,6 +205,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
     return out
 
 
+# bondstone: REQ-RUL-006
 def _mask_code(text: str) -> str:
     """Blank out fenced blocks and inline code spans, keeping offsets and newlines."""
     def blank(m: re.Match[str]) -> str:
@@ -210,6 +214,7 @@ def _mask_code(text: str) -> str:
     return re.sub(r"(`+)(?!`).+?(?<!`)\1(?!`)", blank, text)
 
 
+# bondstone: REQ-GRA-002
 def _schema_diag(cfg: Config, node: Node, err: Any) -> Diagnostic:
     if err.validator == "required":
         missing = re.findall(r"'([^']+)' is a required property", err.message)
@@ -233,6 +238,7 @@ def _schema_diag(cfg: Config, node: Node, err: Any) -> Diagnostic:
 # =========================================================================== links
 
 
+# bondstone: REQ-GRA-005
 def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for node in graph.nodes:
@@ -269,6 +275,7 @@ def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
     return out
 
 
+# bondstone: REQ-RUL-004
 def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for tdef in cfg.types.values():
@@ -323,6 +330,7 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
 # =========================================================================== rules
 
 
+# bondstone: REQ-RUL-002
 def evaluate_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for rule in cfg.rules:
@@ -346,6 +354,7 @@ def _rule_diag(rule: Rule, detail: str, node: Node | None) -> Diagnostic:
                       node.id if node else None, rule.spec.get("hint"))
 
 
+# bondstone: REQ-RUL-002
 def _eval_clause(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> str | None:
     ctx = rule.context_pack
     if "link" in clause:
@@ -389,8 +398,9 @@ def _sel_text(sel: dict[str, Any] | None, word: str = "to") -> str:
 # =========================================================================== code tags
 
 
+# bondstone: REQ-TRC-001
 def scan_tags(text: str) -> list[tuple[int, str]]:
-    """(line, id) for every `bondstone: ID[, ID…]` tag in a text."""
+    """(line, id) for every bondstone tag (comma-separated ids) in a text."""
     found = []
     for lineno, line in enumerate(text.splitlines(), 1):
         for m in CODE_TAG_RE.finditer(line):
@@ -398,6 +408,7 @@ def scan_tags(text: str) -> list[tuple[int, str]]:
     return found
 
 
+# bondstone: REQ-TRC-001, REQ-TRC-002, REQ-TRC-003
 def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
     settings = cfg.code_settings()
     include = as_list(settings.get("include"))
@@ -443,6 +454,7 @@ def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
 # =========================================================================== views
 
 
+# bondstone: REQ-VIE-003
 def check_views(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for view in cfg.views:
@@ -474,6 +486,7 @@ class Changes:
     deleted: set[str]
 
 
+# bondstone: REQ-DIF-004
 def changed_files(root: Path, base: str) -> Changes:
     out = _git(root, "diff", "--name-status", "-M", "--relative", base)
     files: set[str] = set()
@@ -493,6 +506,7 @@ def changed_files(root: Path, base: str) -> Changes:
     return Changes(files, renames, deleted)
 
 
+# bondstone: REQ-DIF-004
 def _base_version(cfg: Config, base: str, changes: Changes, node: Node) -> ParsedDoc | None:
     """The node's document at `base`, following renames and moved ids."""
     candidates = [node.path]
@@ -535,6 +549,7 @@ def glob_to_regex(pattern: str) -> re.Pattern[str]:
     return re.compile(out + r"\Z")
 
 
+# bondstone: REQ-DIF-001, REQ-DIF-002, REQ-DIF-003, REQ-DIF-005
 def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     try:
@@ -615,6 +630,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     return out
 
 
+# bondstone: REQ-DIF-006
 def _traced_documents(cfg: Config, graph: Graph, base: str, files: list[str]) -> dict[str, set[str]]:
     """Top-level documents referenced by tags in `files`, now or at `base` -> referencing files."""
     traced: dict[str, set[str]] = {}
@@ -639,6 +655,7 @@ def _traced_documents(cfg: Config, graph: Graph, base: str, files: list[str]) ->
 # =========================================================================== policy
 
 
+# bondstone: REQ-PRF-003, REQ-PRF-004
 def apply_policy(cfg: Config, diags: list[Diagnostic]) -> list[Diagnostic]:
     today = dt.date.today().isoformat()
     active_waivers = []

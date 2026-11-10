@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import string
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -31,18 +32,29 @@ def _git_user(root: Path) -> str:
         return ""
 
 
-def next_id(tdef_qname: str, id_format: str, graph: Graph, slug: str) -> str:
-    if "{slug" in id_format and "{n" not in id_format:
-        return id_format.format(slug=slug.upper() if id_format.isupper() else slug)
-    numbers = []
-    for node in graph.nodes:
-        if node.type == tdef_qname and node.id:
-            m = re.search(r"(\d+)\D*$", node.id)
-            if m:
-                numbers.append(int(m.group(1)))
-    return id_format.format(n=max(numbers, default=0) + 1, slug=slug)
+# bondstone: REQ-SCF-001
+def next_id(tdef_qname: str, id_format: str, graph: Graph, slug: str,
+            values: dict[str, Any] | None = None) -> str:
+    """Next id from `id_format`; `{n}` numbers, `{slug}` and any `--set` key fill placeholders."""
+    values = {k: str(v) for k, v in (values or {}).items()}
+    fields = {name for _, name, _, _ in string.Formatter().parse(id_format) if name}
+    missing = sorted(fields - {"n", "slug"} - set(values))
+    if missing:
+        raise BondstoneError(f"id_format '{id_format}' needs {', '.join(missing)}; "
+                             f"pass --set {missing[0]}=...")
+    n = 1
+    if "n" in fields:
+        numbers = []
+        for node in graph.nodes:
+            if node.type == tdef_qname and node.id:
+                m = re.search(r"(\d+)\D*$", node.id)
+                if m:
+                    numbers.append(int(m.group(1)))
+        n = max(numbers, default=0) + 1
+    return id_format.format(n=n, slug=slug, **{k: v for k, v in values.items() if k in fields})
 
 
+# bondstone: REQ-SCF-002, REQ-SCF-003
 def new_document(cfg: Config, graph: Graph, type_name: str, title: str,
                  sets: dict[str, Any]) -> Path:
     qname = type_name if ":" in type_name else next(
@@ -57,7 +69,7 @@ def new_document(cfg: Config, graph: Graph, type_name: str, title: str,
     id_format = spec.get("id_format")
     if not id_format:
         raise BondstoneError(f"{qname} has no id_format; cannot scaffold")
-    doc_id = str(sets.pop("id", None) or next_id(qname, id_format, graph, slug))
+    doc_id = str(sets.pop("id", None) or next_id(qname, id_format, graph, slug, sets))
 
     fm: dict[str, Any] = {"id": doc_id, "title": title}
     lifecycle = tdef.traits.get("lifecycle")
@@ -100,6 +112,7 @@ def new_document(cfg: Config, graph: Graph, type_name: str, title: str,
     return path
 
 
+# bondstone: REQ-SCF-005
 def init_profile(root: Path, packs: list[str], bridges: list[str]) -> Path:
     path = root / PROFILE_PATH
     if path.exists():
@@ -126,6 +139,7 @@ class SupersedeResult:
     skipped: list[str] = field(default_factory=list)
 
 
+# bondstone: REQ-SCF-004
 def supersede(cfg: Config, graph: Graph, old_id: str, title: str, sets: dict[str, Any],
               repoint: bool = True) -> SupersedeResult:
     """Create a successor of `old_id`, mark it superseded and move incoming links to it."""

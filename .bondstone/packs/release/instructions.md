@@ -1,0 +1,2 @@
+- Plan a release with `bondstone new release:Release --title "..." --set version=X.Y.Z`.
+- `CHANGELOG.md` is generated from releases and the proposals they include; never edit it.

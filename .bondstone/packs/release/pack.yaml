@@ -1,0 +1,43 @@
+id: release
+version: 0.1.0
+description: Releases and a generated changelog.
+
+types:
+  Release:
+    description: One published version.
+    id_format: "v{version}"
+    id_pattern: "^v\\d+\\.\\d+\\.\\d+$"
+    paths: ["docs/releases/*.md"]
+    dir: docs/releases
+    filename: "{id}.md"
+    fields:
+      title: {type: string, minLength: 3}
+      date: {type: string, format: date}
+      version: {type: string, pattern: "^\\d+\\.\\d+\\.\\d+$"}
+    required_fields: [title, version]
+    sections: [Highlights]
+    traits:
+      lifecycle:
+        statuses: [planned, released]
+        initial: planned
+        transitions: {planned: [released]}
+      immutable: {when: [released]}
+      indexed: {}
+
+rules:
+  - id: released-has-date
+    description: A released version records its release date.
+    when: {type: Release, status: released}
+    require:
+      - field: date
+
+views:
+  - id: changelog
+    title: Changelog
+    output: CHANGELOG.md
+    render: tree
+    select: {type: Release}
+    levels:
+      - {link: includes}
+
+instructions: instructions.md

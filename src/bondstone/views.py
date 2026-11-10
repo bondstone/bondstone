@@ -41,6 +41,7 @@ def _header(view: View) -> str:
     return f"{GENERATED_MARK} view={view.qid}; do not edit, run `bondstone gen` -->\n# {title}\n"
 
 
+# bondstone: REQ-VIE-001
 def render_table(cfg: Config, graph: Graph, view: View) -> str:
     spec = view.spec
     output = spec["output"]
@@ -80,6 +81,7 @@ def _children(cfg: Config, graph: Graph, node: Node, step: dict[str, Any]) -> li
     return unique
 
 
+# bondstone: REQ-VIE-002
 def render_tree(cfg: Config, graph: Graph, view: View) -> str:
     spec = view.spec
     output = spec["output"]
@@ -114,6 +116,7 @@ def render(cfg: Config, graph: Graph, view: View) -> str:
     return renderer(cfg, graph, view)
 
 
+# bondstone: REQ-VIE-004
 def generate(cfg: Config, graph: Graph) -> list[str]:
     written = []
     for view in cfg.views:

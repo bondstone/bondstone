@@ -12,6 +12,7 @@ KNOWN_TRAITS = {"lifecycle", "owned", "supersedable", "immutable", "code-traceab
 SELECTOR_KEYS = {"type", "role", "trait", "status", "where"}
 
 
+# bondstone: REQ-RUL-001
 def matches(cfg: Config, node: Node, selector: dict[str, Any] | None, context: str | None) -> bool:
     if not selector:
         return True

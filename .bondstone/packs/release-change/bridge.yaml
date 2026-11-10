@@ -1,0 +1,30 @@
+id: release-change
+version: 0.1.0
+description: Releases include implemented proposals.
+
+requires:
+  release: "^0.1"
+  change: "^0.1"
+
+links:
+  includes:
+    from: release:Release
+    to: change:Proposal
+    description: Proposals shipped in this release.
+
+rules:
+  - id: release-includes-only-implemented
+    description: Releases include only implemented proposals.
+    when: {type: release:Release}
+    require:
+      - link: includes
+        all: true
+        to: {status: implemented}
+
+  - id: implemented-proposal-is-released
+    description: Every implemented proposal is part of a (planned or published) release.
+    severity: warn
+    when: {type: change:Proposal, status: implemented}
+    require:
+      - incoming: includes
+        min: 1

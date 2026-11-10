@@ -18,6 +18,7 @@ def describe_rule(rule: Rule) -> str:
     return "".join(parts)
 
 
+# bondstone: REQ-AGT-002
 def explain_rule(cfg: Config, qid: str) -> str | None:
     rule = cfg.rule(qid)
     if rule is None:
@@ -34,6 +35,7 @@ def explain_rule(cfg: Config, qid: str) -> str | None:
     return "\n".join(lines)
 
 
+# bondstone: REQ-AGT-001
 def agent_instructions(cfg: Config) -> str:
     out = [HEADER, "# Documentation rules (bondstone)", ""]
     out.append(

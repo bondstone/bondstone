@@ -1,0 +1,25 @@
+id: change-adr
+version: 0.1.0
+description: Proposals reference the decisions they rely on.
+
+requires:
+  change: "^0.1"
+  adr: "^1"
+
+links:
+  decided_by:
+    from: change:Proposal
+    to: adr:Decision
+    description: Decisions this proposal depends on.
+
+roles:
+  decision: [adr:Decision]
+
+rules:
+  - id: implemented-proposal-has-accepted-decisions
+    description: A proposal is implemented only on accepted decisions.
+    when: {type: change:Proposal, status: implemented}
+    require:
+      - link: decided_by
+        all: true
+        to: {type: adr:Decision, status: accepted}

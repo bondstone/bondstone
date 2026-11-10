@@ -341,3 +341,15 @@ def test_traced_diff_rule_requires_the_tagged_spec(project):
     project.git("checkout", "-q", "--", ".")
     project.write("src/plain.py", "y = 2\n")
     assert project.rules(base="HEAD") == ["profile/code-needs-spec"]
+
+
+def test_id_format_uses_set_values(project):
+    from bondstone.graph import build_graph
+    from bondstone.model import BondstoneError
+    from bondstone.scaffold import next_id
+
+    project.profile(packs=["adr@1"])
+    graph = build_graph(load_config(project.root))
+    assert next_id("x:Release", "v{version}", graph, "s", {"version": "0.2.0"}) == "v0.2.0"
+    with pytest.raises(BondstoneError, match="pass --set version"):
+        next_id("x:Release", "v{version}", graph, "s", {})

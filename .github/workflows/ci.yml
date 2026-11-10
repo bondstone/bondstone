@@ -17,3 +17,16 @@ jobs:
       - run: pytest -q
       - run: bondstone pack test src/bondstone/library/packs/* src/bondstone/library/bridges/*
       - run: bondstone --root examples/habit-tracker check
+      - run: bondstone pack test .bondstone/packs/*
+      - name: bondstone check (self-hosted docs)
+        run: bondstone check
+      - name: bondstone check against the previous state
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: |
+          git fetch --depth=1 origin ${{ github.event.before }}
+          bondstone check --base ${{ github.event.before }}
+      - name: bondstone check against the PR base
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --depth=1 origin ${{ github.base_ref }}
+          bondstone check --base origin/${{ github.base_ref }}

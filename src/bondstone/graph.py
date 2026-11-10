@@ -49,6 +49,7 @@ def view_outputs(cfg: Config) -> set[str]:
     return {v.spec["output"] for v in cfg.views if v.spec.get("output")}
 
 
+# bondstone: REQ-GRA-001, REQ-VIE-004
 def build_graph(cfg: Config) -> Graph:
     graph = Graph()
     root = cfg.root
@@ -116,6 +117,7 @@ def build_graph(cfg: Config) -> Graph:
     return graph
 
 
+# bondstone: REQ-GRA-004
 def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedDoc) -> None:
     fm = doc.frontmatter or {}
     node = Node(
@@ -148,6 +150,7 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
     _add_items(cfg, graph, node, doc)
 
 
+# bondstone: REQ-GRA-003
 def _add_items(cfg: Config, graph: Graph, parent: Node, doc: ParsedDoc) -> None:
     tdef = cfg.types[parent.type]
     spec = tdef.spec.get("items")

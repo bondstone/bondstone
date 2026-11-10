@@ -1,0 +1,39 @@
+id: change-capability
+version: 0.1.0
+description: Proposals modify capabilities and deliver requirements into the living spec.
+
+requires:
+  change: "^0.1"
+  capability: "^1"
+
+links:
+  modifies:
+    from: change:Proposal
+    to: capability:Capability
+    description: Capability specs this proposal changes.
+  delivers:
+    from: change:Proposal
+    to: capability:Requirement
+    description: Requirements (in the living spec) this proposal added or changed.
+
+roles:
+  change: [change:Proposal]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: accepted-proposal-names-capabilities
+    description: Accepted behaviour changes name the capability specs they modify.
+    when: {type: change:Proposal, status: [accepted, implemented], where: {kind: [feature, fix, breaking]}}
+    require:
+      - link: modifies
+        min: 1
+
+  - id: implemented-proposal-delivers-requirements
+    description: An implemented feature points at the requirements it delivered in the living spec.
+    when: {type: change:Proposal, status: implemented, where: {kind: [feature, breaking]}}
+    require:
+      - link: delivers
+        min: 1
+    hint: "Add the requirement to the capability spec, then `delivers: [REQ-...]`."
+
+instructions: instructions.md

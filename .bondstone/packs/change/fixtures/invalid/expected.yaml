@@ -1,0 +1,6 @@
+errors:
+- bondstone/field-invalid
+- bondstone/field-invalid
+- bondstone/id-format
+- change/breaking-change-has-migration
+warnings: []

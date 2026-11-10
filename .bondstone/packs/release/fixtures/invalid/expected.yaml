@@ -1,0 +1,5 @@
+errors:
+- bondstone/field-invalid
+- bondstone/id-format
+- release/released-has-date
+warnings: []

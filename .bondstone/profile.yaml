@@ -1,0 +1,27 @@
+# bondstone documents itself. See docs/self-hosting.md.
+bondstone: 0.1
+packs: [adr@1, capability@1, change@0.1, release@0.1]
+bridges: [adr-capability@1, change-capability@0.1, change-adr@0.1, release-change@0.1]
+sources: [.bondstone/packs]
+scan: ["docs/**/*.md"]
+defaults:
+  owner: dworek
+code:
+  include: ["src/bondstone/**/*.py"]
+
+rules:
+  - id: source-change-updates-traced-spec
+    description: Changes to bondstone's source update the capability specs the changed code implements.
+    on_change: {paths: ["src/bondstone/**/*.py"]}
+    require:
+      - changed: {role: living-spec}
+        traced: true
+        min: 1
+
+  - id: source-change-has-proposal
+    description: Changes to bondstone's source or library come with a change proposal.
+    severity: warn
+    on_change: {paths: ["src/bondstone/**/*.py", "src/bondstone/library/**"]}
+    require:
+      - changed: {role: change}
+        min: 1
