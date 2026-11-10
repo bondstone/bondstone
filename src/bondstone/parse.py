@@ -52,6 +52,7 @@ class ItemScan:
 # --------------------------------------------------------------------------- documents
 
 
+# bondstone: REQ-GRA-001
 def parse_document(text: str) -> ParsedDoc:
     """Split a document into frontmatter and body.
 
@@ -109,6 +110,7 @@ def _code_flags(lines: list[str]) -> list[bool]:
     return flags
 
 
+# bondstone: REQ-GRA-001
 def find_headings(lines: list[str], first_line: int) -> list[Heading]:
     """ATX headings (`## Title`) outside fenced code blocks."""
     headings = []
@@ -142,6 +144,7 @@ def _inside_section(headings: list[Heading], index: int, section: str | None) ->
     return False
 
 
+# bondstone: REQ-GRA-005, REQ-TRC-006
 def find_items(doc: ParsedDoc, level: int, pattern: re.Pattern[str], section: str | None) -> ItemScan:
     """The items of a document: headings at `level` under `section` whose text matches `pattern`.
 

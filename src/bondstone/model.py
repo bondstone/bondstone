@@ -41,6 +41,7 @@ class EnvironmentProblem(BondstoneError):
 # --------------------------------------------------------------------------- diagnostics
 
 
+# bondstone: REQ-CLI-006
 @dataclass
 class Diagnostic:
     rule: str

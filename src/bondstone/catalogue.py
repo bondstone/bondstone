@@ -27,6 +27,7 @@ def _rule(name: str, severity: str, fires: str, why: str, fix: str, **extra) -> 
     return EngineRule(f"bondstone/{name}", severity, fires, why, fix, **extra)
 
 
+# bondstone: REQ-RUL-005
 ENGINE_RULES: tuple[EngineRule, ...] = (
     _rule("profile", ERROR,
           "The profile, a pack or a bridge is invalid: a manifest that breaks its schema, a pack "
@@ -148,7 +149,7 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A cycle has no current document.",
           "Break the cycle."),
     _rule("code-ref-unknown", ERROR,
-          "A code tag `bondstone: ID` refers to an id that does not exist.",
+          "A code tag `bondstone: <id>` refers to an id that does not exist.",
           "A tag for something the documentation does not contain is stale traceability.",
           "Fix or remove the tag."),
     _rule("code-ref-not-traceable", ERROR,
@@ -159,7 +160,7 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A code-traceable node is not tagged anywhere in code. With `when`, only nodes in the "
           "listed statuses are checked.",
           "An untagged requirement may be unimplemented, or its code cannot be found.",
-          "Add a `bondstone: ID` comment above the implementing code.",
+          "Add a `bondstone: <id>` comment above the implementing code.",
           note="The severity comes from the trait's `coverage` setting."),
     _rule("tag-retired", WARN,
           "A code tag refers to a node whose status is listed in its type's `code-traceable.retired`.",
@@ -226,6 +227,7 @@ def default_severity(rule_id: str) -> str:
     return BY_ID[rule_id].severity
 
 
+# bondstone: REQ-RUL-005
 def diagnostic(rule_id: str, message: str, path: str | None = None, line: int | None = None,
                node: str | None = None, hint: str | None = None, severity: str | None = None,
                fix: dict[str, Any] | None = None) -> Diagnostic:

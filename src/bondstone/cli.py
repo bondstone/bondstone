@@ -23,6 +23,7 @@ from .views import generate
 EXIT_OK, EXIT_VIOLATIONS, EXIT_CONFIG, EXIT_ENVIRONMENT = 0, 1, 2, 3
 
 
+# bondstone: REQ-PRF-003
 def _root(args: argparse.Namespace) -> Path:
     if args.root is None:
         return find_root(Path.cwd())
@@ -32,6 +33,7 @@ def _root(args: argparse.Namespace) -> Path:
     return root.resolve()
 
 
+# bondstone: REQ-PRF-010, REQ-CLI-007
 def _config(args: argparse.Namespace, fmt: str = "text") -> Config | None:
     """The configuration, or None after reporting configuration errors (exit code 2)."""
     cfg = load_config(_root(args))
@@ -42,6 +44,7 @@ def _config(args: argparse.Namespace, fmt: str = "text") -> Config | None:
     return cfg
 
 
+# bondstone: REQ-CLI-001
 def cmd_check(args: argparse.Namespace) -> int:
     cfg = _config(args, args.format)
     if cfg is None:
@@ -53,6 +56,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     return EXIT_VIOLATIONS if fails(diagnostics, args.fail_on) else EXIT_OK
 
 
+# bondstone: REQ-CLI-002
 def cmd_gen(args: argparse.Namespace) -> int:
     cfg = _config(args)
     if cfg is None:
@@ -65,6 +69,7 @@ def cmd_gen(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# bondstone: REQ-CLI-004
 def cmd_baseline(args: argparse.Namespace) -> int:
     cfg = _config(args)
     if cfg is None:
@@ -74,6 +79,7 @@ def cmd_baseline(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# bondstone: REQ-CLI-003
 def cmd_profile_check(args: argparse.Namespace) -> int:
     cfg = load_config(_root(args))
     if cfg.errors:
@@ -124,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# bondstone: REQ-CLI-007
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:

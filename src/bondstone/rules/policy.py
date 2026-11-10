@@ -11,6 +11,7 @@ from ..config import Config
 from ..model import CONFIG_RULE, IGNORE, PROFILE_PATH, Diagnostic
 
 
+# bondstone: REQ-PRF-007, REQ-PRF-008
 def apply_policy(cfg: Config, diagnostics: list[Diagnostic], today: dt.date | None = None) -> list[Diagnostic]:
     """Effective severities, then waivers; what remains is sorted by location.
 
@@ -66,6 +67,7 @@ def _subject(waiver: dict[str, Any]) -> str:
     return f"{waiver['rule']} ({waiver.get('node') or 'all nodes'})"
 
 
+# bondstone: REQ-PRF-008
 def _active_waivers(cfg: Config, today: dt.date) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
     active: list[dict[str, Any]] = []
     problems: list[Diagnostic] = []

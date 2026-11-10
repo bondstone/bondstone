@@ -56,6 +56,7 @@ class ChangeSet:
         self.deleted = sorted(c.path for c in self.changes if c.kind == DELETED)
 
 
+# bondstone: REQ-DIF-002, REQ-DIF-012
 def check_changes(cfg: Config, graph: Graph, repo: Repository, base_ref: str,
                   exemptions: bool = True) -> list[Diagnostic]:
     """Lifecycle, immutability and diff-rule diagnostics for the changes since `base_ref`."""
@@ -171,6 +172,7 @@ def _text(value: Any) -> str | None:
     return str(value) if value is not None else None
 
 
+# bondstone: REQ-DIF-005
 def _item_statuses(cfg: Config, parent: Node, old: ParsedDoc) -> dict[str, str | None]:
     """The status every item had in an earlier version of its document."""
     items = cfg.types[parent.type].items
@@ -262,6 +264,7 @@ def _check_diff_rules(cfg: Config, graph: Graph, repo: Repository, changes: Chan
     return out
 
 
+# bondstone: REQ-DIF-008
 def _evaluate(cfg: Config, graph: Graph, repo: Repository, changes: ChangeSet, rule: Rule,
               triggering: list[Change], changed_nodes: list[Node]) -> list[Diagnostic]:
     out: list[Diagnostic] = []

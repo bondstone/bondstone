@@ -1,0 +1,29 @@
+# Bondstone documents itself: decisions and living capability specs, traced to the code.
+# The packs come from the example until the library package exists (ADR-012).
+bondstone: 1
+packs: [adr@1, capability@1]
+bridges: [adr-capability@1]
+sources: [examples/habit-tracker/.bondstone/packs]
+docs: ["docs/adr/**/*.md", "docs/capabilities/**/*.md"]
+code:
+  include: ["src/bondstone/**/*.py"]
+
+rules:
+  - id: source-change-updates-traced-spec
+    description: A change to bondstone's source updates the capability specs the changed code implements.
+    on_change: {paths: ["src/bondstone/**/*.py"]}
+    require:
+      - changed: {role: living-spec}
+        traced: true
+    exempt: {trailer: Spec-Impact}
+    hint: 'Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed.'
+
+waivers:
+  # Accepted decisions that no capability applies yet, because the phase that builds them has not started.
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-004, reason: "Presets arrive in phase 4.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-006, reason: "Known violations arrive in phase 5.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-007, reason: "The speckit pack and its delivers links arrive in phase 4.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-010, reason: "Matrix views and link columns arrive in phase 4.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-011, reason: "Git sources and the lock file arrive in phase 5.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-013, reason: "The Spec Kit adapter arrives in phase 4.", expires: 2027-06-30}
+  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-014, reason: "Portfolio links come after v1.", expires: 2027-06-30}

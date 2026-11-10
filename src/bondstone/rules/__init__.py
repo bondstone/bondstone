@@ -20,6 +20,7 @@ from .policy import apply_policy
 __all__ = ["apply_policy", "fails", "run_check"]
 
 
+# bondstone: REQ-CLI-001
 def run_check(cfg: Config, graph: Graph, today: dt.date | None = None, *, repo: Repository | None = None,
               base: str | None = None, exemptions: bool = True) -> list[Diagnostic]:
     """Every diagnostic for a repository, after overrides and waivers.
@@ -38,6 +39,7 @@ def run_check(cfg: Config, graph: Graph, today: dt.date | None = None, *, repo: 
     return apply_policy(cfg, diagnostics, today)
 
 
+# bondstone: REQ-CLI-007
 def fails(diagnostics: list[Diagnostic], fail_on: str = ERROR) -> bool:
     """Whether a run fails: on errors, and on warnings too with `--fail-on warn`."""
     levels = {ERROR} if fail_on == ERROR else {ERROR, WARN}

@@ -52,6 +52,7 @@ def range_is_valid(spec: str) -> bool:
     return bool(terms) and all(_TERM.fullmatch(term) for term in terms)
 
 
+# bondstone: REQ-PRF-004
 def version_matches(version: str, spec: str | None) -> bool:
     """Whether a version satisfies a range.
 
@@ -83,6 +84,7 @@ def parse_ref(ref: str) -> tuple[str, str | None]:
 # --------------------------------------------------------------------------- root
 
 
+# bondstone: REQ-PRF-003
 def find_root(start: Path) -> Path:
     """The nearest folder at or above `start` that holds `.bondstone/profile.yaml`."""
     start = start.resolve()
@@ -146,6 +148,7 @@ def _problem(message: str, path: str = PROFILE_PATH) -> Diagnostic:
     return Diagnostic(CONFIG_RULE, ERROR, message, path=path)
 
 
+# bondstone: REQ-PRF-004
 def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
     """Load the profile and every pack and bridge it names from the local sources.
 
@@ -189,6 +192,7 @@ def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
     return result
 
 
+# bondstone: REQ-PRF-004
 def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], kind: str,
             cid: str, spec: str | None) -> Component | None:
     if spec is not None and not range_is_valid(spec):
@@ -230,6 +234,7 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
     return Component(kind, cid, data["version"], chosen.dir, shown, data)
 
 
+# bondstone: REQ-PRF-005
 def _check_requirements(result: Resolution) -> None:
     """Every bridge's required packs are in the profile, in a version the bridge accepts."""
     packs = {c.id: c for c in result.components if c.kind == "pack"}

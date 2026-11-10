@@ -16,6 +16,7 @@ from ..select import describe, items, matches, sources, targets
 _PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
+# bondstone: REQ-RUL-002
 def check_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """Evaluate every node and existence rule. Diff rules need a base commit and are skipped."""
     out: list[Diagnostic] = []
@@ -33,6 +34,7 @@ def check_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
     return out
 
 
+# bondstone: REQ-RUL-009
 def rule_diagnostic(rule: Rule, detail: str, node: Node | None, path: str | None = None) -> Diagnostic:
     """A violation of a declared rule; `{id}` in the hint and the fix stands for the node's id."""
     node_id = node.id if node else None
@@ -53,6 +55,7 @@ def rule_diagnostic(rule: Rule, detail: str, node: Node | None, path: str | None
 # --------------------------------------------------------------------------- clauses
 
 
+# bondstone: REQ-RUL-002, REQ-TRC-007
 def clause_failure(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> str | None:
     """Why a clause does not hold for a node, or None when it holds."""
     context = rule.context_pack
@@ -106,6 +109,7 @@ def _render(template: str, values: dict[str, Any]) -> str | None:
     return _PLACEHOLDER.sub(lambda match: str(values[match.group(1)]), template)
 
 
+# bondstone: REQ-RUL-004
 def _file_field(cfg: Config, node: Node, spec: dict[str, Any]) -> str | None:
     """A value in a YAML or JSON file equals a field of the node (`equals`) or a literal (`value`)."""
     values = {**node.fields, "id": node.id, "dir": posixpath.dirname(node.path)}
@@ -136,6 +140,7 @@ def _file_field(cfg: Config, node: Node, spec: dict[str, Any]) -> str | None:
 # --------------------------------------------------------------------------- existence rules
 
 
+# bondstone: REQ-RUL-003
 def _existence(cfg: Config, graph: Graph, rule: Rule) -> list[Diagnostic]:
     """Every file matching `for_each.glob` has a document at `for_each.document`."""
     spec = rule.spec["for_each"]

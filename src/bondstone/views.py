@@ -45,6 +45,7 @@ def _cell(node: Node, column: str, output: str) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
+# bondstone: REQ-VIE-005
 def _header(view: View) -> list[str]:
     lines = [f"{GENERATED_MARK} view={view.qid}; do not edit, run `bondstone gen` -->\n"
              f"# {view.spec.get('title', view.qid)}\n"]
@@ -59,6 +60,7 @@ def _selected(cfg: Config, graph: Graph, view: View) -> list[Node]:
     return sorted(nodes, key=lambda n: ([natural_key(_value(n, key)) for key in keys], natural_key(n.id)))
 
 
+# bondstone: REQ-VIE-001
 def render_table(cfg: Config, graph: Graph, view: View) -> str:
     """One row per selected node."""
     columns = view.spec.get("columns") or DEFAULT_COLUMNS
@@ -83,6 +85,7 @@ def _children(cfg: Config, graph: Graph, node: Node, level: dict[str, str]) -> l
     return sorted(unique.values(), key=lambda child: natural_key(child.id))
 
 
+# bondstone: REQ-VIE-002
 def render_tree(cfg: Config, graph: Graph, view: View) -> str:
     """The selected nodes as roots, and below each the nodes reached level by level."""
     levels = view.spec.get("levels") or []
@@ -110,6 +113,7 @@ def render(cfg: Config, graph: Graph, view: View) -> str:
     return RENDERERS[view.spec.get("render", "table")](cfg, graph, view)
 
 
+# bondstone: REQ-VIE-003, REQ-VIE-004
 def stale_views(cfg: Config, graph: Graph) -> list[tuple[View, str]]:
     """Views whose file is missing or differs from what would be generated, with the new content."""
     stale = []
@@ -125,6 +129,7 @@ def stale_views(cfg: Config, graph: Graph) -> list[tuple[View, str]]:
     return stale
 
 
+# bondstone: REQ-VIE-003
 def generate(cfg: Config, graph: Graph) -> list[str]:
     """Write every stale view; returns the paths written."""
     written = []
@@ -136,6 +141,7 @@ def generate(cfg: Config, graph: Graph) -> list[str]:
     return written
 
 
+# bondstone: REQ-VIE-004
 def check_views(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """`bondstone/view-stale` for every view that `bondstone gen` would rewrite."""
     return [

@@ -91,6 +91,7 @@ def template_problem(template: str) -> str | None:
     return None
 
 
+# bondstone: REQ-GRA-002
 def id_regex(template: str, values: dict[str, Any] | None = None) -> str:
     """The pattern an id must match in full, derived from its template.
 
@@ -114,6 +115,7 @@ def id_regex(template: str, values: dict[str, Any] | None = None) -> str:
     return "^" + out + re.escape(template[position:]) + "$"
 
 
+# bondstone: REQ-GRA-002
 def path_glob(template: str) -> str:
     """The glob that finds a type's documents: `docs/adr/{id}-{slug}.md` gives `docs/adr/*.md`."""
     segments = []
@@ -193,6 +195,7 @@ class Config:
     def rule(self, qid: str) -> Rule | None:
         return next((r for r in self.rules if r.qid == qid), None)
 
+    # bondstone: REQ-PRF-007
     def severity(self, qid: str, default: str) -> str:
         """A rule's effective severity: its default unless the profile overrides it."""
         return self.overrides.get(qid, default)
@@ -215,6 +218,7 @@ class Config:
             return None, f"link name '{key}' is ambiguous ({names}); use the qualified name"
         return (found[0], None) if found else (None, None)
 
+    # bondstone: REQ-GRA-008, REQ-RUL-006
     def schema_for(self, type_qname: str) -> dict[str, Any]:
         """The JSON Schema of a document type's frontmatter fields."""
         tdef = self.types[type_qname]
@@ -236,6 +240,7 @@ class Config:
         }
 
 
+# bondstone: REQ-PRF-006, REQ-PRF-010
 def load_config(root: Path, extra_sources: list[Path] | None = None) -> Config:
     """The effective configuration of a repository, with every problem found on the way.
 
@@ -259,6 +264,7 @@ def load_config(root: Path, extra_sources: list[Path] | None = None) -> Config:
     return cfg
 
 
+# bondstone: REQ-PRF-006
 class _Builder:
     def __init__(self, cfg: Config):
         self.cfg = cfg
@@ -619,6 +625,7 @@ class _Builder:
 
     # ----------------------------------------------------------------------- overrides
 
+    # bondstone: REQ-PRF-007
     def overrides(self) -> None:
         cfg = self.cfg
         for qid, severity in (cfg.profile.get("overrides") or {}).items():
@@ -643,6 +650,7 @@ class _Builder:
 
     # ----------------------------------------------------------------------- bridges
 
+    # bondstone: REQ-PRF-009
     def unbridged_packs(self) -> None:
         """Warn when the packs fall into groups that no bridge connects."""
         cfg = self.cfg

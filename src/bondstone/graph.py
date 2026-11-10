@@ -29,6 +29,7 @@ class Graph:
     code_tags: list[CodeTag] = field(default_factory=list)
     code_regions: list[CodeRegion] = field(default_factory=list)
 
+    # bondstone: REQ-GRA-006
     def index(self) -> None:
         """Rebuild the id lookup and the incoming-link index from the nodes."""
         self.by_id = {}
@@ -58,6 +59,7 @@ def glob_files(root: os.PathLike[str] | str, pattern: str) -> list[str]:
 # --------------------------------------------------------------------------- documents
 
 
+# bondstone: REQ-GRA-004, REQ-VIE-005
 def build_graph(cfg: Config) -> Graph:
     graph = Graph()
     typed: dict[str, list[str]] = {}  # path -> types whose path matches
@@ -91,6 +93,7 @@ def build_graph(cfg: Config) -> Graph:
     return graph
 
 
+# bondstone: REQ-GRA-003, REQ-GRA-004
 def _document_type(cfg: Config, graph: Graph, path: str, doc: ParsedDoc, candidates: list[str]) -> str | None:
     """The type to load a document as, or None when it cannot be loaded.
 
@@ -143,6 +146,7 @@ def _document_type(cfg: Config, graph: Graph, path: str, doc: ParsedDoc, candida
     return declared
 
 
+# bondstone: REQ-GRA-006
 def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedDoc) -> None:
     frontmatter = doc.frontmatter or {}
     node = Node(
@@ -167,6 +171,7 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
     _add_items(cfg, graph, node, doc)
 
 
+# bondstone: REQ-GRA-005, REQ-TRC-006
 def _add_items(cfg: Config, graph: Graph, parent: Node, doc: ParsedDoc) -> None:
     items = cfg.types[parent.type].items
     if items is None:
@@ -198,8 +203,9 @@ def _add_items(cfg: Config, graph: Graph, parent: Node, doc: ParsedDoc) -> None:
 # --------------------------------------------------------------------------- code
 
 
+# bondstone: REQ-TRC-001
 def scan_tags(text: str) -> list[tuple[int, str]]:
-    """(line, id) for every `bondstone: ID` tag in a text; one tag may list several ids."""
+    """(line, id) for every `bondstone: <id>` tag in a text; one tag may list several ids."""
     found = []
     for number, line in enumerate(text.splitlines(), 1):
         for match in TAG_RE.finditer(line):
@@ -211,6 +217,7 @@ def _indent(line: str) -> int:
     return len(line) - len(line.lstrip())
 
 
+# bondstone: REQ-TRC-002
 def tag_regions(text: str) -> list[tuple[str, int, int]]:
     """(id, first line, last line) of the code each tag annotates.
 
@@ -252,6 +259,7 @@ def tag_regions(text: str) -> list[tuple[str, int, int]]:
     return regions
 
 
+# bondstone: REQ-TRC-001
 def code_files(cfg: Config) -> list[str]:
     excluded = {path for pattern in cfg.code_exclude for path in glob_files(cfg.root, pattern)}
     files: list[str] = []
@@ -262,6 +270,7 @@ def code_files(cfg: Config) -> list[str]:
     return files
 
 
+# bondstone: REQ-TRC-001
 def _scan_code(cfg: Config, graph: Graph) -> None:
     for path in code_files(cfg):
         try:
