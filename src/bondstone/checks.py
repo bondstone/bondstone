@@ -25,7 +25,7 @@ from .select import (
 from .views import render
 
 TODO_RE = re.compile(r"<!--\s*todo\b", re.I)
-CODE_TAG_RE = re.compile(r"bondstone:\s*([A-Za-z][\w-]*(?:\s*,\s*[A-Za-z][\w-]*)*)")
+CODE_TAG_RE = re.compile(r"\bbondstone:[ \t]+([A-Z][\w-]*(?:[ \t]*,[ \t]*[A-Z][\w-]*)*)")
 
 
 # =========================================================================== entry point
@@ -184,9 +184,10 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
         if node.parent is None and TODO_RE.search(node.body):
             lifecycle = tdef.traits.get("lifecycle") or {}
             draft = node.status is not None and node.status == lifecycle.get("initial")
+            todo_line = node.body_line + node.body[: TODO_RE.search(node.body).start()].count("\n")
             out.append(Diagnostic("bondstone/todo-left", WARN if draft else ERROR,
                                   "document still contains template placeholders (<!-- todo: ... -->)",
-                                  node.path, None, node.id,
+                                  node.path, todo_line, node.id,
                                   hint="Replace every `<!-- todo: ... -->` marker with real content."))
 
         present = node.heading_titles()
