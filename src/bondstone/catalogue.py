@@ -1,0 +1,194 @@
+"""The catalogue of engine rules: every `bondstone/...` diagnostic the engine can emit.
+
+Engine checks are rules like any other. Each has a default severity that a profile may
+override, down to `ignore`. The one exception is `bondstone/profile`: the checker cannot run
+on an invalid configuration, so it always stops the run with exit code 2."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .model import ERROR, WARN
+
+
+@dataclass(frozen=True)
+class EngineRule:
+    id: str
+    severity: str  # default severity
+    fires: str  # when the rule reports
+    why: str
+    fix: str
+    overridable: bool = True
+    note: str = ""  # how the severity varies, when it does
+
+
+def _rule(name: str, severity: str, fires: str, why: str, fix: str, **extra) -> EngineRule:
+    return EngineRule(f"bondstone/{name}", severity, fires, why, fix, **extra)
+
+
+ENGINE_RULES: tuple[EngineRule, ...] = (
+    _rule("profile", ERROR,
+          "The profile, a pack or a bridge is invalid: a manifest that breaks its schema, a pack "
+          "that is not found or whose version does not match, a bridge whose required packs are "
+          "missing, unknown types, links, roles or rule ids, or an override that loosens a locked rule.",
+          "Checks are only meaningful when the rules themselves are consistent.",
+          "Read the message; `bondstone profile check` lists only these problems.",
+          overridable=False, note="Stops the run with exit code 2 and cannot be overridden or waived."),
+    _rule("unbridged-packs", WARN,
+          "The profile's packs form groups that no bridge connects.",
+          "Unconnected packs produce islands of documents that nothing links together.",
+          "Add a bridge that requires packs from both groups, or remove a pack you do not use."),
+    _rule("parse-error", ERROR,
+          "A document cannot be read: it is not UTF-8, or its frontmatter is not closed, is not "
+          "valid YAML or is not a mapping.",
+          "Nothing else can be checked for an unreadable document.",
+          "Fix the YAML between the `---` lines."),
+    _rule("frontmatter-missing", ERROR,
+          "A file at a type's path has no frontmatter.",
+          "Files in typed folders are expected to be documents.",
+          "Add a frontmatter block with `id` and `type`."),
+    _rule("untyped-document", ERROR,
+          "A file under the profile's `docs` globs is at no type's path.",
+          "Managed folders hold only documents that bondstone can check.",
+          "Move the file to a type's path, or narrow `docs` in the profile."),
+    _rule("type-missing", ERROR,
+          "A document's frontmatter has no `type`.",
+          "Every document states its type, so a reader and a tool can tell what it is without "
+          "knowing the folder layout.",
+          "Add `type: <pack>:<Type>` to the frontmatter; the hint names the type its path implies."),
+    _rule("unknown-type", ERROR,
+          "A document declares a `type` that no active pack defines.",
+          "The type decides every other check.",
+          "Use a qualified type of an active pack, such as `adr:Decision`, or add the pack to the profile."),
+    _rule("type-mismatch", ERROR,
+          "A document declares a `type` whose path it does not live at.",
+          "A type's documents are found by their path; elsewhere they are easy to miss.",
+          "Move the file to the type's path, or correct `type`."),
+    _rule("type-ambiguous", ERROR,
+          "A file is at the path of several types and declares none of them.",
+          "Bondstone cannot tell which rules apply.",
+          "Add `type` to the frontmatter."),
+    _rule("link-ambiguous", ERROR,
+          "A frontmatter key matches link names from several packs or bridges.",
+          "The link could point to different kinds of documents.",
+          "Use the qualified name, such as `adr-capability:constrained_by`."),
+    _rule("item-heading", ERROR,
+          "A heading at the item level inside the item section does not look like an item, such "
+          "as a level-3 heading under `## Requirements` that is not `REQ-...: title`.",
+          "Malformed items would silently not be checked or traced.",
+          "Rename the heading to match the item heading, or change its level."),
+    _rule("id-missing", ERROR,
+          "A document has no `id`.",
+          "Links, tags and views all refer to ids.",
+          "Add `id` following the type's id template."),
+    _rule("id-format", ERROR,
+          "An id does not match its type's id template.",
+          "Consistent ids keep links and code tags readable and unambiguous.",
+          "Rename the id and update the links to it."),
+    _rule("id-duplicate", ERROR,
+          "Two documents or items use the same id.",
+          "Links and tags would be ambiguous.",
+          "Give one of them a new id."),
+    _rule("field-missing", ERROR,
+          "A required field is missing from the frontmatter.",
+          "Required fields are part of the type's contract.",
+          "Add the field."),
+    _rule("field-unknown", ERROR,
+          "A frontmatter key is neither a field nor a link of the document's type.",
+          "Unknown keys are usually typos of links, which would otherwise be silently ignored.",
+          "Use one of the fields or links listed in the hint."),
+    _rule("field-invalid", ERROR,
+          "A field value does not match the type's schema, such as an unknown status or a malformed date.",
+          "Values outside the schema break views, rules and lifecycles.",
+          "Use a value the schema allows."),
+    _rule("todo-left", ERROR,
+          "A document still contains a `<!-- todo: ... -->` placeholder outside code.",
+          "Scaffolded placeholders must not survive into decided or published documents.",
+          "Replace every placeholder with real content.",
+          note="A warning while the document is in its lifecycle's initial status, an error afterwards."),
+    _rule("section-missing", ERROR,
+          "A document lacks a section its type requires.",
+          "Required sections carry the information the method depends on.",
+          "Add the heading (any level)."),
+    _rule("link-broken", ERROR,
+          "A link points to an id that does not exist.",
+          "Broken links are exactly the drift bondstone exists to prevent.",
+          "Fix the id or create the missing document."),
+    _rule("link-type", ERROR,
+          "A link points to a node of a type the link does not allow.",
+          "Typed links keep relations meaningful.",
+          "Point the link at a node of an allowed type."),
+    _rule("link-self", ERROR,
+          "A document links to itself.",
+          "Self-links carry no information and usually come from a copy-paste mistake.",
+          "Remove or correct the link."),
+    _rule("link-min", ERROR,
+          "A document has fewer links of a kind than the link requires.",
+          "Some relations are mandatory, such as an opportunity serving an outcome.",
+          "Add the links named in the message."),
+    _rule("link-max", ERROR,
+          "A document has more links of a kind than the link allows.",
+          "Some relations are singular, such as a decision superseding at most one decision.",
+          "Remove the extra links."),
+    _rule("supersede-status", ERROR,
+          "A document is superseded by another but its status is not `superseded`.",
+          "Readers must see that a document no longer applies.",
+          "Set `status: superseded`."),
+    _rule("supersede-multiple", ERROR,
+          "A document is superseded by more than one document.",
+          "Supersession must form a single chain.",
+          "Supersede the newest document instead."),
+    _rule("supersede-orphan", WARN,
+          "A document has the status `superseded` but nothing supersedes it.",
+          "Readers cannot find what replaced it.",
+          "Add the supersede link to its successor, or change its status."),
+    _rule("supersede-cycle", ERROR,
+          "Supersede links form a cycle.",
+          "A cycle has no current document.",
+          "Break the cycle."),
+    _rule("code-ref-unknown", ERROR,
+          "A code tag `bondstone: ID` refers to an id that does not exist.",
+          "A tag for something the documentation does not contain is stale traceability.",
+          "Fix or remove the tag."),
+    _rule("code-ref-not-traceable", ERROR,
+          "A code tag refers to a node whose type is not code-traceable.",
+          "Only some types, such as requirements, describe behaviour that code implements.",
+          "Tag a code-traceable node instead, such as the requirement rather than its document."),
+    _rule("code-coverage", WARN,
+          "A code-traceable node is not tagged anywhere in code. With `when`, only nodes in the "
+          "listed statuses are checked.",
+          "An untagged requirement may be unimplemented, or its code cannot be found.",
+          "Add a `bondstone: ID` comment above the implementing code.",
+          note="The severity comes from the trait's `coverage` setting."),
+    _rule("tag-retired", WARN,
+          "A code tag refers to a node whose status is listed in its type's `code-traceable.retired`.",
+          "The code claims to implement something the documentation no longer contains.",
+          "Remove the tag, or the code if it is no longer needed."),
+    _rule("view-stale", ERROR,
+          "A generated view is missing or differs from what `bondstone gen` would write.",
+          "Committed views must match the documents they are generated from.",
+          "Run `bondstone gen` and commit the result."),
+    _rule("waiver-invalid", ERROR,
+          "A waiver has no `rule`, `reason` or `expires`, names a rule that does not exist, or "
+          "names a locked rule.",
+          "Every exception is explained and temporary, and locked rules allow none.",
+          "Complete or remove the waiver."),
+    _rule("waiver-expired", ERROR,
+          "A waiver's `expires` date has passed.",
+          "Exceptions are temporary by design.",
+          "Fix the waived problem and remove the waiver, or renew it with a reason."),
+    _rule("waiver-unused", WARN,
+          "A waiver matches no diagnostic.",
+          "Unused waivers hide future problems.",
+          "Remove the waiver."),
+)
+
+BY_ID: dict[str, EngineRule] = {rule.id: rule for rule in ENGINE_RULES}
+
+
+def engine_rule(rule_id: str) -> EngineRule | None:
+    return BY_ID.get(rule_id)
+
+
+def default_severity(rule_id: str) -> str:
+    return BY_ID[rule_id].severity
