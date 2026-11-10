@@ -1,3 +1,4 @@
+# bondstone: REQ-LIB-003
 id: capability
 version: 1.0.0
 description: Living capability specs - what the system does today - with requirements and scenarios.

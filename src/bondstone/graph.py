@@ -12,7 +12,8 @@ from .model import ERROR, PART_OF, Diagnostic, LinkRef, Node
 from .parser import ParsedDoc, parse_document
 
 GENERATED_MARK = "<!-- bondstone:generated"
-CODE_TAG_RE = re.compile(r"\bbondstone:[ \t]+([A-Z][\w-]*(?:[ \t]*,[ \t]*[A-Z][\w-]*)*)")
+_TAG_ID = r"[A-Z](?:[\w-]*\w)?(?![\w-]|\.\w)"  # complete id: no trailing hyphen, not followed by more id characters
+CODE_TAG_RE = re.compile(rf"\bbondstone:[ \t]+({_TAG_ID}(?:[ \t]*,[ \t]*{_TAG_ID})*)")
 RESERVED = {"id", "type"}
 
 

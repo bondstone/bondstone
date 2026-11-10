@@ -1,7 +1,7 @@
 ---
 id: CHG-007
 title: Document every built-in pack and bridge (self-hosting phase 3)
-status: draft
+status: accepted
 owner: dworek
 kind: docs
 ---

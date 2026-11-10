@@ -461,3 +461,11 @@ def test_tag_regions_end_with_the_tagged_block():
     assert tag_regions(py) == [("A-1", 1, 6), ("B-1", 14, 16)]
     js = "// bondstone: J-1\nfunction f() {\n  return 1;\n}\n\nfunction g() {}\n"
     assert tag_regions(js) == [("J-1", 1, 4)]
+
+
+def test_incomplete_ids_are_not_tags():
+    from bondstone.graph import scan_tags
+
+    assert scan_tags("hint: tag it with `bondstone: REQ-...`") == []
+    assert scan_tags("# bondstone: REQ-AA-001, CLI-pack-test.") == [(1, "REQ-AA-001"), (1, "CLI-pack-test")]
+    assert scan_tags("# bondstone: A") == [(1, "A")]

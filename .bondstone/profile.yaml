@@ -8,7 +8,7 @@ scan: ["docs/**/*.md"]
 defaults:
   owner: dworek
 code:
-  include: ["src/bondstone/**/*.py"]
+  include: ["src/bondstone/**/*.py", "src/bondstone/library/*/*/*.yaml", ".bondstone/packs/*/*.yaml"]
 
 rules:
   - id: source-change-updates-traced-spec

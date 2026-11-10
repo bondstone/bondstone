@@ -16,11 +16,17 @@ Connect code to the documents it implements with tags in comments.
 
 ### REQ-TRC-001: Recognise tags
 
-Bondstone SHALL read `bondstone: ID[, ID…]` tags, with whitespace after the colon and ids starting with an uppercase letter, from the files in `code.include` minus `code.exclude`.
+Bondstone SHALL read `bondstone: ID[, ID…]` tags, with whitespace after the colon and complete ids (starting with an uppercase letter, not ending with a hyphen, and not followed by more id characters), from the files in `code.include` minus `code.exclude`.
 
 #### Scenario: String literal is not a tag
 
 - Given code containing `"bondstone:part_of"`
+- When check runs
+- Then no tag is read
+
+#### Scenario: Placeholder in a hint
+
+- Given a manifest hint mentioning `bondstone: REQ-...`
 - When check runs
 - Then no tag is read
 

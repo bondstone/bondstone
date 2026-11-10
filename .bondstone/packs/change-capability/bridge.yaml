@@ -1,3 +1,4 @@
+# bondstone: REQ-LIB-006
 id: change-capability
 version: 0.2.0
 description: Proposals modify capabilities and deliver requirements into the living spec.

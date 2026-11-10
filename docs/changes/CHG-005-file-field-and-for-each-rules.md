@@ -1,7 +1,7 @@
 ---
 id: CHG-005
 title: File-field and for-each rules
-status: draft
+status: accepted
 owner: dworek
 kind: feature
 modifies:

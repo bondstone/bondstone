@@ -21,6 +21,12 @@
 | [REQ-GRA-004](../capabilities/graph.md#req-gra-004-resolve-links-by-name) | Resolve links by name | CAP-graph |
 | [REQ-GRA-005](../capabilities/graph.md#req-gra-005-validate-link-targets) | Validate link targets | CAP-graph |
 | [REQ-GRA-006](../capabilities/graph.md#req-gra-006-enforce-unique-and-well-formed-ids) | Enforce unique and well-formed ids | CAP-graph |
+| [REQ-LIB-001](../capabilities/built-in-library.md#req-lib-001-decision-records) | Decision records | CAP-built-in-library |
+| [REQ-LIB-002](../capabilities/built-in-library.md#req-lib-002-product-discovery) | Product discovery | CAP-built-in-library |
+| [REQ-LIB-003](../capabilities/built-in-library.md#req-lib-003-living-capability-specs) | Living capability specs | CAP-built-in-library |
+| [REQ-LIB-004](../capabilities/built-in-library.md#req-lib-004-change-proposals) | Change proposals | CAP-built-in-library |
+| [REQ-LIB-005](../capabilities/built-in-library.md#req-lib-005-releases-and-changelog) | Releases and changelog | CAP-built-in-library |
+| [REQ-LIB-006](../capabilities/built-in-library.md#req-lib-006-bridges-between-built-in-packs) | Bridges between built-in packs | CAP-built-in-library |
 | [REQ-PKT-001](../capabilities/pack-testing.md#req-pkt-001-run-fixtures) | Run fixtures | CAP-pack-testing |
 | [REQ-PKT-002](../capabilities/pack-testing.md#req-pkt-002-test-the-local-version) | Test the local version | CAP-pack-testing |
 | [REQ-PRF-001](../capabilities/profiles.md#req-prf-001-resolve-packs-and-bridges-by-version) | Resolve packs and bridges by version | CAP-profiles |

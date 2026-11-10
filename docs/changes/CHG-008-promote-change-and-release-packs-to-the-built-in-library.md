@@ -1,9 +1,11 @@
 ---
 id: CHG-008
 title: Promote change and release packs to the built-in library
-status: draft
+status: accepted
 owner: dworek
 kind: feature
+modifies:
+- CAP-built-in-library
 ---
 
 ## Why

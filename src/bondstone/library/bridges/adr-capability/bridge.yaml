@@ -1,3 +1,4 @@
+# bondstone: REQ-LIB-006
 id: adr-capability
 version: 1.0.0
 description: Connects capability specs to the decisions that constrain them.
