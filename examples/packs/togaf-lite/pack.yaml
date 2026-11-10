@@ -1,0 +1,230 @@
+pack: togaf-lite
+version: 0.1.0
+bondstone: ">=0.1"
+description: A small subset of TOGAF for teams - principles, architecture requirements, building blocks, work packages.
+requires:
+  adr: "^1.0"
+
+types:
+  principle:
+    description: A lasting rule that guides architecture choices.
+    path: "docs/architecture/principles/{id}-{slug}.md"
+    id: "PRIN-{seq:2}"
+    frontmatter:
+      required: [title, owner]
+      properties:
+        title: {type: string, minLength: 5}
+        owner: {type: string}
+    sections:
+      - heading: Statement
+      - heading: Rationale
+        min_words: 15
+      - heading: Implications
+    extra_sections: forbid
+    lifecycle:
+      field: status
+      initial: draft
+      transitions:
+        draft: [approved]
+        approved: [retired]
+
+  requirement:
+    description: An architecture requirement - functional, quality or constraint.
+    path: "docs/architecture/requirements/{id}-{slug}.md"
+    id: "AREQ-{seq:3}"
+    frontmatter:
+      required: [title, owner, kind, priority]
+      properties:
+        title: {type: string, minLength: 5}
+        owner: {type: string}
+        kind: {enum: [functional, quality, constraint]}
+        priority: {enum: [must, should, could]}
+    sections:
+      - heading: Statement
+      - heading: Fit criterion
+        min_words: 8
+    extra_sections: allow
+    lifecycle:
+      field: status
+      initial: draft
+      transitions:
+        draft: [approved, withdrawn]
+        approved: [satisfied, withdrawn]
+        satisfied: [approved]
+
+  building-block:
+    description: A component of the architecture. Architecture blocks say what is needed; solution blocks say what is built.
+    path: "docs/architecture/building-blocks/{slug}.md"
+    id: "BB-{slug}"
+    frontmatter:
+      required: [title, owner, kind, layer]
+      properties:
+        title: {type: string, minLength: 3}
+        owner: {type: string}
+        kind: {enum: [architecture, solution]}
+        layer: {enum: [business, data, application, technology]}
+        code:
+          type: array
+          items: {type: string}
+    sections:
+      - heading: Responsibility
+        min_words: 10
+      - heading: Interfaces
+      - heading: Operational notes
+        optional: true
+    extra_sections: allow
+    lifecycle:
+      field: status
+      initial: planned
+      transitions:
+        planned: [live, cancelled]
+        live: [retiring]
+        retiring: [retired]
+    anchors: {field: code, tag: "@block"}
+
+  work-package:
+    description: A unit of change that delivers or alters building blocks.
+    path: "docs/architecture/work-packages/{id}-{slug}.md"
+    id: "WP-{seq:3}"
+    frontmatter:
+      required: [title, owner]
+      properties:
+        title: {type: string, minLength: 5}
+        owner: {type: string}
+        target_date: {type: string, format: date}
+    sections:
+      - heading: Scope
+        min_words: 10
+      - heading: Expected result
+    extra_sections: allow
+    lifecycle:
+      field: status
+      initial: planned
+      transitions:
+        planned: [in-progress, cancelled]
+        in-progress: [done, cancelled]
+      frozen: [done]
+
+links:
+  motivated_by:
+    description: The principles this requirement follows from.
+    from: requirement
+    to: principle
+    inverse: motivates
+  satisfies:
+    description: The requirements this building block satisfies.
+    from: building-block
+    to: requirement
+    inverse: satisfied_by
+  depends_on:
+    description: Building blocks this one needs at run time.
+    from: building-block
+    to: building-block
+    inverse: used_by
+  realizes:
+    description: The architecture block this solution block implements.
+    from: building-block
+    to: building-block
+    max: 1
+    inverse: realized_by
+    acyclic: true
+  delivers:
+    description: The building blocks this work package creates or changes.
+    from: work-package
+    to: building-block
+    min: 1
+    inverse: delivered_by
+  affects:
+    description: The building blocks a decision applies to.
+    from: adr/decision
+    to: building-block
+    inverse: decided_by
+
+rules:
+  - id: approved-requirement-is-motivated
+    description: An approved requirement traces to at least one principle.
+    severity: warn
+    select: {type: requirement, where: {status: [approved, satisfied]}}
+    require:
+      outgoing: {link: motivated_by, min: 1, where: {status: approved}}
+    fix: "Add `motivated_by: [PRIN-NN]` to the frontmatter."
+
+  - id: satisfied-requirement-has-live-block
+    description: A requirement marked satisfied is satisfied by a live building block.
+    severity: error
+    select: {type: requirement, where: {status: satisfied}}
+    require:
+      incoming: {link: satisfies, min: 1, where: {status: live}}
+    fix: "Link a live building block with `satisfies: [{id}]`, or move the requirement back to approved."
+
+  - id: live-solution-block-is-anchored
+    description: A live solution block points at the code that implements it.
+    severity: error
+    select: {type: building-block, where: {kind: solution, status: live}}
+    require:
+      anchors: {min: 1}
+    fix: "Add a `code:` list of globs to the frontmatter."
+
+  - id: live-block-has-decision
+    description: A live building block is backed by at least one accepted decision.
+    severity: warn
+    select: {type: building-block, where: {status: live}}
+    require:
+      incoming: {link: affects, min: 1, where: {status: accepted}}
+    fix: "bondstone new adr/decision --title '...' --link affects={id}"
+
+  - id: code-change-updates-block
+    description: Changing code updates the building block that code is anchored to.
+    severity: error
+    on_change: {paths: ["services/**", "libs/**"]}
+    require:
+      touched: {type: building-block, anchored: true, min: 1}
+    unless:
+      trailer: "Arch-Impact: none"
+    fix: "Update the building block doc, or add the commit trailer 'Arch-Impact: none (<reason>)'."
+
+  - id: new-block-needs-decision
+    description: Introducing a building block comes with a decision record.
+    severity: warn
+    on_change:
+      paths: ["docs/architecture/building-blocks/*.md"]
+      change: [added]
+    require:
+      touched: {type: adr/decision, min: 1}
+    fix: "bondstone new adr/decision --title '...' --link affects=<new block id>"
+
+views:
+  - id: principles
+    title: Architecture principles
+    output: docs/architecture/principles/README.md
+    layout: table
+    select: {type: principle}
+    columns: [id, title, status, owner]
+    sort: [id]
+
+  - id: building-blocks
+    title: Building block catalogue
+    output: docs/architecture/building-blocks/README.md
+    layout: table
+    select: {type: building-block}
+    columns: [id, title, kind, layer, status, owner, depends_on, decided_by]
+    sort: [layer, title]
+
+  - id: requirements-traceability
+    title: Requirements traceability
+    output: docs/architecture/traceability.md
+    layout: matrix
+    rows: {type: requirement, where: {status: [approved, satisfied]}}
+    cols: {type: building-block}
+    via: [satisfied_by]
+
+profiles:
+  solo:
+    approved-requirement-is-motivated: ignore
+    live-block-has-decision: advisory
+    new-block-needs-decision: advisory
+  team: {}
+  organisation:
+    approved-requirement-is-motivated: error
+    live-block-has-decision: error
+    new-block-needs-decision: error

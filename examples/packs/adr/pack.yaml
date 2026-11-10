@@ -1,0 +1,79 @@
+pack: adr
+version: 1.0.0
+bondstone: ">=0.1"
+description: Architecture decision records with supersession and immutability.
+
+types:
+  decision:
+    description: One architecture decision and the reasoning behind it.
+    path: "docs/adr/{id}-{slug}.md"
+    id: "ADR-{seq:4}"
+    frontmatter:
+      required: [title, date]
+      properties:
+        title: {type: string, minLength: 5}
+        date: {type: string, format: date}
+        deciders: {type: array, items: {type: string}}
+    sections:
+      - heading: Context
+        min_words: 15
+      - heading: Decision
+        min_words: 5
+      - heading: Alternatives considered
+      - heading: Consequences
+      - heading: Notes
+        optional: true
+    extra_sections: forbid
+    lifecycle:
+      field: status
+      initial: proposed
+      transitions:
+        proposed: [accepted, rejected]
+        accepted: [superseded, deprecated]
+      frozen: [accepted, rejected, superseded, deprecated]
+    template: templates/decision.md
+
+links:
+  supersedes:
+    description: The decision this one replaces.
+    from: decision
+    to: decision
+    max: 1
+    inverse: superseded_by
+    acyclic: true
+
+rules:
+  - id: superseded-has-successor
+    description: A superseded decision names the decision that replaced it.
+    severity: error
+    select: {type: decision, where: {status: superseded}}
+    require:
+      incoming: {link: supersedes, min: 1}
+    fix: "bondstone supersede {id} --title '<title of the new decision>'"
+
+  - id: decision-states-alternatives
+    description: An accepted decision describes the options that were rejected.
+    severity: error
+    select: {type: decision, where: {status: accepted}}
+    require:
+      sections:
+        - heading: Alternatives considered
+          min_words: 20
+    fix: "Describe at least one rejected option and why it lost."
+
+views:
+  - id: decision-log
+    title: Decision log
+    output: docs/adr/README.md
+    layout: table
+    select: {type: decision}
+    columns: [id, title, status, date, superseded_by]
+    sort: [id]
+
+profiles:
+  solo:
+    decision-states-alternatives: warn
+  team: {}
+
+agent:
+  guidance: agent.md

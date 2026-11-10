@@ -1,0 +1,146 @@
+pack: solo-app
+version: 0.1.0
+bondstone: ">=0.1"
+description: Minimal living documentation for a one-person app - capability specs, one architecture overview, decisions.
+requires:
+  adr: "^1.0"
+
+types:
+  capability:
+    description: The living spec of one thing the app can do, with its requirements.
+    path: "docs/capabilities/{slug}.md"
+    id: "CAP-{slug}"
+    frontmatter:
+      required: [title, key]
+      properties:
+        title: {type: string, minLength: 3}
+        key:
+          description: Short code used in requirement ids, for example REM.
+          type: string
+          pattern: "^[A-Z]{2,5}$"
+        code:
+          description: Globs of the code that implements this capability.
+          type: array
+          items: {type: string}
+    sections:
+      - heading: Purpose
+        min_words: 10
+      - heading: Requirements
+      - heading: Out of scope
+        optional: true
+    extra_sections: allow
+    lifecycle:
+      field: status
+      initial: planned
+      transitions:
+        planned: [live, dropped]
+        live: [retired]
+    anchors: {field: code, tag: "@spec"}
+    items:
+      requirement:
+        heading: "### {id}: {title}"
+        id: "REQ-{key}-{seq:3}"
+
+  architecture:
+    description: The single architecture overview of the app.
+    path: "docs/architecture.md"
+    id: "ARCH"
+    frontmatter:
+      required: [title]
+      properties:
+        title: {type: string}
+    sections:
+      - heading: Overview
+        min_words: 30
+      - heading: Components
+      - heading: Data and storage
+      - heading: External services
+    extra_sections: allow
+
+links:
+  constrained_by:
+    description: Decisions that shape this capability or the architecture.
+    from: [capability, architecture]
+    to: adr/decision
+    inverse: constrains
+
+rules:
+  - id: live-capability-is-anchored
+    description: A live capability points at the code that implements it.
+    severity: error
+    select: {type: capability, where: {status: live}}
+    require:
+      anchors: {min: 1}
+    fix: "Add a `code:` list of globs to the frontmatter."
+
+  - id: live-capability-has-requirements
+    description: A live capability states at least one requirement.
+    severity: error
+    select: {type: capability, where: {status: live}}
+    require:
+      items: {type: requirement, min: 1}
+    fix: "Add a '### REQ-{key}-001: <title>' heading under Requirements."
+
+  - id: requirement-is-tagged
+    description: Every requirement of a live capability is referenced from code.
+    severity: warn
+    select: {type: requirement, where: {parent: {status: live}}}
+    require:
+      tagged: {min: 1}
+    fix: "Add a comment '@spec {id}' next to the code that implements it."
+
+  - id: requirement-has-test
+    description: Every requirement of a live capability is referenced from a test.
+    severity: warn
+    select: {type: requirement, where: {parent: {status: live}}}
+    require:
+      tagged: {min: 1, in: ["test/**"]}
+    fix: "Add a comment '@spec {id}' to the test that verifies it."
+
+  - id: code-change-updates-capability
+    description: Changing code updates the capability spec that code is anchored to.
+    severity: error
+    on_change: {paths: ["lib/**"]}
+    require:
+      touched: {type: capability, anchored: true, min: 1}
+    unless:
+      trailer: "Spec-Impact: none"
+    fix: "Update the capability doc, or add the commit trailer 'Spec-Impact: none (<reason>)'."
+
+  - id: dependency-change-needs-decision
+    description: Adding or replacing a dependency comes with a decision record.
+    severity: warn
+    on_change: {paths: ["pubspec.yaml", "package.json", "Podfile", "build.gradle*"]}
+    require:
+      touched: {type: adr/decision, min: 1}
+    unless:
+      trailer: "Decision: none"
+    fix: "bondstone new adr/decision --title '<what was chosen>', or add the commit trailer 'Decision: none (<reason>)'."
+
+views:
+  - id: capability-map
+    title: Capabilities
+    output: docs/capabilities/README.md
+    layout: table
+    select: {type: capability}
+    columns: [id, title, status, constrained_by]
+    sort: [title]
+
+  - id: requirements
+    title: Requirements
+    output: docs/requirements.md
+    layout: table
+    select: {type: requirement}
+    columns: [id, title, parent]
+    sort: [id]
+
+profiles:
+  solo:
+    requirement-has-test: ignore
+  team:
+    requirement-is-tagged: error
+    requirement-has-test: error
+    dependency-change-needs-decision: error
+
+agent:
+  guidance: agent.md

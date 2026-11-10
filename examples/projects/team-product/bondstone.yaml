@@ -1,0 +1,23 @@
+# A product team: Opportunity Solution Tree for discovery, TOGAF-lite for
+# architecture, and the ost-togaf bridge for the hand-off between them.
+bondstone: 1
+profile: team
+packs:
+  - source: ../../packs/adr
+  - source: ../../packs/ost
+  - source: ../../packs/togaf-lite
+  - source: ../../packs/ost-togaf
+docs: ["docs/**/*.md"]
+code: ["services/**", "libs/**"]
+
+overrides:
+  ost/targeted-opportunity-compares-solutions: error
+  togaf-lite/live-block-has-decision: error
+
+waivers:
+  - rule: togaf-lite/live-solution-block-is-anchored
+    target: BB-payments-gateway
+    reason: The gateway is a vendor service; there is no code of ours to anchor to yet.
+    expires: 2027-03-31
+
+baseline: .bondstone/baseline.json

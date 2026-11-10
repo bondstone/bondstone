@@ -1,0 +1,54 @@
+# A bridge: no document types of its own, only the hand-off from discovery (ost)
+# to architecture (togaf-lite). Neither of those packs knows about the other.
+pack: ost-togaf
+version: 0.1.0
+bondstone: ">=0.1"
+description: Connects Opportunity Solution Tree discovery to TOGAF-lite architecture requirements.
+requires:
+  ost: "^0.1"
+  togaf-lite: "^0.1"
+
+links:
+  specified_by:
+    description: The architecture requirements that specify what this solution needs.
+    from: ost/solution
+    to: togaf-lite/requirement
+    inverse: specifies
+
+rules:
+  - id: selected-solution-is-specified
+    description: A selected or delivered solution is specified by at least one architecture requirement.
+    severity: error
+    select: {type: ost/solution, where: {status: [selected, delivered]}}
+    require:
+      outgoing: {link: specified_by, min: 1}
+    fix: "bondstone new togaf-lite/requirement --title '...', then add `specified_by: [AREQ-NNN]` to {id}."
+
+  - id: delivered-solution-is-satisfied
+    description: A delivered solution has at least one of its requirements satisfied.
+    severity: warn
+    select: {type: ost/solution, where: {status: delivered}}
+    require:
+      outgoing: {link: specified_by, min: 1, where: {status: satisfied}}
+    fix: "Move the solution back to selected, or finish the requirements it depends on."
+
+  - id: functional-requirement-traces-to-discovery
+    description: A functional requirement comes from a solution found in discovery.
+    severity: warn
+    select: {type: togaf-lite/requirement, where: {kind: functional, status: [approved, satisfied]}}
+    require:
+      incoming: {link: specified_by, min: 1}
+    fix: "Add `specified_by: [{id}]` to the solution this requirement came from."
+
+views:
+  - id: outcome-to-building-block
+    title: From outcomes to building blocks
+    output: docs/traceability.md
+    layout: tree
+    select: {type: ost/outcome}
+    follow: [ost/served_by, ost/addressed_by, specified_by, togaf-lite/satisfied_by]
+
+profiles:
+  solo:
+    functional-requirement-traces-to-discovery: ignore
+  team: {}
