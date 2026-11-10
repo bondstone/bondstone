@@ -1,0 +1,4 @@
+errors:
+- release-change/release-includes-only-implemented
+warnings:
+- release-change/implemented-proposal-is-released

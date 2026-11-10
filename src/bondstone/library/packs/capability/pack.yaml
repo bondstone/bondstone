@@ -1,0 +1,88 @@
+# bondstone: REQ-LIB-003
+id: capability
+version: 1.0.0
+description: Living capability specs - what the system does today - with requirements and scenarios.
+
+types:
+  Capability:
+    description: >-
+      The living specification of one capability. It describes current behaviour and is
+      updated whenever that behaviour changes.
+    id_format: "CAP-{slug}"
+    id_pattern: "^CAP-[a-z0-9]+(-[a-z0-9]+)*$"
+    paths: ["docs/capabilities/*.md"]
+    dir: docs/capabilities
+    filename: "{slug}.md"
+    template: templates/capability.md
+    fields:
+      title: {type: string, minLength: 3}
+      code: {type: string, pattern: "^[A-Z][A-Z0-9]{1,9}$", description: "short code used in requirement ids"}
+    required_fields: [title, code]
+    sections: [Purpose, Requirements]
+    items:
+      type: Requirement
+      heading_level: 3
+      section: Requirements
+      pattern: "^(?P<id>REQ-[A-Z0-9]+-\\d{3}):\\s*(?P<title>.+)$"
+    traits:
+      lifecycle:
+        statuses: [draft, active, deprecated]
+        initial: draft
+        transitions:
+          draft: [active, deprecated]
+          active: [deprecated]
+      owned: {}
+      indexed: {}
+
+  Requirement:
+    description: >-
+      One requirement inside a capability, written as a level-3 heading
+      `### REQ-<CODE>-001: <title>` under `## Requirements`, with SHALL/MUST wording and
+      at least one `#### Scenario:`.
+    embedded: true
+    id_pattern: "^REQ-[A-Z0-9]+-\\d{3}$"
+    traits:
+      code-traceable: {coverage: warn}
+      indexed: {}
+
+links:
+  depends_on:
+    from: Capability
+    to: Capability
+    description: Capabilities this one relies on.
+
+rules:
+  - id: requirement-has-scenario
+    description: Every requirement has at least one scenario.
+    when: {type: Requirement}
+    require:
+      - contains: "(?m)^####\\s+Scenario:"
+    hint: "Add '#### Scenario: <name>' with Given/When/Then lines."
+
+  - id: requirement-uses-normative-language
+    description: Requirements use SHALL or MUST.
+    when: {type: Requirement}
+    require:
+      - contains: "\\b(SHALL|MUST)\\b"
+
+  - id: active-capability-has-requirements
+    description: An active capability lists at least one requirement.
+    when: {type: Capability, status: active}
+    require:
+      - contains: "(?m)^###\\s+REQ-"
+
+views:
+  - id: index
+    title: Capabilities
+    output: docs/generated/capabilities.md
+    render: table
+    select: {type: Capability}
+    columns: [id, title, status, owner]
+  - id: requirements
+    title: Requirements
+    output: docs/generated/requirements.md
+    render: table
+    select: {type: Requirement}
+    columns: [id, title, parent]
+
+instructions: instructions.md

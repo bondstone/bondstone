@@ -1,0 +1,160 @@
+# bondstone: REQ-LIB-002
+id: ost
+version: 1.0.0
+description: Opportunity Solution Tree for continuous product discovery (outcomes, opportunities, solutions, experiments).
+
+types:
+  Outcome:
+    description: A measurable outcome the product team is trying to move.
+    id_format: "OUT-{n}"
+    id_pattern: "^OUT-\\d+$"
+    paths: ["docs/discovery/outcomes/*.md"]
+    dir: docs/discovery/outcomes
+    filename: "{id}-{slug}.md"
+    template: templates/outcome.md
+    fields:
+      title: {type: string, minLength: 3}
+      metric: {type: string, minLength: 3}
+      target: {type: string}
+    required_fields: [title, metric]
+    sections: [Why it matters]
+    traits:
+      lifecycle:
+        statuses: [active, achieved, dropped]
+        initial: active
+        transitions: {active: [achieved, dropped]}
+      owned: {}
+      indexed: {}
+
+  Opportunity:
+    description: A customer need, pain point or desire, phrased from the customer's perspective.
+    id_format: "OPP-{n}"
+    id_pattern: "^OPP-\\d+$"
+    paths: ["docs/discovery/opportunities/*.md"]
+    dir: docs/discovery/opportunities
+    filename: "{id}-{slug}.md"
+    template: templates/opportunity.md
+    fields:
+      title: {type: string, minLength: 3}
+      evidence: {type: array, items: {type: string}}
+    required_fields: [title]
+    sections: [Customer need]
+    traits:
+      lifecycle:
+        statuses: [open, pursuing, parked, closed]
+        initial: open
+        transitions:
+          open: [pursuing, parked, closed]
+          pursuing: [parked, closed]
+          parked: [open, pursuing, closed]
+      indexed: {}
+
+  Solution:
+    description: An idea that could address an opportunity.
+    id_format: "SOL-{n}"
+    id_pattern: "^SOL-\\d+$"
+    paths: ["docs/discovery/solutions/*.md"]
+    dir: docs/discovery/solutions
+    filename: "{id}-{slug}.md"
+    template: templates/solution.md
+    fields:
+      title: {type: string, minLength: 3}
+    required_fields: [title]
+    sections: [Idea, Assumptions]
+    traits:
+      lifecycle:
+        statuses: [idea, testing, committed, discarded]
+        initial: idea
+        transitions:
+          idea: [testing, committed, discarded]
+          testing: [committed, discarded, idea]
+          committed: [discarded]
+      indexed: {}
+
+  Experiment:
+    description: An assumption test for a solution.
+    id_format: "EXP-{n}"
+    id_pattern: "^EXP-\\d+$"
+    paths: ["docs/discovery/experiments/*.md"]
+    dir: docs/discovery/experiments
+    filename: "{id}-{slug}.md"
+    template: templates/experiment.md
+    fields:
+      title: {type: string, minLength: 3}
+      assumption: {type: string, minLength: 3}
+      success_criteria: {type: string, minLength: 3}
+    required_fields: [title, assumption, success_criteria]
+    sections: [Method]
+    traits:
+      lifecycle:
+        statuses: [planned, running, concluded, abandoned]
+        initial: planned
+        transitions:
+          planned: [running, abandoned]
+          running: [concluded, abandoned]
+      indexed: {}
+
+links:
+  serves:
+    from: Opportunity
+    to: [Outcome, Opportunity]
+    min: 1
+    max: 1
+    description: The outcome (or parent opportunity) this opportunity contributes to.
+  addresses:
+    from: Solution
+    to: Opportunity
+    min: 1
+    description: Opportunities this solution addresses.
+  tests:
+    from: Experiment
+    to: Solution
+    min: 1
+    max: 1
+    description: The solution whose assumption this experiment tests.
+
+rules:
+  - id: concluded-experiment-has-result
+    description: A concluded experiment records its result and whether it met the success criteria.
+    when: {type: Experiment, status: concluded}
+    require:
+      - section: Result
+    hint: Add a "## Result" section.
+
+  - id: committed-solution-has-evidence
+    description: A committed solution is backed by at least one concluded experiment.
+    severity: warn
+    when: {type: Solution, status: committed}
+    require:
+      - incoming: tests
+        from: {type: Experiment, status: concluded}
+        min: 1
+
+  - id: active-outcome-has-opportunities
+    description: An active outcome has at least one opportunity mapped under it.
+    severity: warn
+    when: {type: Outcome, status: active}
+    require:
+      - incoming: serves
+        min: 1
+
+  - id: no-solutions-for-closed-opportunities
+    description: Solutions in flight only address open or pursued opportunities.
+    when: {type: Solution, status: [idea, testing]}
+    require:
+      - link: addresses
+        all: true
+        to: {status: [open, pursuing]}
+
+views:
+  - id: tree
+    title: Opportunity solution tree
+    output: docs/generated/opportunity-solution-tree.md
+    render: tree
+    select: {type: Outcome}
+    levels:
+      - {incoming: serves}
+      - {incoming: addresses}
+      - {incoming: tests}
+
+instructions: instructions.md

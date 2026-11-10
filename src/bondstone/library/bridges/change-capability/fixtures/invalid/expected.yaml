@@ -1,0 +1,7 @@
+errors:
+- bondstone/link-broken
+- change-capability/accepted-proposal-names-capabilities
+- change-capability/delivered-requirements-are-implemented
+- change-capability/implemented-proposal-delivers-requirements
+- change-capability/implemented-proposal-delivers-requirements
+warnings: []

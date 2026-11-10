@@ -1,60 +1,127 @@
 # bondstone
 
-A CLI that keeps a repository's living documentation true to a set of rules stored in
-the repository itself. Coding agents run it to check their own work; git hooks and CI
+**Living documentation, enforced.** Bondstone checks a repository's decisions,
+capability specs, discovery artifacts and architecture docs against rules that live in
+the repository itself. Coding agents run it to validate their own work; git hooks and CI
 run it as a gate.
 
-> **Status: design sketch.** This branch contains the proposed file formats, the CLI
-> surface and worked examples. There is no implementation here yet.
+> Status: proof of concept (`POC` branch). See [docs/design.md](docs/design.md).
 
-## The problem
+## Why
 
-Spec-driven tools (Spec Kit, BMAD, OpenSpec, ...) produce good per-change artifacts, but:
+- Spec-driven tools leave per-change artifacts behind but no **living doc** of what is
+  true today.
+- Links and required content between documents are conventions nobody checks.
 
-- nothing forces the **living docs** (decision log, capability specs, architecture) to
-  be updated when a change lands, and
-- the **format of documents and the links between them** are conventions nobody checks.
+Bondstone turns both into deterministic checks.
 
-## The idea
+## How it works
 
 | Concept | What it is |
 |---|---|
-| **Pack** | A versioned set of rules for one method: document types, links, lifecycles, rules, generated views, templates and agent guidance. |
-| **Bridge** | A pack that defines no document types of its own and only connects the types of other packs. |
-| **Project file** | `bondstone.yaml`: which packs a repository uses, the severity profile, overrides and waivers. |
-| **Graph** | Every document and embedded item is a node with a stable id; links are typed edges. All rules run on the graph. |
-| **State rule** | Checked against the repository as it is now. |
-| **Change rule** | Checked against a diff (`--base`): "this kind of change must come with that kind of doc update". |
-| **View** | A generated document (index, tree, matrix). Never written by hand or by an agent. |
+| **Pack** | One method: document types, fields, sections, links, lifecycles, rules, views, templates, agent guidance (`adr`, `ost`, `capability`, …) |
+| **Bridge** | Everything that connects two or more packs: cross-pack links, hand-off rules, cross-pack views, role assignments. Packs never know about each other. |
+| **Profile** | `.bondstone/profile.yaml`: which packs and bridges a repository uses, plus overrides, waivers and repository rules |
+| **Trait** | Engine-defined behaviour a type opts into: `lifecycle`, `owned`, `supersedable`, `immutable`, `code-traceable`, `indexed` |
+| **Role** | A name (`living-spec`, `decision`, …) mapped to types by bridges or the profile, so generic rules work across packs |
+| **View** | Generated Markdown (indexes, trees) that `check` keeps in sync |
 
-Bondstone does not run a workflow. Spec Kit, BMAD or a human decide *how* work is
-done; bondstone decides whether the result is acceptable.
+There is no shared ontology: packs stay independent, traits give mechanical behaviour,
+and bridges or profiles give meaning.
 
-## Contents
+## Install
 
-| Path | What |
-|---|---|
-| [docs/rule-pack-format.md](docs/rule-pack-format.md) | The pack and project file formats |
-| [docs/cli.md](docs/cli.md) | Commands, output formats, exit codes |
-| [docs/adapters.md](docs/adapters.md) | Constraining Spec Kit and BMAD, agent hooks |
-| [schema/](schema/) | JSON Schemas for `pack.yaml` and `bondstone.yaml` |
-| [examples/packs/](examples/packs/) | `adr`, `solo-app`, `ost`, `togaf-lite`, `ost-togaf` (a bridge) |
-| [examples/projects/](examples/projects/) | A solo mobile app, and a team using OST discovery with TOGAF-lite architecture |
+```bash
+uv tool install git+https://github.com/bondstone/bondstone@POC
+# or: pip install git+https://github.com/bondstone/bondstone@POC
+```
 
-## What a run looks like
+## Quick start
+
+```bash
+bondstone packs                                   # built-in packs and bridges
+bondstone init --packs adr@1,ost@1,capability@1 \
+               --bridges ost-capability@1,adr-capability@1
+bondstone new adr:Decision --title "Store habits locally with SQLite"
+bondstone new capability:Capability --title "Reminders" --set code=REM
+bondstone supersede ADR-001 --title "Store habits with Drift"
+bondstone gen                                     # regenerate views
+bondstone check                                   # validate everything
+bondstone check --base origin/main --format json  # + lifecycle, immutability, diff rules
+bondstone agent --output AGENTS.bondstone.md      # instructions for coding agents
+```
+
+A complete example lives in [`examples/habit-tracker`](examples/habit-tracker): a solo
+mobile app using Opportunity Solution Tree discovery, living capability specs and ADRs.
 
 ```text
-$ bondstone check --base origin/main
-docs/adr/ADR-0003-use-sqlite.md:4  error  core/frozen-edited
-    ADR-0003 is 'accepted'; only its status may change.
-    fix: bondstone new adr/decision --link supersedes=ADR-0003
-lib/reminders/scheduler.dart      error  solo-app/code-change-updates-capability
-    Code anchored to CAP-reminders changed, but CAP-reminders did not.
-    fix: update docs/capabilities/reminders.md, or add the commit trailer
-         "Spec-Impact: none (<reason>)"
-docs/adr/README.md                error  core/view-stale
-    fix: bondstone render
-3 errors, 0 warnings
+$ bondstone check --base HEAD
+app/lib/habits.dart:10: error bondstone/code-ref-unknown: code references unknown id 'REQ-HAB-009'
+docs/adr/ADR-002-store-habits-locally-with-sqlite.md:1: error bondstone/immutable: ADR-002 was 'accepted' and may not be edited (only status may change)
+    hint: Create a new document that supersedes it instead.
+docs/discovery/solutions/SOL-2-streak-freeze.md:5: error bondstone/link-broken: addresses -> 'OPP-9': no such document
+.bondstone/profile.yaml: warn profile/code-change-updates-living-spec: Changes to app code come with an update to a living spec. (...)
+```
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `check [--base REF] [--format json] [--fail-on warn]` | validate; exit 1 on failure |
+| `gen` | regenerate views |
+| `new TYPE --title T [--set k=v]` | scaffold a document with the next id |
+| `baseline [REF]` | record the commit where documents were adopted (for `--base` checks) |
+| `supersede ID --title T` | replace a document: successor, `superseded` status, links moved |
+| `init --packs … --bridges …` | create a profile and generate views |
+| `profile check` | validate the profile, packs and bridges |
+| `rules`, `explain RULE` | list / explain active rules, including engine rules (`bondstone/...`) |
+| `agent [--output FILE]` | generate agent instructions |
+| `graph` | export the document graph as JSON |
+| `packs` | list built-in packs and bridges |
+| `pack test DIR…` | run a pack's or bridge's fixtures |
+
+## Built-in library
+
+| Kind | Id | Contents |
+|---|---|---|
+| pack | `adr` | `Decision` with lifecycle, supersession, immutability |
+| pack | `ost` | `Outcome`, `Opportunity`, `Solution`, `Experiment` |
+| pack | `capability` | living `Capability` specs with embedded `Requirement` items (code-traceable) |
+| bridge | `ost-capability` | committed solutions must be `realized_by` capabilities |
+| pack | `change` | change proposals: draft → accepted → implemented |
+| pack | `release` | releases and a generated `CHANGELOG.md` |
+| bridge | `adr-capability` | capabilities are `constrained_by` live decisions |
+| bridge | `change-capability` | proposals `modify` capabilities and `deliver` requirements that code implements |
+| bridge | `change-adr` | proposals are `decided_by` accepted decisions |
+| bridge | `release-change` | releases `include` implemented proposals |
+
+Custom packs and bridges go in any directory listed under `sources:` in the profile
+(default `.bondstone/packs`); see the [design doc](docs/design.md) for the formats.
+
+## CI and hooks
+
+GitHub Actions:
+
+```yaml
+- run: pip install git+https://github.com/bondstone/bondstone@POC
+- run: bondstone check --base origin/${{ github.base_ref }}
+```
+
+[pre-commit](https://pre-commit.com):
+
+```yaml
+repos:
+  - repo: https://github.com/bondstone/bondstone
+    rev: POC
+    hooks: [{id: bondstone-check}]
+```
+
+## Development
+
+```bash
+pip install -e '.[dev]'
+pytest
+bondstone pack test src/bondstone/library/packs/* src/bondstone/library/bridges/*
 ```
 
 ## License

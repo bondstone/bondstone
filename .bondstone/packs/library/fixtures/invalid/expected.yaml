@@ -1,0 +1,5 @@
+errors:
+- library/every-bridge-has-a-readme
+- library/every-pack-has-a-readme
+- library/matches-manifest
+warnings: []

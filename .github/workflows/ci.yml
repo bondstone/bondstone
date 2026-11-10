@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # base and baseline commits must be available
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+      - run: bondstone pack test src/bondstone/library/packs/* src/bondstone/library/bridges/*
+      - run: bondstone --root examples/habit-tracker check
+      - run: bondstone pack test .bondstone/packs/*
+      - name: bondstone check (self-hosted docs)
+        run: bondstone check
+      - name: bondstone check against the previous state
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: bondstone check --base ${{ github.event.before }}
+      - name: bondstone check against the PR base
+        if: github.event_name == 'pull_request'
+        run: bondstone check --base origin/${{ github.base_ref }}

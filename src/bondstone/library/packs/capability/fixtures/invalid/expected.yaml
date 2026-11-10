@@ -1,0 +1,6 @@
+errors:
+- bondstone/item-heading
+- bondstone/todo-left
+- capability/requirement-has-scenario
+- capability/requirement-uses-normative-language
+warnings: []

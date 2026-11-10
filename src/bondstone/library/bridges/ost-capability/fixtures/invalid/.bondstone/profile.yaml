@@ -1,0 +1,8 @@
+bondstone: 0.1
+packs:
+- ost@1
+- capability@1
+bridges:
+- ost-capability@1
+overrides:
+  bondstone/view-stale: 'off'

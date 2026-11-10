@@ -1,0 +1,931 @@
+"""All checks: structure, links, traits, rules, code tags, views, diffs, policy."""
+
+from __future__ import annotations
+
+import datetime as dt
+import posixpath
+import re
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml
+from jsonschema import Draft202012Validator, FormatChecker
+
+from .graph import Graph, build_graph, glob_files, rel, scan_tags
+from .loader import Config, as_list, qualify
+from .model import ERROR, OFF, PART_OF, WARN, Diagnostic, Node, Rule
+from .parser import ParsedDoc, parse_document
+from .select import (
+    KNOWN_TRAITS,
+    incoming_links,
+    link_exists,
+    matches,
+    outgoing_links,
+    validate_selector,
+)
+from .views import render
+
+TODO_RE = re.compile(r"<!--\s*todo\b", re.I)
+
+
+# =========================================================================== entry point
+
+
+def run_check(cfg: Config, base: str | None = None, graph: Graph | None = None) -> list[Diagnostic]:
+    graph = graph or build_graph(cfg)
+    diags: list[Diagnostic] = []
+    diags += profile_problems(cfg)
+    diags += graph.diagnostics
+    diags += check_nodes(cfg, graph)
+    diags += check_links(cfg, graph)
+    diags += check_supersedable(cfg, graph)
+    diags += evaluate_rules(cfg, graph)
+    diags += check_code(cfg, graph)
+    diags += check_views(cfg, graph)
+    if base:
+        diags += check_diff(cfg, graph, base)
+    return apply_policy(cfg, diags)
+
+
+def has_errors(diags: list[Diagnostic], fail_on: str = ERROR) -> bool:
+    levels = {ERROR} if fail_on == ERROR else {ERROR, WARN}
+    return any(d.severity in levels for d in diags)
+
+
+# =========================================================================== profile
+
+
+# bondstone: REQ-PRF-005, REQ-PRF-007
+def profile_problems(cfg: Config) -> list[Diagnostic]:
+    out = list(cfg.problems)
+
+    def bad(msg: str, severity: str = ERROR) -> None:
+        # bondstone: ENG-001
+        out.append(Diagnostic("bondstone/profile", severity, msg, path=".bondstone/profile.yaml"))
+
+    for tdef in cfg.types.values():
+        for trait in tdef.traits:
+            if trait not in KNOWN_TRAITS:
+                bad(f"type {tdef.qname}: unknown trait '{trait}'")
+        items = tdef.spec.get("items")
+        if items and qualify(items.get("type", ""), tdef.owner) not in cfg.types:
+            bad(f"type {tdef.qname}: items type '{items.get('type')}' is not defined")
+        template = tdef.spec.get("template")
+        if template and not (tdef.component_dir / template).is_file():
+            bad(f"type {tdef.qname}: template '{template}' not found")
+        sup = tdef.traits.get("supersedable")
+        if sup is not None:
+            lq = qualify(sup.get("link", "supersedes"), tdef.owner)
+            if lq not in cfg.links:
+                bad(f"type {tdef.qname}: supersedable link '{lq}' is not defined")
+    for link in cfg.links.values():
+        for t in [*link.from_types, *link.to_types]:
+            if t not in cfg.types:
+                bad(f"link {link.qname}: unknown type '{t}'")
+    for role, types in cfg.roles.items():
+        for t in types:
+            if t not in cfg.types:
+                bad(f"role '{role}': unknown type '{t}'")
+    for rule in cfg.rules:
+        spec = rule.spec
+        for msg in validate_selector(cfg, spec.get("when"), rule.context_pack, rule.qid):
+            bad(msg)
+        if sum(k in spec for k in ("when", "on_change", "for_each")) > 1:
+            bad(f"{rule.qid}: use only one of 'when', 'on_change' and 'for_each'")
+        if "for_each" in spec:
+            fe = spec["for_each"] or {}
+            if not fe.get("glob") or not fe.get("document"):
+                bad(f"{rule.qid}: for_each needs 'glob' and 'document'")
+            for t in as_list(fe.get("type")):
+                if qualify(t, rule.context_pack) not in cfg.types:
+                    bad(f"{rule.qid}: unknown type '{qualify(t, rule.context_pack)}'")
+            continue
+        if not as_list(spec.get("require")):
+            bad(f"{rule.qid}: rule has no 'require' clauses")
+        def flatten(clauses: Any, nested: bool = False) -> list[dict[str, Any]]:
+            result = []
+            for c in as_list(clauses):
+                if not isinstance(c, dict):
+                    bad(f"{rule.qid}: clause must be a mapping")
+                elif "any" in c:
+                    if not as_list(c["any"]):
+                        bad(f"{rule.qid}: 'any' needs at least one alternative")
+                    result += flatten(c["any"], nested=True)
+                else:
+                    if nested and c.get("traced"):
+                        bad(f"{rule.qid}: 'traced' is not supported inside 'any'")
+                    result.append(c)
+            return result
+
+        for clause in flatten(spec.get("require")):
+            for key in ("to", "from", "changed", "exists"):
+                for msg in validate_selector(cfg, clause.get(key), rule.context_pack, rule.qid):
+                    bad(msg)
+            for key in ("link", "incoming"):
+                name = clause.get(key)
+                if name and not link_exists(cfg, name):
+                    bad(f"{rule.qid}: unknown link '{name}'")
+    for view in cfg.views:
+        for msg in validate_selector(cfg, view.spec.get("select"), view.context_pack, view.qid):
+            bad(msg)
+
+    # packs that no bridge connects
+    packs = [c.id for c in cfg.components if c.kind == "pack"]
+    if len(packs) > 1:
+        parent = {p: p for p in packs}
+
+        def find(x: str) -> str:
+            while parent[x] != x:
+                x = parent[x]
+            return x
+
+        for comp in cfg.components:
+            if comp.kind == "bridge":
+                req = [p for p in (comp.data.get("requires") or {}) if p in parent]
+                for a, b in zip(req, req[1:]):
+                    parent[find(a)] = find(b)
+        groups: dict[str, list[str]] = {}
+        for p in packs:
+            groups.setdefault(find(p), []).append(p)
+        if len(groups) > 1:
+            listing = "; ".join(", ".join(sorted(g)) for g in groups.values())
+            # bondstone: ENG-002
+            out.append(Diagnostic("bondstone/unbridged-packs", WARN,
+                                  f"packs form disconnected groups ({listing}); add a bridge to connect them",
+                                  path=".bondstone/profile.yaml"))
+    return out
+
+
+# =========================================================================== nodes
+
+
+# bondstone: REQ-GRA-002, REQ-RUL-003
+def _schema_for(cfg: Config, type_qname: str) -> dict[str, Any]:
+    tdef = cfg.types[type_qname]
+    props = dict(tdef.spec.get("fields") or {})
+    props.setdefault("title", {"type": "string", "minLength": 1})
+    required = list(as_list(tdef.spec.get("required_fields")))
+    traits = tdef.traits
+    if "lifecycle" in traits:
+        props["status"] = {"enum": list(traits["lifecycle"].get("statuses", []))}
+        required.append("status")
+    if "owned" in traits:
+        props["owner"] = {"type": "string", "minLength": 1}
+        required.append("owner")
+    return {
+        "type": "object",
+        "properties": props,
+        "required": sorted(set(required)),
+        "additionalProperties": bool(tdef.spec.get("additional_fields", False)),
+    }
+
+
+# bondstone: REQ-GRA-006, REQ-RUL-005, REQ-RUL-006
+def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    seen: dict[str, Node] = {}
+    for node in graph.nodes:
+        tdef = cfg.types[node.type]
+        if not node.id:
+            # bondstone: ENG-010
+            out.append(Diagnostic("bondstone/id-missing", ERROR, f"{node.type} document has no `id`",
+                                  node.path, node.line,
+                                  hint=f"Add `id:` matching {tdef.spec.get('id_pattern', 'the type id format')}."))
+        else:
+            pattern = tdef.spec.get("id_pattern")
+            if pattern and not re.fullmatch(pattern, node.id):
+                # bondstone: ENG-011
+                out.append(Diagnostic("bondstone/id-format", ERROR,
+                                      f"id '{node.id}' does not match {pattern}",
+                                      node.path, node.field_lines.get("id", node.line), node.id))
+            if node.id in seen:
+                other = seen[node.id]
+                # bondstone: ENG-012
+                out.append(Diagnostic("bondstone/id-duplicate", ERROR,
+                                      f"id '{node.id}' is already used in {other.path}:{other.line}",
+                                      node.path, node.field_lines.get("id", node.line), node.id))
+            else:
+                seen[node.id] = node
+
+        if node.parent is None:  # frontmatter documents only
+            validator = Draft202012Validator(_schema_for(cfg, node.type), format_checker=FormatChecker())
+            for err in sorted(validator.iter_errors(node.fields), key=lambda e: list(e.path)):
+                out.append(_schema_diag(cfg, node, err))
+
+        todo = TODO_RE.search(_mask_code(node.body)) if node.parent is None else None
+        if todo:
+            lifecycle = tdef.traits.get("lifecycle") or {}
+            draft = node.status is not None and node.status == lifecycle.get("initial")
+            todo_line = node.body_line + node.body[: todo.start()].count("\n")
+            # bondstone: ENG-016
+            out.append(Diagnostic("bondstone/todo-left", WARN if draft else ERROR,
+                                  "document still contains template placeholders (<!-- todo: ... -->)",
+                                  node.path, todo_line, node.id,
+                                  hint="Replace every `<!-- todo: ... -->` marker with real content."))
+
+        present = node.heading_titles()
+        for section in as_list(tdef.spec.get("sections")):
+            if section not in present:
+                # bondstone: ENG-017
+                out.append(Diagnostic("bondstone/section-missing", ERROR,
+                                      f"{node.type} requires a '{section}' section",
+                                      node.path, node.line, node.id,
+                                      hint=f"Add a heading '## {section}'."))
+    return out
+
+
+# bondstone: REQ-RUL-006
+def _mask_code(text: str) -> str:
+    """Blank out fenced blocks and inline code spans, keeping offsets and newlines."""
+    def blank(m: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", m.group(0))
+    text = re.sub(r"(?ms)^\s*(```|~~~).*?^\s*\1[^\n]*$", blank, text)
+    return re.sub(r"(`+)(?!`).+?(?<!`)\1(?!`)", blank, text)
+
+
+# bondstone: REQ-GRA-002
+def _schema_diag(cfg: Config, node: Node, err: Any) -> Diagnostic:
+    if err.validator == "required":
+        missing = re.findall(r"'([^']+)' is a required property", err.message)
+        name = missing[0] if missing else "?"
+        # bondstone: ENG-013
+        return Diagnostic("bondstone/field-missing", ERROR, f"missing required field '{name}'",
+                          node.path, 1, node.id)
+    if err.validator == "additionalProperties":
+        extras = [k for k in node.fields if k not in (err.schema.get("properties") or {})]
+        links = sorted({l.name for l in cfg.links_from(node.type)})
+        fields = sorted((err.schema.get("properties") or {}).keys())
+        # bondstone: ENG-014
+        return Diagnostic("bondstone/field-unknown", ERROR,
+                          f"unknown key(s) {', '.join(extras)} for {node.type}",
+                          node.path, node.field_lines.get(extras[0]) if extras else 1, node.id,
+                          hint=f"Fields: {', '.join(fields)}. Links: {', '.join(links) or 'none'}.")
+    key = ".".join(str(p) for p in err.path) or "?"
+    top = str(err.path[0]) if err.path else None
+    # bondstone: ENG-015
+    return Diagnostic("bondstone/field-invalid", ERROR, f"field '{key}': {err.message}",
+                      node.path, node.field_lines.get(top, 1) if top else 1, node.id)
+
+
+# =========================================================================== links
+
+
+# bondstone: REQ-GRA-005
+def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    for node in graph.nodes:
+        for lq, refs in node.links.items():
+            if lq == PART_OF:
+                continue
+            link = cfg.links[lq]
+            for ref in refs:
+                target = graph.by_id.get(ref.target)
+                if target is None:
+                    # bondstone: ENG-018
+                    out.append(Diagnostic("bondstone/link-broken", ERROR,
+                                          f"{link.name} -> '{ref.target}': no such document",
+                                          node.path, ref.line, node.id))
+                elif link.to_types and target.type not in link.to_types:
+                    # bondstone: ENG-019
+                    out.append(Diagnostic("bondstone/link-type", ERROR,
+                                          f"{link.name} -> {ref.target} is a {target.type}; "
+                                          f"expected {', '.join(link.to_types)}",
+                                          node.path, ref.line, node.id))
+                elif ref.target == node.id:
+                    # bondstone: ENG-020
+                    out.append(Diagnostic("bondstone/link-self", ERROR,
+                                          f"{link.name} points to itself", node.path, ref.line, node.id))
+        for link in cfg.links_from(node.type):
+            count = len(node.links.get(link.qname, []))
+            if count < link.min:
+                # bondstone: ENG-021
+                out.append(Diagnostic("bondstone/link-min", ERROR,
+                                      f"needs at least {link.min} '{link.name}' link(s) to "
+                                      f"{', '.join(link.to_types)}; has {count}",
+                                      node.path, node.line, node.id,
+                                      hint=f"Add `{link.name}: [<id>]` to the frontmatter."))
+            if link.max is not None and count > int(link.max):
+                # bondstone: ENG-022
+                out.append(Diagnostic("bondstone/link-max", ERROR,
+                                      f"at most {link.max} '{link.name}' link(s) allowed; has {count}",
+                                      node.path, node.field_lines.get(link.name, node.line), node.id))
+    return out
+
+
+# bondstone: REQ-RUL-004
+def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    for tdef in cfg.types.values():
+        sup = tdef.traits.get("supersedable")
+        if sup is None:
+            continue
+        lq = qualify(sup.get("link", "supersedes"), tdef.owner)
+        has_lifecycle = tdef.has_trait("lifecycle")
+        superseded_by: dict[str, list[Node]] = {}
+        for node in (n for n in graph.nodes if n.type == tdef.qname):
+            for ref in node.links.get(lq, []):
+                superseded_by.setdefault(ref.target, []).append(node)
+                target = graph.by_id.get(ref.target)
+                if target and has_lifecycle and target.status != "superseded":
+                    # bondstone: ENG-023
+                    out.append(Diagnostic("bondstone/supersede-status", ERROR,
+                                          f"{node.id} supersedes {target.id}, but {target.id} has status "
+                                          f"'{target.status}'",
+                                          target.path, target.field_lines.get("status", 1), target.id,
+                                          hint=f"Set `status: superseded` in {target.path}."))
+        for target_id, sources in superseded_by.items():
+            if len(sources) > 1:
+                target = graph.by_id.get(target_id)
+                # bondstone: ENG-024
+                out.append(Diagnostic("bondstone/supersede-multiple", ERROR,
+                                      f"{target_id} is superseded by several nodes: "
+                                      f"{', '.join(s.id or '?' for s in sources)}",
+                                      target.path if target else None, 1, target_id))
+        for node in (n for n in graph.nodes if n.type == tdef.qname):
+            if has_lifecycle and node.status == "superseded" and node.id not in superseded_by:
+                # bondstone: ENG-025
+                out.append(Diagnostic("bondstone/supersede-orphan", WARN,
+                                      f"{node.id} is superseded but nothing supersedes it",
+                                      node.path, node.field_lines.get("status", 1), node.id))
+            # cycles
+            seen = {node.id}
+            current = node
+            while current is not None:
+                refs = current.links.get(lq, [])
+                if not refs:
+                    break
+                nxt = graph.by_id.get(refs[0].target)
+                if nxt is None:
+                    break
+                if nxt.id in seen:
+                    # bondstone: ENG-026
+                    out.append(Diagnostic("bondstone/supersede-cycle", ERROR,
+                                          f"supersede chain from {node.id} forms a cycle",
+                                          node.path, 1, node.id))
+                    break
+                seen.add(nxt.id)
+                current = nxt
+    return out
+
+
+# =========================================================================== rules
+
+
+# bondstone: REQ-RUL-002
+def evaluate_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    for rule in cfg.rules:
+        if "on_change" in rule.spec:
+            continue
+        if "for_each" in rule.spec:
+            out += _for_each(cfg, graph, rule)
+            continue
+        for node in graph.nodes:
+            if not matches(cfg, node, rule.spec.get("when"), rule.context_pack):
+                continue
+            for clause in as_list(rule.spec.get("require")):
+                failure = _eval_clause(cfg, graph, rule, node, clause)
+                if failure:
+                    out.append(_rule_diag(rule, failure, node))
+    return out
+
+
+def _rule_diag(rule: Rule, detail: str, node: Node | None) -> Diagnostic:
+    message = rule.spec.get("message") or rule.description or rule.qid
+    return Diagnostic(rule.qid, rule.severity, f"{message} ({detail})",
+                      node.path if node else ".bondstone/profile.yaml",
+                      node.line if node else None,
+                      node.id if node else None, rule.spec.get("hint"))
+
+
+# bondstone: REQ-RUL-002, REQ-RUL-010
+def _eval_clause(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> str | None:
+    ctx = rule.context_pack
+    if "link" in clause:
+        links = outgoing_links(cfg, node.type, clause["link"])
+        targets = [graph.by_id[r.target] for l in links for r in node.links.get(l.qname, [])
+                   if r.target in graph.by_id]
+        if clause.get("all"):
+            bad = [t.id for t in targets if not matches(cfg, t, clause.get("to"), ctx)]
+            return f"'{clause['link']}' targets not allowed: {', '.join(bad)}" if bad else None
+        good = [t for t in targets if matches(cfg, t, clause.get("to"), ctx)]
+        need = int(clause.get("min", 1))
+        if len(good) < need:
+            return f"needs {need} '{clause['link']}' link(s){_sel_text(clause.get('to'))}, has {len(good)}"
+        return None
+    if "incoming" in clause:
+        qnames = {l.qname for l in incoming_links(cfg, node.type, clause["incoming"])}
+        sources = [src for lq, src in graph.incoming.get(node.id or "", []) if lq in qnames]
+        good = [s for s in sources if matches(cfg, s, clause.get("from"), ctx)]
+        need = int(clause.get("min", 1))
+        if len(good) < need:
+            return (f"needs {need} incoming '{clause['incoming']}' link(s)"
+                    f"{_sel_text(clause.get('from'), 'from')}, has {len(good)}")
+        return None
+    if "field" in clause:
+        value = node.fields.get(clause["field"])
+        return None if value not in (None, "", []) else f"field '{clause['field']}' is empty"
+    if "section" in clause:
+        return None if clause["section"] in node.heading_titles() else f"missing section '{clause['section']}'"
+    if "contains" in clause:
+        return None if re.search(clause["contains"], node.body, re.M) else f"body must match /{clause['contains']}/"
+    if "file_field" in clause:
+        return _file_field(cfg, node, clause["file_field"])
+    if "any" in clause:
+        failures = [_eval_clause(cfg, graph, rule, node, c) for c in as_list(clause["any"])]
+        return ("needs one of: " + "; or ".join(failures)) if failures and all(failures) else None
+    return f"unsupported clause {sorted(clause)}"
+
+
+class _Template(dict):
+    def __missing__(self, key: str) -> str:
+        raise KeyError(key)
+
+
+def _render_path(template: str, values: dict[str, Any]) -> str | None:
+    try:
+        return template.format_map(_Template({k: str(v) for k, v in values.items()}))
+    except KeyError:
+        return None
+
+
+# bondstone: REQ-RUL-008
+def _file_field(cfg: Config, node: Node, spec: dict[str, Any]) -> str | None:
+    """A value in a YAML/JSON file must equal a node field (`equals`) or a literal (`value`)."""
+    directory = posixpath.dirname(node.path)
+    rel_path = _render_path(spec.get("path", ""), {**node.fields, "id": node.id, "dir": directory})
+    if rel_path is None:
+        return f"cannot build path from '{spec.get('path')}' (missing field)"
+    rel_path = posixpath.normpath(rel_path)
+    path = cfg.root / rel_path
+    if not path.is_file():
+        return f"{rel_path} does not exist"
+    try:
+        data: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return f"{rel_path} is not valid YAML/JSON ({exc.__class__.__name__})"
+    for part in str(spec.get("key", "")).split("."):
+        if not isinstance(data, dict) or part not in data:
+            return f"{rel_path} has no '{spec.get('key')}'"
+        data = data[part]
+    if "equals" in spec:
+        expected, what = node.fields.get(spec["equals"]), f"field '{spec['equals']}'"
+    else:
+        expected, what = spec.get("value"), "the expected value"
+    if str(data) != str(expected):
+        return f"{rel_path} {spec.get('key')} is '{data}', {what} is '{expected}'"
+    return None
+
+
+# bondstone: REQ-RUL-009
+def _for_each(cfg: Config, graph: Graph, rule: Rule) -> list[Diagnostic]:
+    """Every file matching `for_each.glob` has a document at `for_each.document`."""
+    spec = rule.spec["for_each"]
+    types = {qualify(t, rule.context_pack) for t in as_list(spec.get("type"))}
+    documents = {(n.path, n.type) for n in graph.nodes if n.parent is None}
+    out = []
+    for file in sorted(glob_files(cfg.root, spec["glob"])):
+        path = rel(cfg.root, file)
+        values = {"dir": posixpath.dirname(path), "name": file.stem, "path": path}
+        expected = posixpath.normpath(_render_path(spec["document"], values) or spec["document"])
+        found = [t for p, t in documents if p == expected and (not types or t in types)]
+        if not found:
+            kind = " or ".join(sorted(types)) if types else "document"
+            out.append(Diagnostic(rule.qid, rule.severity,
+                                  f"{rule.description or rule.qid} ({path} has no {kind} at {expected})",
+                                  path, None, None, rule.spec.get("hint")))
+    return out
+
+
+def _sel_text(sel: dict[str, Any] | None, word: str = "to") -> str:
+    if not sel:
+        return ""
+    parts = [f"{k}={v}" for k, v in sel.items()]
+    return f" {word} " + " ".join(parts)
+
+
+# =========================================================================== code tags
+
+
+# bondstone: REQ-TRC-001, REQ-TRC-002, REQ-TRC-003
+def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    if not as_list(cfg.code_settings().get("include")):
+        return []
+    out: list[Diagnostic] = []
+    for path, lineno, ref in graph.code_refs:
+        node = graph.by_id.get(ref)
+        if node is None:
+            # bondstone: ENG-027
+            out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
+                                  f"code references unknown id '{ref}'", path, lineno))
+        elif not cfg.types[node.type].has_trait("code-traceable"):
+            # bondstone: ENG-028
+            out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
+                                  f"{ref} is {node.type}, a type that is not code-traceable",
+                                  path, lineno, ref))
+    for node in graph.nodes:
+        trait = cfg.types[node.type].traits.get("code-traceable")
+        if trait is None or not node.id:
+            continue
+        coverage = trait.get("coverage", WARN)
+        if coverage != OFF and not node.covered:
+            # bondstone: ENG-029
+            out.append(Diagnostic("bondstone/code-coverage", coverage,
+                                  f"{node.id} is not referenced from code",
+                                  node.path, node.line, node.id,
+                                  hint=f"Add a `bondstone: {node.id}` comment where it is implemented."))
+    return out
+
+
+# =========================================================================== views
+
+
+# bondstone: REQ-VIE-003
+def check_views(cfg: Config, graph: Graph) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    for view in cfg.views:
+        output = view.spec.get("output")
+        if not output:
+            continue
+        path = cfg.root / output
+        expected = render(cfg, graph, view)
+        if not path.exists() or path.read_text(encoding="utf-8") != expected:
+            # bondstone: ENG-030
+            out.append(Diagnostic("bondstone/view-stale", ERROR, f"generated view {view.qid} is out of date",
+                                  output, None, hint="Run `bondstone gen`."))
+    return out
+
+
+# =========================================================================== diff
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or f"git {' '.join(args)} failed")
+    return result.stdout
+
+
+@dataclass
+class Changes:
+    files: set[str]          # changed, added or untracked paths (current names)
+    renames: dict[str, str]  # new path -> old path
+    deleted: set[str]
+
+
+# bondstone: REQ-DIF-004
+def changed_files(root: Path, base: str) -> Changes:
+    out = _git(root, "diff", "--name-status", "-M", "--relative", base)
+    files: set[str] = set()
+    renames: dict[str, str] = {}
+    deleted: set[str] = set()
+    for line in out.splitlines():
+        parts = line.split("\t")
+        status = parts[0]
+        if status.startswith("R") and len(parts) == 3:
+            renames[parts[2]] = parts[1]
+            files.add(parts[2])
+        elif status.startswith("D"):
+            deleted.add(parts[1])
+        elif len(parts) >= 2:
+            files.add(parts[-1])
+    files |= set(_git(root, "ls-files", "--others", "--exclude-standard").split())
+    return Changes(files, renames, deleted)
+
+
+# bondstone: REQ-DIF-004
+def _base_version(cfg: Config, base: str, changes: Changes, node: Node) -> ParsedDoc | None:
+    """The node's document at `base`, following renames and moved ids."""
+    candidates = [node.path]
+    if node.path in changes.renames:
+        candidates.append(changes.renames[node.path])
+    candidates += sorted(changes.deleted)
+    for path in candidates:
+        text = file_at(cfg.root, base, path)
+        if text is None:
+            continue
+        doc = parse_document(text)
+        if path in (node.path, changes.renames.get(node.path)) or (
+                doc.frontmatter and str(doc.frontmatter.get("id")) == node.id):
+            return doc
+    return None
+
+
+def file_at(root: Path, base: str, path: str) -> str | None:
+    try:
+        return _git(root, "show", f"{base}:./{path}")
+    except RuntimeError:
+        return None
+
+
+def glob_to_regex(pattern: str) -> re.Pattern[str]:
+    out = ""
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+        if pattern.startswith("**/", i):
+            out += "(?:.*/)?"
+            i += 3
+            continue
+        if pattern.startswith("**", i):
+            out += ".*"
+            i += 2
+            continue
+        out += {"*": "[^/]*", "?": "[^/]"}.get(c, re.escape(c))
+        i += 1
+    return re.compile(out + r"\Z")
+
+
+# bondstone: REQ-DIF-007, REQ-DIF-008
+def _baseline_version(cfg: Config, baseline: str, changes: Changes, node: Node) -> ParsedDoc | None:
+    """The node's document at the profile's baseline commit, if it existed there."""
+    for path in (node.path, changes.renames.get(node.path)):
+        if path:
+            text = file_at(cfg.root, baseline, path)
+            if text is not None:
+                doc = parse_document(text)
+                if doc.frontmatter and str(doc.frontmatter.get("id")) == node.id:
+                    return doc
+    return None
+
+
+# bondstone: REQ-DIF-001, REQ-DIF-002, REQ-DIF-003, REQ-DIF-005, REQ-DIF-007, REQ-DIF-008
+def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
+    out: list[Diagnostic] = []
+    try:
+        changes = changed_files(cfg.root, base)
+    except RuntimeError as exc:
+        # bondstone: ENG-031
+        return [Diagnostic("bondstone/git", ERROR, f"cannot diff against '{base}': {exc}")]
+    changed = changes.files
+    baseline = cfg.profile.get("baseline")
+    if baseline is not None:
+        baseline = str(baseline)
+        try:
+            _git(cfg.root, "cat-file", "-e", f"{baseline}^{{commit}}")
+        except RuntimeError:
+            # bondstone: ENG-035
+            out.append(Diagnostic("bondstone/baseline-missing", ERROR,
+                                  f"baseline commit {baseline} is not available in this clone",
+                                  ".bondstone/profile.yaml",
+                                  hint=f"Fetch full history (`git fetch --unshallow`) or `git fetch origin {baseline}`."))
+            baseline = None
+
+    for node in graph.nodes:
+        if node.parent is not None or node.path not in changed:
+            continue
+        traits = cfg.types[node.type].traits
+        old = _base_version(cfg, base, changes, node)
+        if (old is None or not old.frontmatter) and baseline:
+            old = _baseline_version(cfg, baseline, changes, node)
+        if old is None or not old.frontmatter:
+            lifecycle = traits.get("lifecycle")
+            if lifecycle and node.status is not None:
+                allowed = [str(s) for s in as_list(lifecycle.get("create_as"))] or \
+                    [str(lifecycle.get("initial") or as_list(lifecycle.get("statuses"))[0])]
+                if node.status not in allowed:
+                    # bondstone: ENG-033
+                    out.append(Diagnostic("bondstone/status-initial", ERROR,
+                                          f"new {node.type} starts as '{node.status}'; "
+                                          f"new documents must start as {', '.join(allowed)}",
+                                          node.path, node.field_lines.get("status", 1), node.id,
+                                          hint="Create it in the initial status and change the status in a "
+                                               "later change, or override bondstone/status-initial."))
+            continue
+        old_status = old.frontmatter.get("status")
+        old_status = str(old_status) if old_status is not None else None
+        lifecycle = traits.get("lifecycle")
+        if lifecycle and old_status and node.status and old_status != node.status:
+            allowed = (lifecycle.get("transitions") or {}).get(old_status, [])
+            if node.status not in allowed:
+                # bondstone: ENG-032
+                out.append(Diagnostic("bondstone/status-transition", ERROR,
+                                      f"status change {old_status} -> {node.status} is not allowed "
+                                      f"(allowed: {', '.join(allowed) or 'none'})",
+                                      node.path, node.field_lines.get("status", 1), node.id))
+        immutable = traits.get("immutable")
+        if immutable and old_status in {str(s) for s in as_list(immutable.get("when"))}:
+            allow = set(as_list(immutable.get("allow_fields"))) | {"status"}
+            new_fm = {k: v for k, v in node.raw_keys.items() if k not in allow}
+            old_fm = {k: v for k, v in old.frontmatter.items() if k not in allow}
+            if new_fm != old_fm or node.body.strip() != old.body.strip():
+                # bondstone: ENG-034
+                out.append(Diagnostic("bondstone/immutable", ERROR,
+                                      f"{node.id} was '{old_status}' and may not be edited "
+                                      f"(only {', '.join(sorted(allow))} may change)",
+                                      node.path, 1, node.id,
+                                      hint="Create a new document that supersedes it instead."))
+
+    for rule in cfg.rules:
+        trigger = rule.spec.get("on_change")
+        if not trigger:
+            continue
+        patterns = [glob_to_regex(p) for p in as_list(trigger.get("paths"))]
+        triggering = sorted(f for f in changed if any(p.match(f) for p in patterns))
+        if not triggering:
+            continue
+        changed_nodes = [n for n in graph.nodes if n.path in changed]
+        shown = ", ".join(triggering[:5]) + (" …" if len(triggering) > 5 else "")
+        for clause in as_list(rule.spec.get("require")):
+            if "any" in clause:
+                failures = [_eval_diff_clause(cfg, graph, rule, changed_nodes, c) for c in as_list(clause["any"])]
+                if failures and all(failures):
+                    out.append(_rule_diag(rule, f"changed {shown}; needs one of: " + "; or ".join(failures), None))
+                continue
+            if "exists" in clause or ("changed" in clause and not clause.get("traced")):
+                failure = _eval_diff_clause(cfg, graph, rule, changed_nodes, clause)
+                if failure:
+                    out.append(_rule_diag(rule, f"changed {shown}; {failure}", None))
+                continue
+            if "changed" not in clause:
+                continue
+            if clause.get("traced"):
+                traced = _traced_documents(cfg, graph, base, triggering)
+                wanted = {doc_id: files for doc_id, files in traced.items()
+                          if matches(cfg, graph.by_id[doc_id], clause["changed"], rule.context_pack)}
+                if wanted:
+                    for doc_id, files in sorted(wanted.items()):
+                        doc = graph.by_id[doc_id]
+                        if doc.path not in changed:
+                            out.append(_rule_diag(rule, f"{', '.join(sorted(files))} implements {doc_id}, "
+                                                        f"which was not updated", doc))
+                    continue
+            failure = _eval_diff_clause(cfg, graph, rule, changed_nodes, {**clause, "traced": False})
+            if failure:
+                out.append(_rule_diag(rule, f"changed {shown}; {failure}", None))
+    return out
+
+
+# bondstone: REQ-DIF-005, REQ-DIF-010
+def _eval_diff_clause(cfg: Config, graph: Graph, rule: Rule, changed_nodes: list[Node],
+                      clause: dict[str, Any]) -> str | None:
+    """Evaluate an `exists` or (untraced) `changed` clause of a diff rule; None when it passes."""
+    need = int(clause.get("min", 1))
+    if "exists" in clause:
+        found = [n for n in graph.nodes if matches(cfg, n, clause["exists"], rule.context_pack)]
+        if len(found) < need:
+            return f"needs {need} document(s){_sel_text(clause['exists'], 'matching')}"
+        return None
+    if "changed" in clause:
+        good = [n for n in changed_nodes if matches(cfg, n, clause["changed"], rule.context_pack)]
+        if len(good) < need:
+            return f"needs {need} changed document(s){_sel_text(clause['changed'], 'matching')}"
+        return None
+    return f"unsupported clause {sorted(clause)} in a diff rule"
+
+
+# bondstone: REQ-DIF-006
+HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
+
+
+def _changed_lines(root: Path, base: str, path: str) -> tuple[set[int], set[int]] | None:
+    """(changed lines in the current file, removed lines in the base file); None if new."""
+    if file_at(root, base, path) is None:
+        return None
+    diff = _git(root, "diff", "-U0", base, "--", path)
+    new_lines: set[int] = set()
+    old_lines: set[int] = set()
+    for m in HUNK_RE.finditer(diff):
+        old_start, old_count = int(m.group(1)), int(m.group(2) or 1)
+        new_start, new_count = int(m.group(3)), int(m.group(4) or 1)
+        old_lines.update(range(old_start, old_start + old_count))
+        new_lines.update(range(new_start, new_start + new_count))
+        if new_count == 0:  # pure deletion: the lines around it changed
+            new_lines.update({new_start, new_start + 1})
+    return new_lines, old_lines
+
+
+def tag_regions(text: str) -> list[tuple[str, int, int]]:
+    """(id, first line, last line) of the code each tag annotates.
+
+    Consecutive tag lines form a block. The region runs from the block to the end of the
+    code below it: the line before the first non-blank line that is indented no deeper
+    than the block's first code line and follows a blank line, or before the next tag
+    block at the same or lower indentation. Deeper tag blocks (inside a function) nest
+    and do not end the region of the tag above the function."""
+    lines = text.splitlines()
+    tags = scan_tags(text)
+    tag_lines = sorted({line for line, _ in tags})
+    block_start: dict[int, int] = {}
+    for line in tag_lines:
+        block_start[line] = block_start.get(line - 1, line)
+    starts = sorted(set(block_start.values()))
+
+    def indent(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    regions = []
+    for line, ref in tags:
+        start = block_start[line]
+        block_end = max(l for l in tag_lines if block_start[l] == start)
+        anchor = next((i for i in range(block_end + 1, len(lines) + 1)
+                       if lines[i - 1].strip() and i not in block_start), None)
+        end = len(lines)
+        if anchor is not None:
+            base = indent(lines[anchor - 1])
+            for i in range(block_end + 1, len(lines) + 1):
+                current = lines[i - 1]
+                if i in starts and i > start and indent(current) <= base:
+                    end = i - 1
+                    break
+                if i > anchor and current.strip() and indent(current) <= base \
+                        and not lines[i - 2].strip() and i not in block_start:
+                    end = i - 1
+                    break
+        while end > start and not lines[end - 1].strip():
+            end -= 1
+        regions.append((ref, start, end))
+    return regions
+
+
+def _tags_in_lines(text: str, lines: set[int] | None) -> set[str]:
+    """Ids of tags whose region touches `lines`; changes to tag lines themselves are ignored."""
+    tags = scan_tags(text)
+    if lines is None:
+        return {ref for _, ref in tags}
+    lines = lines - {line for line, _ in tags}
+    return {ref for ref, start, end in tag_regions(text) if any(start <= l <= end for l in lines)}
+
+
+def _traced_documents(cfg: Config, graph: Graph, base: str, files: list[str]) -> dict[str, set[str]]:
+    """Top-level documents tagged in the changed regions of `files` -> those files.
+
+    A tag's region runs from the tag to the line before the next tag. Regions are taken from
+    the current file (changed lines) and from the base file (removed lines)."""
+    traced: dict[str, set[str]] = {}
+    for path in files:
+        lines = _changed_lines(cfg.root, base, path)
+        refs: set[str] = set()
+        current = cfg.root / path
+        if current.is_file():
+            try:
+                refs |= _tags_in_lines(current.read_text(encoding="utf-8"), lines[0] if lines else None)
+            except (UnicodeDecodeError, OSError):
+                pass
+        old_text = file_at(cfg.root, base, path)
+        if old_text is not None:
+            refs |= _tags_in_lines(old_text, lines[1] if lines else set())
+        for ref in refs:
+            node = graph.by_id.get(ref)
+            while node is not None and node.parent is not None:
+                node = graph.by_id.get(node.parent)
+            if node is not None and node.id:
+                traced.setdefault(node.id, set()).add(path)
+    return traced
+
+
+# =========================================================================== policy
+
+
+# bondstone: REQ-PRF-003, REQ-PRF-004
+def apply_policy(cfg: Config, diags: list[Diagnostic]) -> list[Diagnostic]:
+    today = dt.date.today().isoformat()
+    active_waivers = []
+    extra: list[Diagnostic] = []
+    for w in cfg.waivers:
+        if not isinstance(w, dict) or not w.get("rule"):
+            # bondstone: ENG-036
+            extra.append(Diagnostic("bondstone/waiver-invalid", ERROR, f"waiver needs a 'rule': {w}",
+                                    ".bondstone/profile.yaml"))
+            continue
+        if not w.get("reason"):
+            # bondstone: ENG-036
+            extra.append(Diagnostic("bondstone/waiver-invalid", ERROR,
+                                    f"waiver for {w['rule']} has no 'reason'", ".bondstone/profile.yaml"))
+            continue
+        expires = w.get("expires")
+        if expires and str(expires) < today:
+            # bondstone: ENG-037
+            extra.append(Diagnostic("bondstone/waiver-expired", ERROR,
+                                    f"waiver for {w['rule']} ({w.get('node', 'all nodes')}) expired on {expires}",
+                                    ".bondstone/profile.yaml"))
+            continue
+        active_waivers.append({**w, "_used": False})
+
+    result: list[Diagnostic] = []
+    for d in diags:
+        severity = cfg.overrides.get(d.rule, d.severity)
+        rule = cfg.rule(d.rule)
+        if rule and rule.locked and severity != d.severity:
+            severity = d.severity
+        if severity == OFF:
+            continue
+        d.severity = severity
+        waived = False
+        for w in active_waivers:
+            if w["rule"] == d.rule and (not w.get("node") or w["node"] == d.node):
+                w["_used"] = True
+                waived = not (rule and rule.locked)
+        if not waived:
+            result.append(d)
+    for w in active_waivers:
+        if not w["_used"]:
+            # bondstone: ENG-038
+            extra.append(Diagnostic("bondstone/waiver-unused", WARN,
+                                    f"waiver for {w['rule']} ({w.get('node', 'all nodes')}) matches nothing",
+                                    ".bondstone/profile.yaml"))
+    result.extend(extra)
+    result.sort(key=lambda d: (d.path or "", d.line or 0, d.rule))
+    return result

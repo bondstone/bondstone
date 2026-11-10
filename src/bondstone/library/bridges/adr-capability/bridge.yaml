@@ -1,0 +1,38 @@
+# bondstone: REQ-LIB-006
+id: adr-capability
+version: 1.0.0
+description: Connects capability specs to the decisions that constrain them.
+
+requires:
+  adr: "^1"
+  capability: "^1"
+
+links:
+  constrained_by:
+    from: capability:Capability
+    to: adr:Decision
+    description: Decisions this capability must respect.
+
+roles:
+  decision: [adr:Decision]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: constrained-by-live-decision
+    description: Capabilities are constrained only by accepted or proposed decisions.
+    when: {type: capability:Capability}
+    require:
+      - link: constrained_by
+        all: true
+        to: {type: adr:Decision, status: [proposed, accepted]}
+    hint: Point to the decision that superseded it.
+
+  - id: accepted-decision-is-applied
+    description: An accepted decision constrains at least one capability (otherwise, is it still relevant?).
+    severity: warn
+    when: {type: adr:Decision, status: accepted}
+    require:
+      - incoming: constrained_by
+        min: 1
+
+instructions: instructions.md

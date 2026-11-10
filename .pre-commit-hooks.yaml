@@ -1,0 +1,6 @@
+- id: bondstone-check
+  name: bondstone check
+  entry: bondstone check
+  language: python
+  pass_filenames: false
+  always_run: true

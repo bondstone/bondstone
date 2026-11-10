@@ -1,0 +1,6 @@
+bondstone: 0.1
+packs:
+- adr@1
+bridges: []
+overrides:
+  bondstone/view-stale: 'off'

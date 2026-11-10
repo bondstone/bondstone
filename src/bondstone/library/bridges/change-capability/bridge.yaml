@@ -1,0 +1,49 @@
+# bondstone: REQ-LIB-006
+id: change-capability
+version: 0.2.0
+description: Proposals modify capabilities and deliver requirements into the living spec.
+
+requires:
+  change: "^0.1"
+  capability: "^1"
+
+links:
+  modifies:
+    from: change:Proposal
+    to: capability:Capability
+    description: Capability specs this proposal changes.
+  delivers:
+    from: change:Proposal
+    to: capability:Requirement
+    description: Requirements (in the living spec) this proposal added or changed.
+
+roles:
+  change: [change:Proposal]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: accepted-proposal-names-capabilities
+    description: Accepted behaviour changes name the capability specs they modify.
+    when: {type: change:Proposal, status: [accepted, implemented], where: {kind: [feature, fix, breaking]}}
+    require:
+      - link: modifies
+        min: 1
+
+  - id: implemented-proposal-delivers-requirements
+    description: An implemented feature points at the requirements it delivered in the living spec.
+    when: {type: change:Proposal, status: implemented, where: {kind: [feature, breaking]}}
+    require:
+      - link: delivers
+        min: 1
+    hint: "Add the requirement to the capability spec, then `delivers: [REQ-...]`."
+
+  - id: delivered-requirements-are-implemented
+    description: Requirements delivered by an implemented proposal are tagged in code.
+    when: {type: change:Proposal, status: implemented}
+    require:
+      - link: delivers
+        all: true
+        to: {type: capability:Requirement, covered: true}
+    hint: "Tag the implementing code with `bondstone: REQ-...`."
+
+instructions: instructions.md

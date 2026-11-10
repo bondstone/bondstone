@@ -1,0 +1,583 @@
+import datetime as dt
+import json
+
+import pytest
+
+from bondstone.cli import main
+from bondstone.loader import load_config, version_matches
+from bondstone.graph import build_graph
+from bondstone.scaffold import new_document
+
+from .conftest import adr
+
+
+@pytest.mark.parametrize("version,spec,ok", [
+    ("1.2.0", "1", True), ("2.0.0", "1", False), ("1.2.0", "^1.3", False),
+    ("1.4.1", "1.3", True), ("1.0.0", ">=1,<2", True), ("1.0.0", None, True),
+])
+def test_version_matches(version, spec, ok):
+    assert version_matches(version, spec) is ok
+
+
+def test_missing_pack_and_unmet_bridge(project):
+    project.profile(packs=["adr@1", "nope@1"], bridges=["adr-capability@1"])
+    messages = [d.message for d in project.check() if d.rule == "bondstone/profile"]
+    assert any("'nope' not found" in m for m in messages)
+    assert any("requires pack 'capability'" in m for m in messages)
+
+
+def test_version_mismatch(project):
+    project.profile(packs=["adr@2"])
+    assert any("no version matches" in d.message for d in project.check())
+
+
+def test_unbridged_packs_warning(project):
+    project.profile(packs=["adr@1", "ost@1"], overrides={"bondstone/view-stale": "off"})
+    assert project.rules() == ["bondstone/unbridged-packs"]
+
+
+def test_unknown_key_and_broken_link(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "supersedes: ADR-009\ncolour: red\n"))
+    assert project.rules() == ["bondstone/field-unknown", "bondstone/link-broken"]
+
+
+def test_explicit_type_outside_paths(project):
+    project.profile(packs=["adr@1"], scan=["notes/**/*.md"], overrides={"bondstone/view-stale": "off"})
+    project.write("notes/x.md", adr("ADR-001", "accepted").replace("---\nid", "---\ntype: adr:Decision\nid", 1))
+    project.write("notes/plain.md", "# not a bondstone doc\n")
+    graph = build_graph(load_config(project.root))
+    assert [n.id for n in graph.nodes] == ["ADR-001"]
+    assert project.rules() == []
+
+
+def test_overrides_waivers_and_locks(project):
+    tomorrow = (dt.date.today() + dt.timedelta(days=1)).isoformat()
+    project.profile(
+        packs=["adr@1"],
+        overrides={"bondstone/view-stale": "off", "adr/alternatives-considered": "error"},
+        waivers=[
+            {"rule": "bondstone/field-unknown", "node": "ADR-001", "reason": "legacy", "expires": tomorrow},
+            {"rule": "bondstone/link-broken", "reason": "x", "expires": "2020-01-01"},
+            {"rule": "bondstone/id-format", "reason": "never matches"},
+            {"rule": "bondstone/section-missing"},
+        ],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "colour: red\n",
+                                               body="## Context\n\n## Decision\n\n## Consequences\n"))
+    diags = {d.rule: d.severity for d in project.check()}
+    assert diags == {
+        "adr/alternatives-considered": "error",      # raised by override
+        "bondstone/waiver-expired": "error",
+        "bondstone/waiver-unused": "warn",
+        "bondstone/waiver-invalid": "error",          # no reason
+    }
+
+
+def test_locked_rule_cannot_be_loosened(project):
+    project.write(".bondstone/packs/strict/pack.yaml", """
+        id: strict
+        version: 1.0.0
+        types:
+          Note:
+            paths: ["notes/*.md"]
+        rules:
+          - id: has-summary
+            locked: true
+            when: {type: Note}
+            require: [{section: Summary}]
+    """)
+    project.profile(packs=["strict@1"], sources=[".bondstone/packs"],
+                    overrides={"strict/has-summary": "off"},
+                    waivers=[{"rule": "strict/has-summary", "reason": "please"}])
+    project.write("notes/a.md", "---\nid: N1\ntitle: A note\n---\n# Body\n")
+    rules = project.rules()
+    assert "strict/has-summary" in rules
+    assert "bondstone/profile" in rules  # override rejected
+
+
+def test_roles_from_bridges_and_profile_role_rule(project):
+    project.profile(
+        packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        roles={"spec": ["capability:Capability"]},
+        overrides={"bondstone/view-stale": "off"},
+        rules=[{"id": "specs-have-owner-team", "when": {"role": "spec"}, "require": [{"field": "owner"}]}],
+    )
+    cfg = load_config(project.root)
+    assert cfg.roles["living-spec"] == ["capability:Capability"]  # deduplicated across bridges
+    assert cfg.roles["spec"] == ["capability:Capability"]
+
+
+def test_diff_lifecycle_immutability_and_diff_rule(project):
+    project.profile(
+        packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/**/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.write("docs/capabilities/a.md", """
+        ---
+        id: CAP-a
+        title: Capability A
+        status: active
+        owner: me
+        code: AA
+        constrained_by: [ADR-001]
+        ---
+        ## Purpose
+
+        p
+
+        ## Requirements
+
+        ### REQ-AA-001: Thing
+
+        The system SHALL do the thing.
+
+        #### Scenario: ok
+
+        - Then fine
+    """)
+    project.write("src/app.py", "x = 1\n")
+    project.git("init", "-q")
+    project.commit()
+    assert project.rules(base="HEAD") == []
+
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted").replace("\nc\n", "\nchanged\n"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "deprecated"))
+    project.write("src/app.py", "x = 2  # bondstone: REQ-AA-001\n")
+    assert project.rules(base="HEAD") == [
+        "bondstone/immutable", "bondstone/status-transition", "profile/code-needs-spec"]
+
+    # status-only change of an accepted ADR is allowed; touching the spec satisfies the diff rule
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "deprecated"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    text = (project.root / "docs/capabilities/a.md").read_text()
+    project.write("docs/capabilities/a.md", text.replace("do the thing", "do the thing well"))
+    assert project.rules(base="HEAD", severity="error") == ["adr-capability/constrained-by-live-decision"]
+
+
+def test_new_document_is_valid_after_filling_todos(project):
+    project.profile(packs=["adr@1"], defaults={"owner": "me"}, overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-007-old.md", adr("ADR-007", "accepted"))
+    cfg = load_config(project.root)
+    path = new_document(cfg, build_graph(cfg), "Decision", "Use SQLite", {})
+    assert path.name == "ADR-008-use-sqlite.md"
+    assert "status: proposed" in path.read_text()
+    assert project.rules() == ["bondstone/todo-left"]
+    assert [d.severity for d in project.check()] == ["warn"]  # still a draft
+    path.write_text(path.read_text().replace("proposed", "accepted"))
+    assert [d.severity for d in project.check()] == ["error"]  # accepted with placeholders
+
+
+def test_cli_json_and_exit_codes(project, capsys):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", "colour: red\n"))
+    code = main(["--root", str(project.root), "check", "--format", "json"])
+    payload = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert payload["summary"]["errors"] == 1
+    assert payload["diagnostics"][0]["rule"] == "bondstone/field-unknown"
+    assert payload["diagnostics"][0]["line"] == 7
+
+    assert main(["--root", str(project.root), "gen"]) == 0
+    assert (project.root / "docs/generated/decisions.md").exists()
+    assert main(["--root", str(project.root), "explain", "adr/alternatives-considered"]) == 0
+    assert main(["--root", str(project.root), "explain", "nope"]) == 2
+
+
+def test_code_tags_ignore_non_tag_mentions(project):
+    project.profile(packs=["capability@1"], code={"include": ["src/*.py"]},
+                    overrides={"bondstone/view-stale": "off"})
+    project.write("src/a.py", '''
+        MARK = "<!-- bondstone:generated"
+        LINK = "bondstone:part_of"
+        HINT = "add a `bondstone: <id>` comment"
+        # bondstone: REQ-ZZ-001
+    ''')
+    assert project.rules() == ["bondstone/code-ref-unknown"]
+
+
+def test_todo_markers_inside_code_are_ignored(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    body = ("\n## Context\n\nUse `<!-- todo: ... -->` markers.\n\n```md\n<!-- todo: x -->\n```\n\n"
+            "## Decision\n\nd\n\n## Alternatives considered\n\na\n\n## Consequences\n\nx\n")
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", body=body))
+    assert project.rules() == []
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", body=body + "\n<!-- todo: y -->\n"))
+    assert project.rules() == ["bondstone/todo-left"]
+
+
+def test_init_generates_views_so_fresh_repo_is_clean(project, capsys):
+    assert main(["--root", str(project.root), "init", "--packs", "adr@1,capability@1",
+                 "--bridges", "adr-capability@1"]) == 0
+    assert "wrote docs/generated/decisions.md" in capsys.readouterr().out
+    assert project.rules() == []
+
+
+def _git_project(project, **profile):
+    profile.setdefault("overrides", {"bondstone/view-stale": "off"})
+    project.profile(**profile)
+    project.git("init", "-q")
+    return project
+
+
+def test_new_documents_must_start_in_initial_status(project):
+    _git_project(project, packs=["adr@1"])
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "proposed"))
+    project.commit()
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    assert project.rules(base="HEAD") == ["bondstone/status-initial"]
+
+    # a renamed document is not new
+    (project.root / "docs/adr/ADR-002-b.md").unlink()
+    project.git("mv", "docs/adr/ADR-001-a.md", "docs/adr/ADR-001-renamed.md")
+    project.write("docs/adr/ADR-001-renamed.md", adr("ADR-001", "accepted"))
+    assert project.rules(base="HEAD") == []
+    # moved without git mv (untracked new path, deleted old path) is also recognised
+    project.git("reset", "-q", "--hard")
+    (project.root / "docs/adr/ADR-001-a.md").rename(project.root / "docs/adr/ADR-001-moved.md")
+    assert project.rules(base="HEAD") == []
+
+
+def test_create_as_allows_other_creation_statuses(project):
+    project.write(".bondstone/packs/note/pack.yaml", """
+        id: note
+        version: 1.0.0
+        types:
+          Note:
+            paths: ["notes/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, final], initial: draft, create_as: [draft, final]}
+    """)
+    _git_project(project, packs=["note@1"], sources=[".bondstone/packs"])
+    project.write("notes/a.md", "---\nid: N1\ntitle: A note\nstatus: draft\n---\n")
+    project.commit()
+    project.write("notes/b.md", "---\nid: N2\ntitle: B note\nstatus: final\n---\n")
+    assert project.rules(base="HEAD") == []
+
+
+CAP = """
+---
+id: CAP-a
+title: Capability A
+status: active
+owner: me
+code: AA
+constrained_by: [{adr}]
+---
+## Purpose
+
+p
+
+## Requirements
+
+### REQ-AA-001: Thing
+
+The system SHALL do the thing.
+
+#### Scenario: ok
+
+- Then fine
+"""
+
+
+def test_supersede_moves_links_and_respects_immutability(project):
+    from bondstone.graph import build_graph
+    from bondstone.scaffold import supersede
+    from bondstone.model import BondstoneError
+
+    project.profile(packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+                    defaults={"owner": "me"}, overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001, ADR-002"))
+    cfg = load_config(project.root)
+    result = supersede(cfg, build_graph(cfg), "ADR-001", "Better decision", {})
+    assert result.created.name == "ADR-003-better-decision.md"
+    assert "supersedes: ADR-001" in result.created.read_text()
+    assert "status: superseded" in (project.root / "docs/adr/ADR-001-a.md").read_text()
+    assert "constrained_by: [ADR-003, ADR-002]" in (project.root / "docs/capabilities/a.md").read_text()
+    assert project.rules(severity="error") == []
+
+    cfg = load_config(project.root)
+    with pytest.raises(BondstoneError, match="already superseded"):
+        supersede(cfg, build_graph(cfg), "ADR-001", "Again", {})
+    with pytest.raises(BondstoneError, match="cannot become 'superseded'"):
+        supersede(cfg, build_graph(cfg), "ADR-002", "Too early", {})
+    with pytest.raises(BondstoneError, match="not supersedable"):
+        supersede(cfg, build_graph(cfg), "CAP-a", "Nope", {})
+
+
+def test_traced_diff_rule_requires_the_tagged_spec(project):
+    _git_project(
+        project, packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "traced": True, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001"))
+    project.write("docs/capabilities/b.md", CAP.format(adr="ADR-001").replace("CAP-a", "CAP-b")
+                  .replace("AA", "BB"))
+    project.write("src/a.py", "# bondstone: REQ-AA-001\nx = 1\n")
+    project.write("src/plain.py", "y = 1\n")
+    project.commit()
+
+    project.write("src/a.py", "# bondstone: REQ-AA-001\nx = 2\n")
+    project.write("docs/capabilities/b.md", (project.root / "docs/capabilities/b.md").read_text() + "\nmore\n")
+    diags = [d for d in project.check(base="HEAD") if d.rule == "profile/code-needs-spec"]
+    assert [d.node for d in diags] == ["CAP-a"]  # the wrong spec changed
+    assert "src/a.py implements CAP-a" in diags[0].message
+
+    project.write("docs/capabilities/a.md", (project.root / "docs/capabilities/a.md").read_text() + "\nmore\n")
+    assert project.rules(base="HEAD") == []
+
+    # untraced code falls back to "any living spec changed"
+    project.git("checkout", "-q", "--", ".")
+    project.write("src/plain.py", "y = 2\n")
+    assert project.rules(base="HEAD") == ["profile/code-needs-spec"]
+
+
+def test_id_format_uses_set_values(project):
+    from bondstone.graph import build_graph
+    from bondstone.model import BondstoneError
+    from bondstone.scaffold import next_id
+
+    project.profile(packs=["adr@1"])
+    graph = build_graph(load_config(project.root))
+    assert next_id("x:Release", "v{version}", graph, "s", {"version": "0.2.0"}) == "v0.2.0"
+    with pytest.raises(BondstoneError, match="pass --set version"):
+        next_id("x:Release", "v{version}", graph, "s", {})
+
+
+def test_frontmatter_edits_handle_flow_style():
+    from bondstone.edit import replace_id, set_scalar
+
+    text = "---\n{id: ADR-001, title: T, status: accepted,\n  owner: me}\n---\n## Context\n"
+    edited = set_scalar(text, "status", "superseded")
+    assert "status: superseded" in edited and "{" not in edited
+    assert edited.endswith("---\n## Context\n")
+    text = "---\n{id: CAP-a, constrained_by: [ADR-001, ADR-002]}\n---\n"
+    edited, changed = replace_id(text, "constrained_by", "ADR-001", "ADR-009")
+    assert changed and "ADR-009" in edited and "ADR-002" in edited
+    block = "---\nid: X\nlinks: [A, B]   # keep\n---\n"
+    assert replace_id(block, "links", "A", "C")[0] == "---\nid: X\nlinks: [C, B]   # keep\n---\n"
+
+
+def test_baseline_adopts_existing_documents(project, capsys):
+    _git_project(project, packs=["adr@1"])
+    project.commit("empty")
+    project.git("branch", "-M", "main")
+    project.git("checkout", "-q", "-b", "feature")
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.commit("adopt")
+    assert project.rules(base="main") == ["bondstone/status-initial"]
+
+    assert main(["--root", str(project.root), "baseline"]) == 0
+    assert "baseline: " in capsys.readouterr().out
+    project.commit("baseline")
+    assert project.rules(base="main") == []
+
+    # after the baseline, changes are still checked against the baseline version
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted").replace("\nc\n", "\nedited\n"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "deprecated"))
+    project.write("docs/adr/ADR-003-c.md", adr("ADR-003", "accepted"))
+    assert project.rules(base="main") == [
+        "bondstone/immutable", "bondstone/status-initial", "bondstone/status-transition"]
+
+    profile = (project.root / ".bondstone/profile.yaml").read_text()
+    (project.root / ".bondstone/profile.yaml").write_text(
+        profile.replace(profile.split("baseline: ")[1].split("\n")[0], "0" * 40))
+    assert "bondstone/baseline-missing" in project.rules(base="main")
+
+
+def test_traced_rule_uses_changed_regions(project):
+    _git_project(
+        project, packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "traced": True, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001"))
+    project.write("docs/capabilities/b.md", CAP.format(adr="ADR-001").replace("CAP-a", "CAP-b").replace("AA", "BB"))
+    project.write("src/m.py", "# bondstone: REQ-AA-001\ndef a():\n    return 1\n\n"
+                              "# bondstone: REQ-BB-001\ndef b():\n    return 1\n")
+    project.commit()
+    project.write("src/m.py", "# bondstone: REQ-AA-001\ndef a():\n    return 1\n\n"
+                              "# bondstone: REQ-BB-001\ndef b():\n    return 2\n")
+    diags = [d.node for d in project.check(base="HEAD") if d.rule == "profile/code-needs-spec"]
+    assert diags == ["CAP-b"]  # only the region that changed
+
+
+def test_covered_selector(project):
+    project.profile(packs=["capability@1"], code={"include": ["src/*.py"]},
+                    overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+                    rules=[{"id": "covered-only", "when": {"type": "capability:Requirement", "covered": False},
+                            "require": [{"field": "nope"}]}])
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001").replace("constrained_by: [ADR-001]\n", "")
+                  + "\n### REQ-AA-002: Other\n\nIt SHALL.\n\n#### Scenario: s\n\n- ok\n")
+    project.write("src/a.py", "# bondstone: REQ-AA-001\n")
+    assert [d.node for d in project.check() if d.rule == "profile/covered-only"] == ["REQ-AA-002"]
+
+
+def test_stacked_tags_share_a_region():
+    from bondstone.checks import _tags_in_lines
+
+    text = "# bondstone: A-1\n# bondstone: B-1\ndef f():\n    pass\n# bondstone: C-1\ndef g():\n    pass\n"
+    assert _tags_in_lines(text, {4}) == {"A-1", "B-1"}
+    assert _tags_in_lines(text, {7}) == {"C-1"}
+
+
+def test_set_values_that_are_not_yaml(project):
+    project.profile(packs=["adr@1"])
+    assert main(["--root", str(project.root), "new", "adr:Decision", "--title", "X y z",
+                 "--set", "tags=[a, b]", "--set", "context=bondstone check [--base REF] [x]"]) == 0
+    text = next((project.root / "docs/adr").glob("*.md")).read_text()
+    assert "- a\n- b" in text and "context: bondstone check [--base REF] [x]" in text
+    assert main(["--root", str(project.root), "new", "adr:Decision", "--title", "X", "--set", "novalue"]) == 2
+
+
+def test_tag_only_changes_do_not_trace():
+    from bondstone.checks import _tags_in_lines
+
+    text = "# bondstone: A-1\n# bondstone: B-1\ndef f():\n    pass\n"
+    assert _tags_in_lines(text, {2}) == set()
+    assert _tags_in_lines(text, {2, 4}) == {"A-1", "B-1"}
+
+
+def test_tag_regions_end_with_the_tagged_block():
+    from bondstone.checks import tag_regions
+
+    py = ("# bondstone: A-1\ndef f(x,\n      y):\n    a = 1\n\n    return a\n\n\n"
+          "def untagged():\n    pass\n\n\nclass C:\n    # bondstone: B-1\n    def m(self):\n        pass\n\n    def n(self):\n        pass\n")
+    assert tag_regions(py) == [("A-1", 1, 6), ("B-1", 14, 16)]
+    js = "// bondstone: J-1\nfunction f() {\n  return 1;\n}\n\nfunction g() {}\n"
+    assert tag_regions(js) == [("J-1", 1, 4)]
+
+
+def test_incomplete_ids_are_not_tags():
+    from bondstone.graph import scan_tags
+
+    assert scan_tags("hint: tag it with `bondstone: REQ-...`") == []
+    assert scan_tags("# bondstone: REQ-AA-001, CLI-pack-test.") == [(1, "REQ-AA-001"), (1, "CLI-pack-test")]
+    assert scan_tags("# bondstone: A") == [(1, "A")]
+
+
+def test_nested_tags_keep_the_outer_region():
+    from bondstone.checks import tag_regions
+
+    py = ("# bondstone: A-1\ndef f():\n    x = 1\n    # bondstone: E-1\n    raise E()\n\n    return x\n\n\n"
+          "# bondstone: B-1\ndef g():\n    pass\n")
+    assert sorted(tag_regions(py)) == [("A-1", 1, 7), ("B-1", 10, 12), ("E-1", 4, 5)]
+
+
+def test_file_field_and_for_each(project):
+    project.write(".bondstone/packs/docs/pack.yaml", """
+        id: docs
+        version: 1.0.0
+        types:
+          Readme:
+            paths: ["lib/*/README.md"]
+            fields:
+              name: {type: string}
+              version: {type: string}
+        rules:
+          - id: version-matches
+            when: {type: Readme}
+            require:
+              - file_field: {path: "{dir}/manifest.yaml", key: meta.version, equals: version}
+              - file_field: {path: "{dir}/manifest.yaml", key: kind, value: pack}
+          - id: manifest-has-readme
+            for_each: {glob: "lib/*/manifest.yaml", document: "{dir}/README.md", type: Readme}
+    """)
+    project.profile(packs=["docs@1"], sources=[".bondstone/packs"], overrides={"bondstone/view-stale": "off"})
+    project.write("lib/a/manifest.yaml", "kind: pack\nmeta: {version: 1.2.0}\n")
+    project.write("lib/a/README.md", "---\nid: R-a\ntitle: A\nname: a\nversion: 1.2.0\n---\n")
+    project.write("lib/b/manifest.yaml", "kind: bridge\nmeta: {version: 2.0.0}\n")
+    project.write("lib/b/README.md", "---\nid: R-b\ntitle: B\nname: b\nversion: 1.0.0\n---\n")
+    project.write("lib/c/manifest.yaml", "kind: pack\nmeta: {version: 1.0.0}\n")
+    diags = project.check()
+    assert sorted((d.rule, d.node or d.path) for d in diags) == [
+        ("docs/manifest-has-readme", "lib/c/manifest.yaml"),
+        ("docs/version-matches", "R-b"), ("docs/version-matches", "R-b")]
+    assert "is '2.0.0', field 'version' is '1.0.0'" in " ".join(d.message for d in diags)
+
+
+def test_exists_clause_in_diff_rules(project):
+    project.write(".bondstone/packs/p/pack.yaml", """
+        id: p
+        version: 1.0.0
+        types:
+          Proposal:
+            paths: ["docs/p/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, accepted], initial: draft, transitions: {draft: [accepted]}}
+    """)
+    _git_project(project, packs=["p@1"], sources=[".bondstone/packs"], roles={"change": ["p:Proposal"]},
+                 rules=[{"id": "work-has-proposal", "on_change": {"paths": ["src/**"]},
+                         "require": [{"exists": {"role": "change", "status": "accepted"}, "min": 1}]}])
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: draft\n---\n")
+    project.write("src/a.py", "x = 1\n")
+    project.commit()
+    project.write("src/a.py", "x = 2\n")
+    assert project.rules(base="HEAD") == ["profile/work-has-proposal"]
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: accepted\n---\n")
+    project.commit()
+    project.write("src/a.py", "x = 3\n")
+    assert project.rules(base="HEAD") == []
+
+
+def test_any_clause_in_node_rules(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"},
+                    rules=[{"id": "result-or-outcome", "when": {"type": "adr:Decision"},
+                            "require": [{"any": [{"section": "Result"}, {"section": "Outcome"}]}]}])
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted") + "\n## Outcome\n\no\n")
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    diags = [d for d in project.check() if d.rule == "profile/result-or-outcome"]
+    assert [d.node for d in diags] == ["ADR-002"]
+    assert "missing section 'Result'; or missing section 'Outcome'" in diags[0].message
+
+
+def test_any_clause_in_diff_rules_allows_closing_the_last_proposal(project):
+    project.write(".bondstone/packs/p/pack.yaml", """
+        id: p
+        version: 1.0.0
+        types:
+          Proposal:
+            paths: ["docs/p/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, accepted, implemented], initial: draft,
+                          transitions: {draft: [accepted], accepted: [implemented]}}
+    """)
+    rule = {"id": "work-has-proposal", "on_change": {"paths": ["lib/**"]},
+            "require": [{"any": [{"exists": {"role": "change", "status": "accepted"}},
+                                 {"changed": {"role": "change", "status": "implemented"}}]}]}
+    _git_project(project, packs=["p@1"], sources=[".bondstone/packs"], roles={"change": ["p:Proposal"]}, rules=[rule])
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: accepted\n---\n")
+    project.write("lib/x.md", "draft\n")
+    project.commit()
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: implemented\n---\n")
+    project.write("lib/x.md", "active\n")
+    assert project.rules(base="HEAD") == []          # closed in this change
+    project.commit()
+    project.write("lib/x.md", "changed again\n")
+    assert project.rules(base="HEAD") == ["profile/work-has-proposal"]  # no open proposal
+
+
+def test_any_is_validated(project):
+    project.profile(packs=["capability@1"],
+                    rules=[{"id": "bad", "on_change": {"paths": ["src/**"]},
+                            "require": [{"any": [{"changed": {"role": "nope"}, "traced": True}]}]},
+                           {"id": "empty", "when": {"type": "capability:Capability"}, "require": [{"any": []}]}])
+    messages = " ".join(d.message for d in project.check() if d.rule == "bondstone/profile")
+    assert "'traced' is not supported inside 'any'" in messages
+    assert "role 'nope'" in messages
+    assert "'any' needs at least one alternative" in messages

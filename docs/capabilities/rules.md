@@ -1,0 +1,115 @@
+---
+id: CAP-rules
+title: Rules and traits
+status: active
+owner: dworek
+code: RUL
+depends_on: [CAP-graph]
+constrained_by: [ADR-002, ADR-004, ADR-005]
+---
+
+## Purpose
+
+Evaluate declarative rules from packs, bridges and the profile, and the checks implied by traits.
+
+## Requirements
+
+### REQ-RUL-001: Select nodes
+
+Rule selectors SHALL match nodes by type, role, trait, status and field values, combined with AND.
+
+#### Scenario: Status selector
+
+- Given a rule with `when: {type: Solution, status: committed}`
+- When a solution is `idea`
+- Then the rule does not apply to it
+
+### REQ-RUL-002: Evaluate requirement clauses
+
+Bondstone SHALL support `link` (with `min` or `all`), `incoming`, `field`, `section` and `contains` clauses and report each failing clause with the rule's message.
+
+#### Scenario: All targets must match
+
+- Given a clause `link: constrained_by, all: true, to: {status: accepted}`
+- When one target is superseded
+- Then the rule fails and names that target
+
+### REQ-RUL-003: Validate frontmatter against the type schema
+
+Bondstone SHALL validate fields against the type's JSON Schema, including `status` values from the lifecycle trait and `owner` from the owned trait.
+
+#### Scenario: Unknown status
+
+- Given a decision with `status: approved`
+- When check runs
+- Then `bondstone/field-invalid` is reported
+
+### REQ-RUL-004: Check supersession
+
+For supersedable types Bondstone SHALL require superseded targets to have status `superseded`, allow one successor per document and reject cycles.
+
+#### Scenario: Successor without status change
+
+- Given ADR-002 supersedes ADR-001
+- When ADR-001 is still accepted
+- Then `bondstone/supersede-status` is reported
+
+### REQ-RUL-005: Require sections
+
+Bondstone SHALL report documents that lack a section their type requires.
+
+#### Scenario: Missing section
+
+- Given a decision without `## Consequences`
+- When check runs
+- Then `bondstone/section-missing` is reported
+
+### REQ-RUL-006: Flag unfinished placeholders
+
+Bondstone SHALL report `<!-- todo: ... -->` markers outside code spans as a warning in a document's initial status and as an error otherwise.
+
+#### Scenario: Placeholder in an accepted decision
+
+- Given an accepted decision with a todo marker
+- When check runs
+- Then `bondstone/todo-left` is an error
+
+### REQ-RUL-007: Select by code coverage
+
+Selectors SHALL support `covered: true|false`, matching nodes that are (or are not) referenced by a code tag.
+
+#### Scenario: Delivered but not implemented
+
+- Given an implemented proposal that delivers REQ-AA-002
+- When no code is tagged with REQ-AA-002
+- Then `change-capability/delivered-requirements-are-implemented` is reported
+
+### REQ-RUL-008: Compare with values in other files
+
+A `file_field` clause SHALL read a YAML or JSON file at a path built from the document's directory (`{dir}`) and fields, and SHALL fail when the file or the dotted `key` is missing or its value differs from the field named in `equals` or the literal `value`.
+
+#### Scenario: Version drift
+
+- Given a README with `version: 1.0.0` next to a manifest with `version: 1.1.0`
+- When a rule requires `file_field: {path: "{dir}/pack.yaml", key: version, equals: version}`
+- Then the rule fails and shows both values
+
+### REQ-RUL-009: Require a document for every matching file
+
+A rule with `for_each: {glob, document, type}` SHALL report every file matching the glob that has no document of the type at the path built from `{dir}`, `{name}` and `{path}` of the file.
+
+#### Scenario: Pack without a README
+
+- Given `packs/ost/pack.yaml` and no `packs/ost/README.md`
+- When a rule has `for_each: {glob: "packs/*/pack.yaml", document: "{dir}/README.md"}`
+- Then the rule reports `packs/ost/pack.yaml`
+
+### REQ-RUL-010: Alternative clauses
+
+An `any: [clause, ...]` clause SHALL pass when at least one alternative passes and SHALL otherwise report every alternative's failure. `profile check` SHALL validate the alternatives and SHALL reject `traced` inside `any`.
+
+#### Scenario: Either section
+
+- Given a rule requiring `any: [{section: Result}, {section: Outcome}]`
+- When a document has only `## Outcome`
+- Then the rule passes

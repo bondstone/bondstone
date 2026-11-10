@@ -1,0 +1,11 @@
+bondstone: 0.1
+packs:
+- cli@0.1
+- capability@1
+bridges:
+- cli-capability@0.1
+code:
+  include:
+  - src/*.py
+overrides:
+  bondstone/view-stale: 'off'

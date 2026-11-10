@@ -1,0 +1,6 @@
+errors:
+- bondstone/link-min
+- ost/concluded-experiment-has-result
+- ost/no-solutions-for-closed-opportunities
+warnings:
+- ost/committed-solution-has-evidence

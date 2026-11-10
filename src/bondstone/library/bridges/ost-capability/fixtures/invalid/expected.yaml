@@ -1,0 +1,4 @@
+errors:
+- ost-capability/committed-solution-is-realized
+warnings:
+- ost-capability/capability-traces-to-discovery

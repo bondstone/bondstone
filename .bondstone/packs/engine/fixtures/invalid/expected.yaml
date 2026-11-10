@@ -1,0 +1,5 @@
+errors:
+- bondstone/code-coverage
+- bondstone/item-heading
+- engine/rule-is-explained
+warnings: []

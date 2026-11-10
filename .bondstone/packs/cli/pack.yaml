@@ -1,0 +1,44 @@
+id: cli
+version: 0.1.0
+description: Command-line interface reference - one document per command, tied to the code that implements it.
+
+types:
+  Command:
+    description: One CLI command (a subcommand, or a nested one such as `profile check`).
+    id_format: "CLI-{slug}"
+    id_pattern: "^CLI-[a-z]+(-[a-z]+)*$"
+    paths: ["docs/cli/*.md"]
+    dir: docs/cli
+    filename: "{slug}.md"
+    fields:
+      title: {type: string, minLength: 2, description: "the command as typed, e.g. `profile check`"}
+      synopsis: {type: string, minLength: 3}
+      json_output: {type: boolean}
+    required_fields: [title, synopsis]
+    sections: [Options, Exit codes, Examples]
+    traits:
+      lifecycle:
+        statuses: [draft, experimental, stable, deprecated]
+        initial: draft
+        transitions:
+          draft: [experimental, stable]
+          experimental: [stable, deprecated]
+          stable: [deprecated]
+      code-traceable: {coverage: error}
+      indexed: {}
+
+rules:
+  - id: json-output-is-documented
+    description: Stable commands with JSON output document its shape.
+    when: {type: Command, status: stable, where: {json_output: true}}
+    require:
+      - section: JSON output
+
+views:
+  - id: reference
+    title: CLI reference
+    output: docs/generated/cli-reference.md
+    select: {type: Command}
+    columns: [id, title, synopsis, status]
+
+instructions: instructions.md
