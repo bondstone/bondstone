@@ -22,7 +22,7 @@ def test_every_rule_the_engine_emits_is_in_the_catalogue_and_the_other_way_round
 
 
 def test_catalogue_entries_are_complete_and_unique():
-    assert len(BY_ID) == len(ENGINE_RULES) == 36
+    assert len(BY_ID) == len(ENGINE_RULES) == 42
     for rule in ENGINE_RULES:
         assert rule.id.startswith("bondstone/")
         assert rule.severity in SEVERITIES
@@ -37,7 +37,13 @@ def test_new_rules_of_v1_are_present():
     assert default_severity("bondstone/untyped-document") == "error"
     assert default_severity("bondstone/type-missing") == "error"
     assert default_severity("bondstone/tag-retired") == "warn"
-    assert engine_rule("bondstone/immutable") is None  # needs git: arrives with the diff checks
+    assert default_severity("bondstone/exemption-used") == "info"
+    assert default_severity("bondstone/exemption-invalid") == "error"
+
+
+def test_rules_that_compare_with_a_base_commit_are_present():
+    for name in ("status-initial", "status-transition", "immutable", "baseline-missing"):
+        assert engine_rule(f"bondstone/{name}").severity == "error"
 
 
 def test_diagnostic_helper_uses_the_default_severity_unless_told_otherwise():

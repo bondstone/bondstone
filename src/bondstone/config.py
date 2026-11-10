@@ -184,6 +184,12 @@ class Config:
     def code_exclude(self) -> list[str]:
         return list((self.profile.get("code") or {}).get("exclude") or [])
 
+    @property
+    def baseline(self) -> str | None:
+        """The commit whose documents count as already adopted (`bondstone baseline`)."""
+        value = self.profile.get("baseline")
+        return str(value) if value else None
+
     def rule(self, qid: str) -> Rule | None:
         return next((r for r in self.rules if r.qid == qid), None)
 

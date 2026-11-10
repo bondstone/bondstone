@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .model import ERROR, WARN, Diagnostic
+from .model import ERROR, INFO, WARN, Diagnostic
 
 
 @dataclass(frozen=True)
@@ -169,6 +169,37 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A generated view is missing or differs from what `bondstone gen` would write.",
           "Committed views must match the documents they are generated from.",
           "Run `bondstone gen` and commit the result."),
+    _rule("status-initial", ERROR,
+          "With `--base`, a new document or item starts in a status other than its lifecycle's `initial`.",
+          "Skipping the first status skips the review that status stands for.",
+          "Create it in the initial status and change the status in a later change. For documents "
+          "that existed before bondstone, record them with `bondstone baseline`.",
+          note="Only checked for lifecycles that declare `initial`."),
+    _rule("status-transition", ERROR,
+          "With `--base`, a document's or an item's status changed in a way its lifecycle's "
+          "`transitions` do not allow.",
+          "A lifecycle is only worth something when its steps cannot be skipped or undone.",
+          "Use one of the allowed statuses named in the message.",
+          note="Only checked for lifecycles that declare `transitions`."),
+    _rule("immutable", ERROR,
+          "With `--base`, a document that was in an immutable status was edited beyond the fields "
+          "its type allows.",
+          "A decided document is a record: readers must be able to trust it says what was decided.",
+          "Undo the edit and create a new document that supersedes it."),
+    _rule("baseline-missing", ERROR,
+          "With `--base`, the profile's `baseline` commit is not available in the clone.",
+          "Without it, documents adopted at the baseline look new and lifecycle checks misfire.",
+          "Fetch the full history (`git fetch --unshallow`), or record a new commit with `bondstone baseline`."),
+    _rule("exemption-used", INFO,
+          "A commit trailer exempted a diff-rule violation; the message names the commit, the rule "
+          "and the reason.",
+          "An exemption is allowed, but it is never silent.",
+          "Nothing to fix. `check --no-exemptions` ignores trailers when a run must be strict."),
+    _rule("exemption-invalid", ERROR,
+          "A commit in the checked range carries an exemption trailer whose value is not "
+          "`none (<reason>)` or `none [ID, ...] (<reason>)`.",
+          "A typo must neither exempt a change silently nor fail to exempt it silently.",
+          "Amend the commit message, or add a commit with a valid trailer."),
     _rule("waiver-invalid", ERROR,
           "A waiver has no `rule`, `reason` or `expires`, names a rule that does not exist, or "
           "names a locked rule.",

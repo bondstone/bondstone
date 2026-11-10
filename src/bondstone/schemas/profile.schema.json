@@ -10,6 +10,12 @@
       "const": 1,
       "x-error": "expected the format version 1"
     },
+    "baseline": {
+      "description": "Commit whose documents count as already adopted; written by `bondstone baseline`.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,64}$",
+      "x-error": "expected a commit id in quotes, as `bondstone baseline` writes it"
+    },
     "extends": {"type": "array", "items": {"type": "string"}},
     "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "bridges": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
