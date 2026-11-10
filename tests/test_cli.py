@@ -177,6 +177,127 @@ def test_root_defaults_to_the_nearest_profile(clean, capsys, monkeypatch):
     assert run(capsys, "check")[0] == 0
 
 
+# --------------------------------------------------------------------------- check --base
+
+
+SPEC_RULE = {
+    "id": "code-updates-spec",
+    "description": "Code changes update the living spec they implement.",
+    "on_change": {"paths": ["src/**"]},
+    "require": [{"changed": {"role": "living-spec"}, "traced": True}],
+    "exempt": {"trailer": "Spec-Impact"},
+    "hint": 'Update the spec, or add the trailer "Spec-Impact: none (<reason>)".',
+}
+
+
+@pytest.fixture
+def history(project):
+    """A git repository whose last commits break one rule of every kind that needs a base.
+
+    Returns the project, the base commit and the commit that carries an exemption trailer."""
+    standard(project.init(), docs=["docs/**/*.md"], code={"include": ["src/*.py"]}, rules=[SPEC_RULE],
+             overrides={"bondstone/view-stale": "error"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.write("docs/capabilities/a.md", capability("CAP-a", "AA", extra="constrained_by: [ADR-001]\n"))
+    project.write("docs/capabilities/b.md", capability("CAP-b", "BB", extra="constrained_by: [ADR-001]\n"))
+    project.write("src/a.py", "# bondstone: REQ-AA-001\ndef a():\n    return 1\n")
+    project.write("src/b.py", "# bondstone: REQ-BB-001\ndef b():\n    return 2\n")
+    assert main(["--root", str(project.root), "gen"]) == 0
+    base = project.commit("first")
+    project.edit("docs/adr/ADR-001-a.md", "## Decision\n\nd", "## Decision\n\nrewritten")  # immutable
+    project.edit("docs/adr/ADR-002-b.md", "status: proposed", "status: deprecated")  # not a transition
+    project.write("docs/adr/ADR-003-c.md", adr("ADR-003", "rejected"))  # not the initial status
+    project.edit("src/a.py", "return 1", "return 10")
+    exempting = project.commit("Tidy a\n\nSpec-Impact: none [CAP-a] (no behaviour change)")
+    project.edit("src/b.py", "return 2", "return 20")  # CAP-b is not updated, and this is not committed
+    assert main(["--root", str(project.root), "gen"]) == 0
+    return project, base, exempting
+
+
+def test_check_base_text_output(history, capsys):
+    project, base, exempting = history
+    code, out, err = run(capsys, "--root", project.root, "check", "--base", base)
+    assert (code, err) == (1, "")
+    assert_golden("check-base.txt", out.replace(exempting[:7], "<commit>"))
+
+
+def test_check_base_json_output(history, capsys):
+    project, base, exempting = history
+    code, out, _ = run(capsys, "--root", project.root, "check", "--base", base, "--format", "json")
+    assert code == 1
+    assert_golden("check-base.json", out.replace(exempting, "<commit>").replace(exempting[:7], "<commit>"))
+    payload = json.loads(out)
+    exempted = [d for d in payload["diagnostics"] if "exempted_by" in d]
+    assert [(d["rule"], d["severity"], d["node"]) for d in exempted] == [("bondstone/exemption-used", "info", "CAP-a")]
+    assert exempted[0]["exempted_by"] == {"commit": exempting, "trailer": "Spec-Impact",
+                                          "reason": "no behaviour change"}
+
+
+def test_no_exemptions_reports_the_exempted_violation(history, capsys):
+    project, base, _ = history
+    _, out, _ = run(capsys, "--root", project.root, "check", "--base", base, "--no-exemptions", "--format", "json")
+    found = [(d["rule"], d["node"]) for d in json.loads(out)["diagnostics"] if d["rule"].startswith("profile/")]
+    assert found == [("profile/code-updates-spec", "CAP-a"), ("profile/code-updates-spec", "CAP-b")]
+
+
+def test_without_base_the_history_is_not_checked(history, capsys):
+    project, _, _ = history
+    code, out, _ = run(capsys, "--root", project.root, "check")
+    assert code == 0 and out == "✓ 0 error(s), 0 warning(s), 7 nodes\n"
+
+
+def test_check_base_on_a_clean_tree(history, capsys):
+    project, _, _ = history
+    project.commit("everything")
+    assert run(capsys, "--root", project.root, "check", "--base", "HEAD") == (
+        0, "✓ 0 error(s), 0 warning(s), 7 nodes\n", "")
+
+
+def test_base_outside_git_and_unknown_refs_exit_with_3(clean, capsys):
+    code, out, err = run(capsys, "--root", clean.root, "check", "--base", "HEAD")
+    assert (code, out) == (3, "") and "is not inside a git repository" in err
+    clean.init().commit("first")
+    code, out, err = run(capsys, "--root", clean.root, "check", "--base", "origin/main")
+    assert (code, out) == (3, "")
+    assert err == ("bondstone: --base: 'origin/main' is not a commit in this repository; "
+                   "fetch it, e.g. `git fetch origin`\n")
+    assert run(capsys, "--root", clean.root, "check", "--base", "HEAD")[0] == 0
+
+
+# --------------------------------------------------------------------------- baseline
+
+
+def test_baseline_records_head_in_the_profile(clean, capsys):
+    clean.write(".bondstone/profile.yaml", "# what this repository uses\n" + clean.read(".bondstone/profile.yaml"))
+    before = clean.read(".bondstone/profile.yaml")
+    head = clean.init().commit("first")
+    assert run(capsys, "--root", clean.root, "baseline") == (0, f"baseline: {head}\n", "")
+    assert clean.read(".bondstone/profile.yaml") == before.replace(
+        "bondstone: 1\n", f"bondstone: 1\nbaseline: '{head}'\n")
+    assert run(capsys, "--root", clean.root, "check", "--base", "HEAD")[0] == 0
+
+
+def test_baseline_replaces_an_earlier_one_and_takes_a_ref(clean, capsys):
+    first = clean.init().commit("first")
+    assert run(capsys, "--root", clean.root, "baseline")[0] == 0
+    second = clean.commit("second")
+    assert run(capsys, "baseline", "HEAD~1", "--root", clean.root) == (0, f"baseline: {first}\n", "")
+    assert run(capsys, "--root", clean.root, "baseline", "main")[1] == f"baseline: {second}\n"
+    text = clean.read(".bondstone/profile.yaml")
+    assert text.count("baseline:") == 1 and f"baseline: '{second}'" in text
+
+
+def test_baseline_outside_git_or_with_an_unknown_ref_exits_with_3(clean, capsys):
+    before = clean.read(".bondstone/profile.yaml")
+    code, out, err = run(capsys, "--root", clean.root, "baseline")
+    assert (code, out) == (3, "") and "is not inside a git repository" in err
+    clean.init().commit("first")
+    code, out, err = run(capsys, "--root", clean.root, "baseline", "v9.9.9")
+    assert (code, out, err) == (3, "", "bondstone: baseline: 'v9.9.9' is not a commit in this repository\n")
+    assert clean.read(".bondstone/profile.yaml") == before
+
+
 # --------------------------------------------------------------------------- the program itself
 
 
@@ -191,7 +312,7 @@ def test_usage_errors_and_version(capsys):
 
 
 def test_commands_of_later_phases_do_not_exist_yet(capsys):
-    for command in (["new", "adr:Decision"], ["check", "--base", "HEAD"], ["explain", "x"], ["pack", "test", "."]):
+    for command in (["new", "adr:Decision"], ["check", "--format", "sarif"], ["explain", "x"], ["pack", "test", "."]):
         with pytest.raises(SystemExit) as exit_info:
             main(command)
         assert exit_info.value.code == 2
