@@ -44,6 +44,7 @@ bondstone init --packs adr@1,ost@1,capability@1 \
                --bridges ost-capability@1,adr-capability@1
 bondstone new adr:Decision --title "Store habits locally with SQLite"
 bondstone new capability:Capability --title "Reminders" --set code=REM
+bondstone supersede ADR-001 --title "Store habits with Drift"
 bondstone gen                                     # regenerate views
 bondstone check                                   # validate everything
 bondstone check --base origin/main --format json  # + lifecycle, immutability, diff rules
@@ -69,7 +70,8 @@ docs/discovery/solutions/SOL-2-streak-freeze.md:5: error bondstone/link-broken: 
 | `check [--base REF] [--format json] [--fail-on warn]` | validate; exit 1 on failure |
 | `gen` | regenerate views |
 | `new TYPE --title T [--set k=v]` | scaffold a document with the next id |
-| `init --packs … --bridges …` | create a profile |
+| `supersede ID --title T` | replace a document: successor, `superseded` status, links moved |
+| `init --packs … --bridges …` | create a profile and generate views |
 | `profile check` | validate the profile, packs and bridges |
 | `rules`, `explain RULE` | list / explain active rules |
 | `agent [--output FILE]` | generate agent instructions |

@@ -209,3 +209,135 @@ def test_todo_markers_inside_code_are_ignored(project):
     assert project.rules() == []
     project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", body=body + "\n<!-- todo: y -->\n"))
     assert project.rules() == ["bondstone/todo-left"]
+
+
+def test_init_generates_views_so_fresh_repo_is_clean(project, capsys):
+    assert main(["--root", str(project.root), "init", "--packs", "adr@1,capability@1",
+                 "--bridges", "adr-capability@1"]) == 0
+    assert "wrote docs/generated/decisions.md" in capsys.readouterr().out
+    assert project.rules() == []
+
+
+def _git_project(project, **profile):
+    profile.setdefault("overrides", {"bondstone/view-stale": "off"})
+    project.profile(**profile)
+    project.git("init", "-q")
+    return project
+
+
+def test_new_documents_must_start_in_initial_status(project):
+    _git_project(project, packs=["adr@1"])
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "proposed"))
+    project.commit()
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    assert project.rules(base="HEAD") == ["bondstone/status-initial"]
+
+    # a renamed document is not new
+    (project.root / "docs/adr/ADR-002-b.md").unlink()
+    project.git("mv", "docs/adr/ADR-001-a.md", "docs/adr/ADR-001-renamed.md")
+    project.write("docs/adr/ADR-001-renamed.md", adr("ADR-001", "accepted"))
+    assert project.rules(base="HEAD") == []
+    # moved without git mv (untracked new path, deleted old path) is also recognised
+    project.git("reset", "-q", "--hard")
+    (project.root / "docs/adr/ADR-001-a.md").rename(project.root / "docs/adr/ADR-001-moved.md")
+    assert project.rules(base="HEAD") == []
+
+
+def test_create_as_allows_other_creation_statuses(project):
+    project.write(".bondstone/packs/note/pack.yaml", """
+        id: note
+        version: 1.0.0
+        types:
+          Note:
+            paths: ["notes/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, final], initial: draft, create_as: [draft, final]}
+    """)
+    _git_project(project, packs=["note@1"], sources=[".bondstone/packs"])
+    project.write("notes/a.md", "---\nid: N1\ntitle: A note\nstatus: draft\n---\n")
+    project.commit()
+    project.write("notes/b.md", "---\nid: N2\ntitle: B note\nstatus: final\n---\n")
+    assert project.rules(base="HEAD") == []
+
+
+CAP = """
+---
+id: CAP-a
+title: Capability A
+status: active
+owner: me
+code: AA
+constrained_by: [{adr}]
+---
+## Purpose
+
+p
+
+## Requirements
+
+### REQ-AA-001: Thing
+
+The system SHALL do the thing.
+
+#### Scenario: ok
+
+- Then fine
+"""
+
+
+def test_supersede_moves_links_and_respects_immutability(project):
+    from bondstone.graph import build_graph
+    from bondstone.scaffold import supersede
+    from bondstone.model import BondstoneError
+
+    project.profile(packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+                    defaults={"owner": "me"}, overrides={"bondstone/view-stale": "off"})
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001, ADR-002"))
+    cfg = load_config(project.root)
+    result = supersede(cfg, build_graph(cfg), "ADR-001", "Better decision", {})
+    assert result.created.name == "ADR-003-better-decision.md"
+    assert "supersedes: ADR-001" in result.created.read_text()
+    assert "status: superseded" in (project.root / "docs/adr/ADR-001-a.md").read_text()
+    assert "constrained_by: [ADR-003, ADR-002]" in (project.root / "docs/capabilities/a.md").read_text()
+    assert project.rules(severity="error") == []
+
+    cfg = load_config(project.root)
+    with pytest.raises(BondstoneError, match="already superseded"):
+        supersede(cfg, build_graph(cfg), "ADR-001", "Again", {})
+    with pytest.raises(BondstoneError, match="cannot become 'superseded'"):
+        supersede(cfg, build_graph(cfg), "ADR-002", "Too early", {})
+    with pytest.raises(BondstoneError, match="not supersedable"):
+        supersede(cfg, build_graph(cfg), "CAP-a", "Nope", {})
+
+
+def test_traced_diff_rule_requires_the_tagged_spec(project):
+    _git_project(
+        project, packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "traced": True, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001"))
+    project.write("docs/capabilities/b.md", CAP.format(adr="ADR-001").replace("CAP-a", "CAP-b")
+                  .replace("AA", "BB"))
+    project.write("src/a.py", "# bondstone: REQ-AA-001\nx = 1\n")
+    project.write("src/plain.py", "y = 1\n")
+    project.commit()
+
+    project.write("src/a.py", "# bondstone: REQ-AA-001\nx = 2\n")
+    project.write("docs/capabilities/b.md", (project.root / "docs/capabilities/b.md").read_text() + "\nmore\n")
+    diags = [d for d in project.check(base="HEAD") if d.rule == "profile/code-needs-spec"]
+    assert [d.node for d in diags] == ["CAP-a"]  # the wrong spec changed
+    assert "src/a.py implements CAP-a" in diags[0].message
+
+    project.write("docs/capabilities/a.md", (project.root / "docs/capabilities/a.md").read_text() + "\nmore\n")
+    assert project.rules(base="HEAD") == []
+
+    # untraced code falls back to "any living spec changed"
+    project.git("checkout", "-q", "--", ".")
+    project.write("src/plain.py", "y = 2\n")
+    assert project.rules(base="HEAD") == ["profile/code-needs-spec"]

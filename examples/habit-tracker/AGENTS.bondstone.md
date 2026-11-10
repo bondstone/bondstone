@@ -4,7 +4,8 @@
 This repository's living documentation is validated by `bondstone`. Before finishing any task:
 
 1. Create new documents with `bondstone new <Type> --title "..."` instead of by hand.
-2. Keep frontmatter links (ids, not paths) accurate.
+2. Keep frontmatter links (ids, not paths) accurate. To replace a document, run
+   `bondstone supersede <ID> --title "..."` instead of editing it.
 3. Run `bondstone gen` to refresh generated views.
 4. Run `bondstone check --format json` (add `--base origin/main` on branches) and fix every error.
 5. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass; ask instead.
@@ -103,14 +104,15 @@ One requirement inside a capability, written as a level-3 heading `### REQ-<CODE
 - **`ost-capability/capability-traces-to-discovery`** (warn): An active capability traces back to at least one committed solution.
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. — _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
-- **`profile/code-change-updates-living-spec`** (warn): Changes to app code come with an update to a living spec.
+- **`profile/code-change-updates-living-spec`** (warn): Changes to app code come with an update to the living specs they implement.
 
 ## Guidance from `adr`
 
 - Write an ADR when a change makes a decision that future readers would not understand
   from the code alone: a new dependency, a storage or protocol choice, a structural pattern.
-- Once an ADR is accepted, do not edit it. Create a new ADR with `supersedes: ADR-xxx` and
-  set the old one's status to `superseded`.
+- Once an ADR is accepted, do not edit it. Run `bondstone supersede ADR-xxx --title "..."`:
+  it creates the successor, marks the old one `superseded` and moves links to the new one.
+- Create ADRs as `proposed` and accept them in a later change.
 
 ## Guidance from `ost`
 

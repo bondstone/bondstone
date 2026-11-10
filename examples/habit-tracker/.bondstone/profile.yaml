@@ -9,11 +9,13 @@ code:
 
 rules:
   - id: code-change-updates-living-spec
-    description: Changes to app code come with an update to a living spec.
+    description: Changes to app code come with an update to the living specs they implement.
     severity: warn
     on_change: {paths: ["app/lib/**"]}
     require:
+      # the specs tagged in the changed code must change; untagged code needs any living spec
       - changed: {role: living-spec}
+        traced: true
         min: 1
 
 overrides:

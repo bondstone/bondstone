@@ -17,7 +17,7 @@ from .graph import build_graph
 from .loader import LIBRARY, Config, find_root, index_components, load_config
 from .model import ERROR, WARN, BondstoneError, Diagnostic
 from .packtest import run_fixtures
-from .scaffold import init_profile, new_document
+from .scaffold import init_profile, new_document, supersede
 from .views import generate
 
 
@@ -71,13 +71,42 @@ def cmd_new(args: argparse.Namespace) -> int:
     return 0
 
 
+def _sets(items: list[str] | None) -> dict[str, Any]:
+    sets: dict[str, Any] = {}
+    for item in items or []:
+        key, _, value = item.partition("=")
+        sets[key] = yaml.safe_load(value) if value else ""
+    return sets
+
+
+def cmd_supersede(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    result = supersede(cfg, build_graph(cfg), args.id, args.title, _sets(args.set),
+                       repoint=not args.no_repoint)
+    print(f"created {result.created.relative_to(cfg.root).as_posix()}")
+    for line in result.updated:
+        print(f"updated {line}")
+    for line in result.skipped:
+        print(f"skipped {line}")
+    written = generate(cfg, build_graph(load_config(cfg.root)))
+    for path in written:
+        print(f"wrote {path}")
+    return 0
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
     packs = [p for p in (args.packs or "").split(",") if p]
     bridges = [b for b in (args.bridges or "").split(",") if b]
     path = init_profile(root, packs, bridges)
     print(f"created {path.relative_to(root).as_posix()}")
-    return 0
+    cfg = load_config(root)
+    for written in generate(cfg, build_graph(cfg)):
+        print(f"wrote {written}")
+    problems = profile_problems(cfg)
+    for d in problems:
+        print(d.format())
+    return 1 if has_errors(problems) else 0
 
 
 def cmd_profile_check(args: argparse.Namespace) -> int:
@@ -175,6 +204,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--title", required=True)
     p.add_argument("--set", action="append", metavar="KEY=VALUE", help="set a frontmatter key (YAML value)")
     p.set_defaults(func=cmd_new)
+
+    p = sub.add_parser("supersede", help="replace a document with a new one and move links to it")
+    p.add_argument("id", help="id of the document to supersede, e.g. ADR-001")
+    p.add_argument("--title", required=True)
+    p.add_argument("--set", action="append", metavar="KEY=VALUE")
+    p.add_argument("--no-repoint", action="store_true", help="keep incoming links on the old document")
+    p.set_defaults(func=cmd_supersede)
 
     p = sub.add_parser("init", help="create .bondstone/profile.yaml")
     p.add_argument("--packs", default="", help="comma-separated, e.g. adr@1,ost@1")

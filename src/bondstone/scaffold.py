@@ -5,14 +5,16 @@ from __future__ import annotations
 import datetime as dt
 import re
 import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 from .graph import Graph
-from .loader import PROFILE_PATH, Config, as_list
-from .model import BondstoneError
+from .edit import replace_id, set_scalar
+from .loader import PROFILE_PATH, Config, as_list, qualify
+from .model import PART_OF, BondstoneError
 from .parser import slugify
 
 
@@ -115,3 +117,76 @@ def init_profile(root: Path, packs: list[str], bridges: list[str]) -> Path:
     path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     return path
 
+
+
+@dataclass
+class SupersedeResult:
+    created: Path
+    updated: list[str] = field(default_factory=list)
+    skipped: list[str] = field(default_factory=list)
+
+
+def supersede(cfg: Config, graph: Graph, old_id: str, title: str, sets: dict[str, Any],
+              repoint: bool = True) -> SupersedeResult:
+    """Create a successor of `old_id`, mark it superseded and move incoming links to it."""
+    old = graph.by_id.get(old_id)
+    if old is None:
+        raise BondstoneError(f"no document with id '{old_id}'")
+    tdef = cfg.types[old.type]
+    sup = tdef.traits.get("supersedable")
+    if sup is None:
+        raise BondstoneError(f"{old.type} is not supersedable")
+    link_qname = qualify(sup.get("link", "supersedes"), tdef.owner)
+    link = cfg.links[link_qname]
+    if any(lq == link_qname for lq, _ in graph.incoming.get(old_id, [])):
+        raise BondstoneError(f"{old_id} is already superseded")
+    lifecycle = tdef.traits.get("lifecycle")
+    if lifecycle and old.status == "superseded":
+        raise BondstoneError(f"{old_id} is already superseded")
+    if lifecycle:
+        if "superseded" not in as_list(lifecycle.get("statuses")):
+            raise BondstoneError(f"{old.type} has no 'superseded' status")
+        allowed = (lifecycle.get("transitions") or {}).get(old.status, [])
+        if "superseded" not in allowed:
+            raise BondstoneError(
+                f"{old_id} is '{old.status}', which cannot become 'superseded' "
+                f"(allowed: {', '.join(allowed) or 'none'})")
+
+    created = new_document(cfg, graph, old.type, title, {link.name: old_id, **sets})
+    result = SupersedeResult(created)
+    new_id = _read_id(created)
+
+    if lifecycle:
+        path = cfg.root / old.path
+        path.write_text(set_scalar(path.read_text(encoding="utf-8"), "status", "superseded"),
+                        encoding="utf-8")
+        result.updated.append(f"{old.path} (status: superseded)")
+
+    if not repoint:
+        return result
+    for lq, src in graph.incoming.get(old_id, []):
+        if lq in (link_qname, PART_OF) or src.parent is not None:
+            continue
+        src_traits = cfg.types[src.type].traits
+        immutable = src_traits.get("immutable")
+        if immutable and src.status in {str(s) for s in as_list(immutable.get("when"))}:
+            result.skipped.append(f"{src.id} ({src.path}) is immutable in status '{src.status}'")
+            continue
+        keys = [k for k in src.raw_keys
+                if (found := cfg.resolve_link_key(src.type, k)[0]) and found.qname == lq]
+        path = cfg.root / src.path
+        text = path.read_text(encoding="utf-8")
+        changed_any = False
+        for key in keys:
+            text, changed = replace_id(text, key, old_id, new_id)
+            changed_any |= changed
+        if changed_any:
+            path.write_text(text, encoding="utf-8")
+            result.updated.append(f"{src.path} ({cfg.links[lq].name}: {old_id} -> {new_id})")
+    return result
+
+
+def _read_id(path: Path) -> str:
+    from .parser import parse_document
+
+    return str(parse_document(path.read_text(encoding="utf-8")).frontmatter["id"])

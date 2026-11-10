@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import re
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from .graph import Graph, build_graph, glob_files, rel
 from .loader import Config, as_list, qualify
 from .model import ERROR, OFF, PART_OF, WARN, Diagnostic, Node, Rule
-from .parser import parse_document
+from .parser import ParsedDoc, parse_document
 from .select import (
     KNOWN_TRAITS,
     incoming_links,
@@ -388,6 +389,15 @@ def _sel_text(sel: dict[str, Any] | None, word: str = "to") -> str:
 # =========================================================================== code tags
 
 
+def scan_tags(text: str) -> list[tuple[int, str]]:
+    """(line, id) for every `bondstone: ID[, ID…]` tag in a text."""
+    found = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for m in CODE_TAG_RE.finditer(line):
+            found.extend((lineno, ref.strip()) for ref in m.group(1).split(","))
+    return found
+
+
 def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
     settings = cfg.code_settings()
     include = as_list(settings.get("include"))
@@ -406,19 +416,17 @@ def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 text = file.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            for lineno, line in enumerate(text.splitlines(), 1):
-                for m in CODE_TAG_RE.finditer(line):
-                    for ref in (r.strip() for r in m.group(1).split(",")):
-                        node = graph.by_id.get(ref)
-                        if node is None:
-                            out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
-                                                  f"code references unknown id '{ref}'", path, lineno))
-                        elif not cfg.types[node.type].has_trait("code-traceable"):
-                            out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
-                                                  f"{ref} is {node.type}, a type that is not code-traceable",
-                                                  path, lineno, ref))
-                        else:
-                            covered.add(ref)
+            for lineno, ref in scan_tags(text):
+                node = graph.by_id.get(ref)
+                if node is None:
+                    out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
+                                          f"code references unknown id '{ref}'", path, lineno))
+                elif not cfg.types[node.type].has_trait("code-traceable"):
+                    out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
+                                          f"{ref} is {node.type}, a type that is not code-traceable",
+                                          path, lineno, ref))
+                else:
+                    covered.add(ref)
     for node in graph.nodes:
         trait = cfg.types[node.type].traits.get("code-traceable")
         if trait is None or not node.id:
@@ -459,13 +467,47 @@ def _git(root: Path, *args: str) -> str:
     return result.stdout
 
 
-def changed_files(root: Path, base: str) -> set[str]:
-    prefix = _git(root, "rev-parse", "--show-prefix").strip()
-    files = set(_git(root, "diff", "--name-only", "--relative", base).split())
+@dataclass
+class Changes:
+    files: set[str]          # changed, added or untracked paths (current names)
+    renames: dict[str, str]  # new path -> old path
+    deleted: set[str]
+
+
+def changed_files(root: Path, base: str) -> Changes:
+    out = _git(root, "diff", "--name-status", "-M", "--relative", base)
+    files: set[str] = set()
+    renames: dict[str, str] = {}
+    deleted: set[str] = set()
+    for line in out.splitlines():
+        parts = line.split("\t")
+        status = parts[0]
+        if status.startswith("R") and len(parts) == 3:
+            renames[parts[2]] = parts[1]
+            files.add(parts[2])
+        elif status.startswith("D"):
+            deleted.add(parts[1])
+        elif len(parts) >= 2:
+            files.add(parts[-1])
     files |= set(_git(root, "ls-files", "--others", "--exclude-standard").split())
-    if prefix:
-        files = {f[len(prefix):] if f.startswith(prefix) else f for f in files}
-    return files
+    return Changes(files, renames, deleted)
+
+
+def _base_version(cfg: Config, base: str, changes: Changes, node: Node) -> ParsedDoc | None:
+    """The node's document at `base`, following renames and moved ids."""
+    candidates = [node.path]
+    if node.path in changes.renames:
+        candidates.append(changes.renames[node.path])
+    candidates += sorted(changes.deleted)
+    for path in candidates:
+        text = file_at(cfg.root, base, path)
+        if text is None:
+            continue
+        doc = parse_document(text)
+        if path in (node.path, changes.renames.get(node.path)) or (
+                doc.frontmatter and str(doc.frontmatter.get("id")) == node.id):
+            return doc
+    return None
 
 
 def file_at(root: Path, base: str, path: str) -> str | None:
@@ -496,20 +538,29 @@ def glob_to_regex(pattern: str) -> re.Pattern[str]:
 def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     try:
-        changed = changed_files(cfg.root, base)
+        changes = changed_files(cfg.root, base)
     except RuntimeError as exc:
         return [Diagnostic("bondstone/git", ERROR, f"cannot diff against '{base}': {exc}")]
+    changed = changes.files
 
     for node in graph.nodes:
         if node.parent is not None or node.path not in changed:
             continue
-        old_text = file_at(cfg.root, base, node.path)
-        if old_text is None:
-            continue
-        old = parse_document(old_text)
-        if not old.frontmatter:
-            continue
         traits = cfg.types[node.type].traits
+        old = _base_version(cfg, base, changes, node)
+        if old is None or not old.frontmatter:
+            lifecycle = traits.get("lifecycle")
+            if lifecycle and node.status is not None:
+                allowed = [str(s) for s in as_list(lifecycle.get("create_as"))] or \
+                    [str(lifecycle.get("initial") or as_list(lifecycle.get("statuses"))[0])]
+                if node.status not in allowed:
+                    out.append(Diagnostic("bondstone/status-initial", ERROR,
+                                          f"new {node.type} starts as '{node.status}'; "
+                                          f"new documents must start as {', '.join(allowed)}",
+                                          node.path, node.field_lines.get("status", 1), node.id,
+                                          hint="Create it in the initial status and change the status in a "
+                                               "later change, or override bondstone/status-initial."))
+            continue
         old_status = old.frontmatter.get("status")
         old_status = str(old_status) if old_status is not None else None
         lifecycle = traits.get("lifecycle")
@@ -544,6 +595,17 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
         for clause in as_list(rule.spec.get("require")):
             if "changed" not in clause:
                 continue
+            if clause.get("traced"):
+                traced = _traced_documents(cfg, graph, base, triggering)
+                wanted = {doc_id: files for doc_id, files in traced.items()
+                          if matches(cfg, graph.by_id[doc_id], clause["changed"], rule.context_pack)}
+                if wanted:
+                    for doc_id, files in sorted(wanted.items()):
+                        doc = graph.by_id[doc_id]
+                        if doc.path not in changed:
+                            out.append(_rule_diag(rule, f"{', '.join(sorted(files))} implements {doc_id}, "
+                                                        f"which was not updated", doc))
+                    continue
             good = [n for n in changed_nodes if matches(cfg, n, clause["changed"], rule.context_pack)]
             need = int(clause.get("min", 1))
             if len(good) < need:
@@ -551,6 +613,27 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
                 out.append(_rule_diag(rule, f"changed {shown}; needs {need} changed document(s)"
                                             f"{_sel_text(clause['changed'], 'matching')}", None))
     return out
+
+
+def _traced_documents(cfg: Config, graph: Graph, base: str, files: list[str]) -> dict[str, set[str]]:
+    """Top-level documents referenced by tags in `files`, now or at `base` -> referencing files."""
+    traced: dict[str, set[str]] = {}
+    for path in files:
+        texts = [file_at(cfg.root, base, path)]
+        current = cfg.root / path
+        if current.is_file():
+            try:
+                texts.append(current.read_text(encoding="utf-8"))
+            except (UnicodeDecodeError, OSError):
+                pass
+        for text in filter(None, texts):
+            for _, ref in scan_tags(text):
+                node = graph.by_id.get(ref)
+                while node is not None and node.parent is not None:
+                    node = graph.by_id.get(node.parent)
+                if node is not None and node.id:
+                    traced.setdefault(node.id, set()).add(path)
+    return traced
 
 
 # =========================================================================== policy

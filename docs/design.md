@@ -142,7 +142,7 @@ caret ranges (`^1`). Pack resolution order: profile `sources`, then the built-in
 
 | Trait | Config | Enforced |
 |---|---|---|
-| `lifecycle` | `statuses`, `initial`, `transitions` | `status` present and valid; with `--base`, status changes follow `transitions` |
+| `lifecycle` | `statuses`, `initial`, `transitions`, `create_as` | `status` present and valid; with `--base`, status changes follow `transitions` and new documents start in `create_as` (default: `initial`) |
 | `owned` | – | `owner` present |
 | `supersedable` | `link` | a superseded target has status `superseded`; superseded at most once; no cycles |
 | `immutable` | `when`, `allow_fields` | with `--base`, a node whose previous status is in `when` may only change `allow_fields` |
@@ -182,6 +182,7 @@ Selectors (`when`, `to`, `from`) combine with AND: `type`, `role`, `trait`, `sta
 | `section: TITLE` | heading present |
 | `contains: REGEX` | node body matches |
 | `changed: SEL, min: N` | (diff rules) N changed nodes match SEL |
+| `changed: SEL, traced: true` | (diff rules) every document matching SEL that is tagged in the changed code (now or at the base) must change; untagged code falls back to `min` |
 
 Diff rules use `on_change: {paths: [globs]}` instead of `when` and only run with
 `bondstone check --base REF`.
@@ -219,10 +220,11 @@ date in the past turns the waiver into an error.
 
 | Command | Purpose |
 |---|---|
-| `bondstone init --packs adr,ost` | create `.bondstone/profile.yaml` |
+| `bondstone init --packs adr,ost` | create `.bondstone/profile.yaml` and generate views |
 | `bondstone check [--base REF] [--format json] [--fail-on warn]` | validate everything; exit 1 on failure |
 | `bondstone gen` | regenerate views |
 | `bondstone new TYPE --title T [--set k=v]` | scaffold a valid document with the next id |
+| `bondstone supersede ID --title T [--no-repoint]` | create a successor, mark the old one superseded, move incoming links (skipping immutable sources), regenerate views |
 | `bondstone profile check` | validate the profile itself: versions, bridges, references, unbridged packs |
 | `bondstone rules` / `bondstone explain RULE` | list / explain active rules |
 | `bondstone agent [--output FILE]` | generate agent instructions from the active profile |
@@ -258,6 +260,9 @@ warnings: []
 In: engine, traits, roles, rules, diff rules (`--base`), views, overrides, waivers,
 code tags, scaffolding, agent instructions, pack tests; packs `adr`, `ost`,
 `capability`; bridges `ost-capability`, `adr-capability`; an example project.
+
+Renames are followed when comparing with `--base` (git rename detection, or a deleted
+file at the base with the same id).
 
 Out (roadmap): lock file and pack migrations; remote (git/URL) pack sources; cross-repo
 references and portfolio aggregation; Spec Kit / OpenSpec adapters; `--fix`;
