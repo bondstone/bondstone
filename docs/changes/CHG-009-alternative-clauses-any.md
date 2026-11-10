@@ -7,6 +7,7 @@ kind: feature
 modifies:
 - CAP-rules
 - CAP-diff-checks
+- CAP-profiles
 ---
 
 ## Why

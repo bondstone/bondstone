@@ -132,7 +132,7 @@ One engine rule, as `### ENG-NNN: bondstone/<rule>` with when it fires, why, fix
 - **`release-change/implemented-proposal-is-released`** (warn): Every implemented proposal is part of a (planned or published) release.
 - **`cli-capability/stable-command-on-active-capability`** (error): Stable commands only expose active capabilities.
 - **`profile/source-change-updates-traced-spec`** (error): Changes to bondstone's source update the capability specs the changed code implements.
-- **`profile/source-change-has-proposal`** (warn): Changes to bondstone's source or library happen under an accepted change proposal.
+- **`profile/source-change-has-proposal`** (warn): Changes to bondstone's source or library happen under an accepted change proposal, or close one.
 
 ## Guidance from `adr`
 

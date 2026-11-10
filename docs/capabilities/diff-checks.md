@@ -127,3 +127,13 @@ Bondstone SHALL report an error, with a fix hint, when the baseline commit is no
 - Given a repository with existing documents
 - When `bondstone baseline` runs
 - Then the profile contains `baseline: '<commit>'`
+
+### REQ-DIF-010: Alternatives in diff rules
+
+Diff rules SHALL accept `any` with `exists` and untraced `changed` alternatives, passing when one alternative passes.
+
+#### Scenario: Closing the last proposal
+
+- Given a rule requiring an accepted proposal, or a proposal changed to implemented, for library changes
+- When a change sets the last accepted proposal to implemented and edits library files
+- Then the rule passes

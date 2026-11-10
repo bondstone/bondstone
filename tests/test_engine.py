@@ -533,3 +533,51 @@ def test_exists_clause_in_diff_rules(project):
     project.commit()
     project.write("src/a.py", "x = 3\n")
     assert project.rules(base="HEAD") == []
+
+
+def test_any_clause_in_node_rules(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"},
+                    rules=[{"id": "result-or-outcome", "when": {"type": "adr:Decision"},
+                            "require": [{"any": [{"section": "Result"}, {"section": "Outcome"}]}]}])
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted") + "\n## Outcome\n\no\n")
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "accepted"))
+    diags = [d for d in project.check() if d.rule == "profile/result-or-outcome"]
+    assert [d.node for d in diags] == ["ADR-002"]
+    assert "missing section 'Result'; or missing section 'Outcome'" in diags[0].message
+
+
+def test_any_clause_in_diff_rules_allows_closing_the_last_proposal(project):
+    project.write(".bondstone/packs/p/pack.yaml", """
+        id: p
+        version: 1.0.0
+        types:
+          Proposal:
+            paths: ["docs/p/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, accepted, implemented], initial: draft,
+                          transitions: {draft: [accepted], accepted: [implemented]}}
+    """)
+    rule = {"id": "work-has-proposal", "on_change": {"paths": ["lib/**"]},
+            "require": [{"any": [{"exists": {"role": "change", "status": "accepted"}},
+                                 {"changed": {"role": "change", "status": "implemented"}}]}]}
+    _git_project(project, packs=["p@1"], sources=[".bondstone/packs"], roles={"change": ["p:Proposal"]}, rules=[rule])
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: accepted\n---\n")
+    project.write("lib/x.md", "draft\n")
+    project.commit()
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: implemented\n---\n")
+    project.write("lib/x.md", "active\n")
+    assert project.rules(base="HEAD") == []          # closed in this change
+    project.commit()
+    project.write("lib/x.md", "changed again\n")
+    assert project.rules(base="HEAD") == ["profile/work-has-proposal"]  # no open proposal
+
+
+def test_any_is_validated(project):
+    project.profile(packs=["capability@1"],
+                    rules=[{"id": "bad", "on_change": {"paths": ["src/**"]},
+                            "require": [{"any": [{"changed": {"role": "nope"}, "traced": True}]}]},
+                           {"id": "empty", "when": {"type": "capability:Capability"}, "require": [{"any": []}]}])
+    messages = " ".join(d.message for d in project.check() if d.rule == "bondstone/profile")
+    assert "'traced' is not supported inside 'any'" in messages
+    assert "role 'nope'" in messages
+    assert "'any' needs at least one alternative" in messages

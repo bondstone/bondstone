@@ -21,10 +21,11 @@ rules:
         min: 1
 
   - id: source-change-has-proposal
-    description: Changes to bondstone's source or library happen under an accepted change proposal.
+    description: Changes to bondstone's source or library happen under an accepted change proposal, or close one.
     severity: warn
     on_change: {paths: ["src/bondstone/**/*.py", "src/bondstone/library/**"]}
     require:
-      - exists: {role: change, status: accepted}
-        min: 1
+      - any:
+          - exists: {role: change, status: accepted}
+          - changed: {role: change, status: implemented}
 

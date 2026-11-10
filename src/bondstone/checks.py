@@ -104,7 +104,22 @@ def profile_problems(cfg: Config) -> list[Diagnostic]:
             continue
         if not as_list(spec.get("require")):
             bad(f"{rule.qid}: rule has no 'require' clauses")
-        for clause in as_list(spec.get("require")):
+        def flatten(clauses: Any, nested: bool = False) -> list[dict[str, Any]]:
+            result = []
+            for c in as_list(clauses):
+                if not isinstance(c, dict):
+                    bad(f"{rule.qid}: clause must be a mapping")
+                elif "any" in c:
+                    if not as_list(c["any"]):
+                        bad(f"{rule.qid}: 'any' needs at least one alternative")
+                    result += flatten(c["any"], nested=True)
+                else:
+                    if nested and c.get("traced"):
+                        bad(f"{rule.qid}: 'traced' is not supported inside 'any'")
+                    result.append(c)
+            return result
+
+        for clause in flatten(spec.get("require")):
             for key in ("to", "from", "changed", "exists"):
                 for msg in validate_selector(cfg, clause.get(key), rule.context_pack, rule.qid):
                     bad(msg)
@@ -385,7 +400,7 @@ def _rule_diag(rule: Rule, detail: str, node: Node | None) -> Diagnostic:
                       node.id if node else None, rule.spec.get("hint"))
 
 
-# bondstone: REQ-RUL-002
+# bondstone: REQ-RUL-002, REQ-RUL-010
 def _eval_clause(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> str | None:
     ctx = rule.context_pack
     if "link" in clause:
@@ -418,6 +433,9 @@ def _eval_clause(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict
         return None if re.search(clause["contains"], node.body, re.M) else f"body must match /{clause['contains']}/"
     if "file_field" in clause:
         return _file_field(cfg, node, clause["file_field"])
+    if "any" in clause:
+        failures = [_eval_clause(cfg, graph, rule, node, c) for c in as_list(clause["any"])]
+        return ("needs one of: " + "; or ".join(failures)) if failures and all(failures) else None
     return f"unsupported clause {sorted(clause)}"
 
 
@@ -709,13 +727,17 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
         if not triggering:
             continue
         changed_nodes = [n for n in graph.nodes if n.path in changed]
+        shown = ", ".join(triggering[:5]) + (" …" if len(triggering) > 5 else "")
         for clause in as_list(rule.spec.get("require")):
-            if "exists" in clause:
-                found = [n for n in graph.nodes if matches(cfg, n, clause["exists"], rule.context_pack)]
-                need = int(clause.get("min", 1))
-                if len(found) < need:
-                    out.append(_rule_diag(rule, f"changed {', '.join(triggering[:5])}; needs {need} document(s)"
-                                                f"{_sel_text(clause['exists'], 'matching')}", None))
+            if "any" in clause:
+                failures = [_eval_diff_clause(cfg, graph, rule, changed_nodes, c) for c in as_list(clause["any"])]
+                if failures and all(failures):
+                    out.append(_rule_diag(rule, f"changed {shown}; needs one of: " + "; or ".join(failures), None))
+                continue
+            if "exists" in clause or ("changed" in clause and not clause.get("traced")):
+                failure = _eval_diff_clause(cfg, graph, rule, changed_nodes, clause)
+                if failure:
+                    out.append(_rule_diag(rule, f"changed {shown}; {failure}", None))
                 continue
             if "changed" not in clause:
                 continue
@@ -730,13 +752,28 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
                             out.append(_rule_diag(rule, f"{', '.join(sorted(files))} implements {doc_id}, "
                                                         f"which was not updated", doc))
                     continue
-            good = [n for n in changed_nodes if matches(cfg, n, clause["changed"], rule.context_pack)]
-            need = int(clause.get("min", 1))
-            if len(good) < need:
-                shown = ", ".join(triggering[:5]) + (" …" if len(triggering) > 5 else "")
-                out.append(_rule_diag(rule, f"changed {shown}; needs {need} changed document(s)"
-                                            f"{_sel_text(clause['changed'], 'matching')}", None))
+            failure = _eval_diff_clause(cfg, graph, rule, changed_nodes, {**clause, "traced": False})
+            if failure:
+                out.append(_rule_diag(rule, f"changed {shown}; {failure}", None))
     return out
+
+
+# bondstone: REQ-DIF-005, REQ-DIF-010
+def _eval_diff_clause(cfg: Config, graph: Graph, rule: Rule, changed_nodes: list[Node],
+                      clause: dict[str, Any]) -> str | None:
+    """Evaluate an `exists` or (untraced) `changed` clause of a diff rule; None when it passes."""
+    need = int(clause.get("min", 1))
+    if "exists" in clause:
+        found = [n for n in graph.nodes if matches(cfg, n, clause["exists"], rule.context_pack)]
+        if len(found) < need:
+            return f"needs {need} document(s){_sel_text(clause['exists'], 'matching')}"
+        return None
+    if "changed" in clause:
+        good = [n for n in changed_nodes if matches(cfg, n, clause["changed"], rule.context_pack)]
+        if len(good) < need:
+            return f"needs {need} changed document(s){_sel_text(clause['changed'], 'matching')}"
+        return None
+    return f"unsupported clause {sorted(clause)} in a diff rule"
 
 
 # bondstone: REQ-DIF-006

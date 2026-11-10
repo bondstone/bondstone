@@ -16,6 +16,7 @@
 | [REQ-DIF-007](../capabilities/diff-checks.md#req-dif-007-compare-adopted-documents-with-the-baseline) | Compare adopted documents with the baseline | CAP-diff-checks |
 | [REQ-DIF-008](../capabilities/diff-checks.md#req-dif-008-report-a-missing-baseline-commit) | Report a missing baseline commit | CAP-diff-checks |
 | [REQ-DIF-009](../capabilities/diff-checks.md#req-dif-009-set-the-baseline) | Set the baseline | CAP-diff-checks |
+| [REQ-DIF-010](../capabilities/diff-checks.md#req-dif-010-alternatives-in-diff-rules) | Alternatives in diff rules | CAP-diff-checks |
 | [REQ-GRA-001](../capabilities/graph.md#req-gra-001-determine-document-types) | Determine document types | CAP-graph |
 | [REQ-GRA-002](../capabilities/graph.md#req-gra-002-reject-unknown-frontmatter-keys) | Reject unknown frontmatter keys | CAP-graph |
 | [REQ-GRA-003](../capabilities/graph.md#req-gra-003-extract-embedded-items) | Extract embedded items | CAP-graph |
@@ -46,6 +47,7 @@
 | [REQ-RUL-007](../capabilities/rules.md#req-rul-007-select-by-code-coverage) | Select by code coverage | CAP-rules |
 | [REQ-RUL-008](../capabilities/rules.md#req-rul-008-compare-with-values-in-other-files) | Compare with values in other files | CAP-rules |
 | [REQ-RUL-009](../capabilities/rules.md#req-rul-009-require-a-document-for-every-matching-file) | Require a document for every matching file | CAP-rules |
+| [REQ-RUL-010](../capabilities/rules.md#req-rul-010-alternative-clauses) | Alternative clauses | CAP-rules |
 | [REQ-SCF-001](../capabilities/scaffolding.md#req-scf-001-assign-the-next-id) | Assign the next id | CAP-scaffolding |
 | [REQ-SCF-002](../capabilities/scaffolding.md#req-scf-002-pre-fill-required-frontmatter) | Pre-fill required frontmatter | CAP-scaffolding |
 | [REQ-SCF-003](../capabilities/scaffolding.md#req-scf-003-mark-unfinished-content) | Mark unfinished content | CAP-scaffolding |

@@ -184,6 +184,7 @@ Selectors (`when`, `to`, `from`) combine with AND: `type`, `role`, `trait`, `sta
 | `file_field: {path, key, equals \| value}` | a value in a YAML/JSON file (path built from `{dir}` and fields, dotted `key`) equals a field or a literal |
 | `changed: SEL, min: N` | (diff rules) N changed nodes match SEL |
 | `exists: SEL, min: N` | (diff rules) N nodes match SEL, changed or not |
+| `any: [clause, ...]` | at least one alternative passes (node and diff rules; no `traced` inside) |
 | `changed: SEL, traced: true` | (diff rules) every document matching SEL that is tagged in a changed code region must change; a tag's region is the block of code below it; untagged code falls back to `min` |
 
 Diff rules use `on_change: {paths: [globs]}` instead of `when` and only run with

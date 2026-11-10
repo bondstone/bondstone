@@ -103,3 +103,13 @@ A rule with `for_each: {glob, document, type}` SHALL report every file matching 
 - Given `packs/ost/pack.yaml` and no `packs/ost/README.md`
 - When a rule has `for_each: {glob: "packs/*/pack.yaml", document: "{dir}/README.md"}`
 - Then the rule reports `packs/ost/pack.yaml`
+
+### REQ-RUL-010: Alternative clauses
+
+An `any: [clause, ...]` clause SHALL pass when at least one alternative passes and SHALL otherwise report every alternative's failure. `profile check` SHALL validate the alternatives and SHALL reject `traced` inside `any`.
+
+#### Scenario: Either section
+
+- Given a rule requiring `any: [{section: Result}, {section: Outcome}]`
+- When a document has only `## Outcome`
+- Then the rule passes

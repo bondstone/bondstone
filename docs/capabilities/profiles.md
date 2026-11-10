@@ -75,7 +75,7 @@ Bondstone SHALL take role assignments from bridges and the profile only, and SHA
 
 ### REQ-PRF-007: Validate rule definitions
 
-Bondstone SHALL report rules that reference unknown types, links, roles or traits, that combine `when`, `on_change` and `for_each`, that have no requirement clauses (except `for_each` rules), and `for_each` rules without `glob` or `document`.
+Bondstone SHALL report rules that reference unknown types, links, roles or traits, that combine `when`, `on_change` and `for_each`, that have no requirement clauses (except `for_each` rules), `for_each` rules without `glob` or `document`, and `any` clauses that are empty or contain `traced` alternatives (alternatives are validated like other clauses).
 
 #### Scenario: Misconfigured for-each rule
 
