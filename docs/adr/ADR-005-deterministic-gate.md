@@ -1,6 +1,9 @@
 ---
-{id: ADR-005, title: The check is deterministic; quality review is separate, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-005
+title: The check is deterministic; quality review is separate
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

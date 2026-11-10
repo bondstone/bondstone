@@ -1,6 +1,9 @@
 ---
-{id: ADR-002, title: The engine knows no methodology; methods are packs, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-002
+title: The engine knows no methodology; methods are packs
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

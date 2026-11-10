@@ -1,6 +1,9 @@
 ---
-{id: ADR-001, title: Use Markdown with YAML frontmatter as the document format, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-001
+title: Use Markdown with YAML frontmatter as the document format
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

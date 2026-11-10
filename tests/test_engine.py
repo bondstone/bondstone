@@ -353,3 +353,17 @@ def test_id_format_uses_set_values(project):
     assert next_id("x:Release", "v{version}", graph, "s", {"version": "0.2.0"}) == "v0.2.0"
     with pytest.raises(BondstoneError, match="pass --set version"):
         next_id("x:Release", "v{version}", graph, "s", {})
+
+
+def test_frontmatter_edits_handle_flow_style():
+    from bondstone.edit import replace_id, set_scalar
+
+    text = "---\n{id: ADR-001, title: T, status: accepted,\n  owner: me}\n---\n## Context\n"
+    edited = set_scalar(text, "status", "superseded")
+    assert "status: superseded" in edited and "{" not in edited
+    assert edited.endswith("---\n## Context\n")
+    text = "---\n{id: CAP-a, constrained_by: [ADR-001, ADR-002]}\n---\n"
+    edited, changed = replace_id(text, "constrained_by", "ADR-001", "ADR-009")
+    assert changed and "ADR-009" in edited and "ADR-002" in edited
+    block = "---\nid: X\nlinks: [A, B]   # keep\n---\n"
+    assert replace_id(block, "links", "A", "C")[0] == "---\nid: X\nlinks: [C, B]   # keep\n---\n"

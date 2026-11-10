@@ -46,7 +46,7 @@ Templates MUST mark every placeholder with a todo marker so that check reports u
 
 ### REQ-SCF-004: Supersede documents
 
-`bondstone supersede ID` SHALL create the successor, set the old document to superseded, move incoming links to the successor except from immutable documents, and regenerate views.
+`bondstone supersede ID` SHALL create the successor, set the old document to superseded, move incoming links to the successor except from immutable documents, and regenerate views. Frontmatter edits SHALL keep block-style formatting and SHALL rewrite flow-style frontmatter in block style first.
 
 #### Scenario: Superseding a decision
 

@@ -1,6 +1,9 @@
 ---
-{id: ADR-003, title: Bridges own everything that connects packs, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-003
+title: Bridges own everything that connects packs
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

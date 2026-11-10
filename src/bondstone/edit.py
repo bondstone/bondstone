@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+import yaml
+
 
 def _frontmatter_bounds(lines: list[str]) -> tuple[int, int]:
     if not lines or lines[0].strip() != "---":
@@ -12,6 +14,20 @@ def _frontmatter_bounds(lines: list[str]) -> tuple[int, int]:
     if end is None:
         raise ValueError("frontmatter is not closed")
     return 1, end
+
+
+# bondstone: REQ-SCF-004
+def to_block_style(text: str) -> str:
+    """Rewrite a flow-style frontmatter mapping (`{id: ..., status: ...}`) in block style.
+
+    Block-style frontmatter is returned unchanged, so line-based edits keep its formatting."""
+    lines = text.split("\n")
+    start, end = _frontmatter_bounds(lines)
+    if not any(lines[i].lstrip().startswith("{") for i in range(start, end)):
+        return text
+    data = yaml.safe_load("\n".join(lines[start:end])) or {}
+    dumped = yaml.safe_dump(data, sort_keys=False, allow_unicode=True, default_flow_style=False).rstrip("\n")
+    return "\n".join([*lines[:start], dumped, *lines[end:]])
 
 
 def _key_span(lines: list[str], key: str) -> tuple[int, int] | None:
@@ -26,8 +42,9 @@ def _key_span(lines: list[str], key: str) -> tuple[int, int] | None:
     return None
 
 
+# bondstone: REQ-SCF-004
 def set_scalar(text: str, key: str, value: str) -> str:
-    lines = text.split("\n")
+    lines = to_block_style(text).split("\n")
     span = _key_span(lines, key)
     if span is None:
         _, end = _frontmatter_bounds(lines)
@@ -38,9 +55,10 @@ def set_scalar(text: str, key: str, value: str) -> str:
     return "\n".join(lines)
 
 
+# bondstone: REQ-SCF-004
 def replace_id(text: str, key: str, old: str, new: str) -> tuple[str, bool]:
     """Replace the id `old` with `new` inside the value of frontmatter `key`."""
-    lines = text.split("\n")
+    lines = to_block_style(text).split("\n")
     span = _key_span(lines, key)
     if span is None:
         return text, False

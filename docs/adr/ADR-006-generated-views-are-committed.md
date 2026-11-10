@@ -1,6 +1,9 @@
 ---
-{id: ADR-006, title: Generated views are committed and checked for staleness, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-006
+title: Generated views are committed and checked for staleness
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

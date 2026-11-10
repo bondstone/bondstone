@@ -1,6 +1,9 @@
 ---
-{id: ADR-004, title: Traits and roles instead of shared core types, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-004
+title: Traits and roles instead of shared core types
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context

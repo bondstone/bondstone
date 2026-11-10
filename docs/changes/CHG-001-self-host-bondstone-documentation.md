@@ -18,6 +18,7 @@ Bondstone should be documented with bondstone, both to keep its own documentatio
 - Seven decisions backfilled from `docs/design.md`.
 - Nine capability specs describing current behaviour, with code tags.
 - `id_format` accepts values passed with `--set` (needed for `v{version}`).
+- Frontmatter edits (`bondstone supersede`) handle flow-style frontmatter, found while bootstrapping.
 
 ## Out of scope
 

@@ -1,6 +1,9 @@
 ---
-{id: ADR-007, title: Agent instructions are generated from the active profile, status: proposed,
-  owner: dworek, date: '2026-11-10'}
+id: ADR-007
+title: Agent instructions are generated from the active profile
+status: accepted
+owner: dworek
+date: '2026-11-10'
 ---
 
 ## Context
