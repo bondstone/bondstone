@@ -124,6 +124,7 @@ class Node:
     links: dict[str, list[LinkRef]] = field(default_factory=dict)
     raw_keys: dict[str, Any] = field(default_factory=dict)
     parent: str | None = None
+    body_line: int = 1
 
     @property
     def status(self) -> str | None:

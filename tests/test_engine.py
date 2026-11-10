@@ -187,3 +187,15 @@ def test_cli_json_and_exit_codes(project, capsys):
     assert (project.root / "docs/generated/decisions.md").exists()
     assert main(["--root", str(project.root), "explain", "adr/alternatives-considered"]) == 0
     assert main(["--root", str(project.root), "explain", "nope"]) == 2
+
+
+def test_code_tags_ignore_non_tag_mentions(project):
+    project.profile(packs=["capability@1"], code={"include": ["src/*.py"]},
+                    overrides={"bondstone/view-stale": "off"})
+    project.write("src/a.py", '''
+        MARK = "<!-- bondstone:generated"
+        LINK = "bondstone:part_of"
+        HINT = "add a `bondstone: <id>` comment"
+        # bondstone: REQ-ZZ-001
+    ''')
+    assert project.rules() == ["bondstone/code-ref-unknown"]

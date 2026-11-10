@@ -128,6 +128,7 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
         body=doc.body,
         headings=doc.headings,
         raw_keys=dict(fm),
+        body_line=doc.body_line,
     )
     for key, value in fm.items():
         if key in RESERVED:
