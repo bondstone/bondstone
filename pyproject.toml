@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bondstone"
+version = "1.0.0a1"
+description = "Keep a repository's living documentation true by checking it against rules stored in the same repository."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6",
+    "jsonschema>=4.18",
+]
+
+[project.scripts]
+bondstone = "bondstone.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bondstone"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
