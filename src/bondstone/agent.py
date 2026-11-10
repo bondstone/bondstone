@@ -18,11 +18,24 @@ def describe_rule(rule: Rule) -> str:
     return "".join(parts)
 
 
+# bondstone: REQ-AGT-004
+def explain_engine_rule(qid: str) -> str | None:
+    """Explain an engine rule (`bondstone/...`) from the catalog shipped with the package."""
+    import re
+    from pathlib import Path
+
+    text = (Path(__file__).parent / "engine_rules.md").read_text(encoding="utf-8")
+    m = re.search(rf"^### (ENG-\d+): {re.escape(qid)}\n(.*?)(?=^### |\Z)", text, re.M | re.S)
+    if not m:
+        return None
+    return f"{qid}  (engine rule {m.group(1)})\n\n{m.group(2).strip()}"
+
+
 # bondstone: REQ-AGT-002
 def explain_rule(cfg: Config, qid: str) -> str | None:
     rule = cfg.rule(qid)
     if rule is None:
-        return None
+        return explain_engine_rule(qid) if qid.startswith("bondstone/") else None
     import yaml
 
     severity = cfg.overrides.get(qid, rule.severity)

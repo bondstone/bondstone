@@ -77,11 +77,13 @@ def build_graph(cfg: Config) -> Graph:
         doc = parse_document(text)
         candidates = path_types.get(path, [])
         if doc.error:
+            # bondstone: ENG-003
             graph.diagnostics.append(Diagnostic("bondstone/parse-error", ERROR, doc.error, path, 1))
             continue
         if doc.frontmatter is None:
             if candidates:
                 graph.diagnostics.append(
+                    # bondstone: ENG-004
                     Diagnostic("bondstone/frontmatter-missing", ERROR,
                                f"expected a {candidates[0]} document with YAML frontmatter", path, 1,
                                hint="Start the file with a '---' frontmatter block; `bondstone new` scaffolds one.")
@@ -92,6 +94,7 @@ def build_graph(cfg: Config) -> Graph:
             qname = str(explicit)
             if qname not in cfg.types:
                 graph.diagnostics.append(
+                    # bondstone: ENG-005
                     Diagnostic("bondstone/unknown-type", ERROR,
                                f"unknown type '{qname}' (known: {', '.join(sorted(cfg.types))})",
                                path, doc.field_lines.get("type", 1))
@@ -99,6 +102,7 @@ def build_graph(cfg: Config) -> Graph:
                 continue
             if candidates and qname not in candidates:
                 graph.diagnostics.append(
+                    # bondstone: ENG-006
                     Diagnostic("bondstone/type-mismatch", ERROR,
                                f"declared type {qname} but path matches {', '.join(candidates)}",
                                path, doc.field_lines.get("type", 1))
@@ -108,6 +112,7 @@ def build_graph(cfg: Config) -> Graph:
             qname = candidates[0]
         elif len(candidates) > 1:
             graph.diagnostics.append(
+                # bondstone: ENG-007
                 Diagnostic("bondstone/type-ambiguous", ERROR,
                            f"path matches several types ({', '.join(candidates)}); add `type:`", path, 1)
             )
@@ -178,6 +183,7 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
         link, error = cfg.resolve_link_key(qname, key)
         if error:
             graph.diagnostics.append(
+                # bondstone: ENG-008
                 Diagnostic("bondstone/link-ambiguous", ERROR, error, path, doc.field_lines.get(key), node.id)
             )
             continue
@@ -208,6 +214,7 @@ def _add_items(cfg: Config, graph: Graph, parent: Node, doc: ParsedDoc) -> None:
         if not m:
             if spec.get("strict", True) and _inside_section(headings, idx, spec.get("section")):
                 graph.diagnostics.append(
+                    # bondstone: ENG-009
                     Diagnostic("bondstone/item-heading", ERROR,
                                f"level-{level} heading '{title}' does not match item pattern {pattern.pattern}",
                                parent.path, line, parent.id)

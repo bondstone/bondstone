@@ -43,3 +43,13 @@ Give coding agents what they need to follow the documentation rules on their own
 - Given a document with an unknown key
 - When check runs with JSON output
 - Then the JSON lists `bondstone/field-unknown` and the exit code is 1
+
+### REQ-AGT-004: Explain engine rules
+
+`bondstone explain bondstone/<rule>` SHALL explain engine rules from the catalog shipped with the package: when the rule fires, why, how to fix it and its severity.
+
+#### Scenario: Explaining an engine rule
+
+- Given the catalog has an entry for `bondstone/immutable`
+- When `bondstone explain bondstone/immutable` runs
+- Then it prints the entry and exits with code 0

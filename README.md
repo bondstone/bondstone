@@ -74,7 +74,7 @@ docs/discovery/solutions/SOL-2-streak-freeze.md:5: error bondstone/link-broken: 
 | `supersede ID --title T` | replace a document: successor, `superseded` status, links moved |
 | `init --packs … --bridges …` | create a profile and generate views |
 | `profile check` | validate the profile, packs and bridges |
-| `rules`, `explain RULE` | list / explain active rules |
+| `rules`, `explain RULE` | list / explain active rules, including engine rules (`bondstone/...`) |
 | `agent [--output FILE]` | generate agent instructions |
 | `graph` | export the document graph as JSON |
 | `packs` | list built-in packs and bridges |
@@ -88,7 +88,12 @@ docs/discovery/solutions/SOL-2-streak-freeze.md:5: error bondstone/link-broken: 
 | pack | `ost` | `Outcome`, `Opportunity`, `Solution`, `Experiment` |
 | pack | `capability` | living `Capability` specs with embedded `Requirement` items (code-traceable) |
 | bridge | `ost-capability` | committed solutions must be `realized_by` capabilities |
+| pack | `change` | change proposals: draft → accepted → implemented |
+| pack | `release` | releases and a generated `CHANGELOG.md` |
 | bridge | `adr-capability` | capabilities are `constrained_by` live decisions |
+| bridge | `change-capability` | proposals `modify` capabilities and `deliver` requirements that code implements |
+| bridge | `change-adr` | proposals are `decided_by` accepted decisions |
+| bridge | `release-change` | releases `include` implemented proposals |
 
 Custom packs and bridges go in any directory listed under `sources:` in the profile
 (default `.bondstone/packs`); see the [design doc](docs/design.md) for the formats.

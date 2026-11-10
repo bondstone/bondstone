@@ -3,15 +3,17 @@
 from __future__ import annotations
 
 import datetime as dt
+import posixpath
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
-from .graph import Graph, build_graph, scan_tags
+from .graph import Graph, build_graph, glob_files, rel, scan_tags
 from .loader import Config, as_list, qualify
 from .model import ERROR, OFF, PART_OF, WARN, Diagnostic, Node, Rule
 from .parser import ParsedDoc, parse_document
@@ -55,11 +57,12 @@ def has_errors(diags: list[Diagnostic], fail_on: str = ERROR) -> bool:
 # =========================================================================== profile
 
 
-# bondstone: REQ-PRF-005
+# bondstone: REQ-PRF-005, REQ-PRF-007
 def profile_problems(cfg: Config) -> list[Diagnostic]:
     out = list(cfg.problems)
 
     def bad(msg: str, severity: str = ERROR) -> None:
+        # bondstone: ENG-001
         out.append(Diagnostic("bondstone/profile", severity, msg, path=".bondstone/profile.yaml"))
 
     for tdef in cfg.types.values():
@@ -89,12 +92,20 @@ def profile_problems(cfg: Config) -> list[Diagnostic]:
         spec = rule.spec
         for msg in validate_selector(cfg, spec.get("when"), rule.context_pack, rule.qid):
             bad(msg)
-        if "when" in spec and "on_change" in spec:
-            bad(f"{rule.qid}: use either 'when' or 'on_change', not both")
+        if sum(k in spec for k in ("when", "on_change", "for_each")) > 1:
+            bad(f"{rule.qid}: use only one of 'when', 'on_change' and 'for_each'")
+        if "for_each" in spec:
+            fe = spec["for_each"] or {}
+            if not fe.get("glob") or not fe.get("document"):
+                bad(f"{rule.qid}: for_each needs 'glob' and 'document'")
+            for t in as_list(fe.get("type")):
+                if qualify(t, rule.context_pack) not in cfg.types:
+                    bad(f"{rule.qid}: unknown type '{qualify(t, rule.context_pack)}'")
+            continue
         if not as_list(spec.get("require")):
             bad(f"{rule.qid}: rule has no 'require' clauses")
         for clause in as_list(spec.get("require")):
-            for key in ("to", "from", "changed"):
+            for key in ("to", "from", "changed", "exists"):
                 for msg in validate_selector(cfg, clause.get(key), rule.context_pack, rule.qid):
                     bad(msg)
             for key in ("link", "incoming"):
@@ -125,6 +136,7 @@ def profile_problems(cfg: Config) -> list[Diagnostic]:
             groups.setdefault(find(p), []).append(p)
         if len(groups) > 1:
             listing = "; ".join(", ".join(sorted(g)) for g in groups.values())
+            # bondstone: ENG-002
             out.append(Diagnostic("bondstone/unbridged-packs", WARN,
                                   f"packs form disconnected groups ({listing}); add a bridge to connect them",
                                   path=".bondstone/profile.yaml"))
@@ -162,17 +174,20 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
     for node in graph.nodes:
         tdef = cfg.types[node.type]
         if not node.id:
+            # bondstone: ENG-010
             out.append(Diagnostic("bondstone/id-missing", ERROR, f"{node.type} document has no `id`",
                                   node.path, node.line,
                                   hint=f"Add `id:` matching {tdef.spec.get('id_pattern', 'the type id format')}."))
         else:
             pattern = tdef.spec.get("id_pattern")
             if pattern and not re.fullmatch(pattern, node.id):
+                # bondstone: ENG-011
                 out.append(Diagnostic("bondstone/id-format", ERROR,
                                       f"id '{node.id}' does not match {pattern}",
                                       node.path, node.field_lines.get("id", node.line), node.id))
             if node.id in seen:
                 other = seen[node.id]
+                # bondstone: ENG-012
                 out.append(Diagnostic("bondstone/id-duplicate", ERROR,
                                       f"id '{node.id}' is already used in {other.path}:{other.line}",
                                       node.path, node.field_lines.get("id", node.line), node.id))
@@ -189,6 +204,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
             lifecycle = tdef.traits.get("lifecycle") or {}
             draft = node.status is not None and node.status == lifecycle.get("initial")
             todo_line = node.body_line + node.body[: todo.start()].count("\n")
+            # bondstone: ENG-016
             out.append(Diagnostic("bondstone/todo-left", WARN if draft else ERROR,
                                   "document still contains template placeholders (<!-- todo: ... -->)",
                                   node.path, todo_line, node.id,
@@ -197,6 +213,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
         present = node.heading_titles()
         for section in as_list(tdef.spec.get("sections")):
             if section not in present:
+                # bondstone: ENG-017
                 out.append(Diagnostic("bondstone/section-missing", ERROR,
                                       f"{node.type} requires a '{section}' section",
                                       node.path, node.line, node.id,
@@ -218,18 +235,21 @@ def _schema_diag(cfg: Config, node: Node, err: Any) -> Diagnostic:
     if err.validator == "required":
         missing = re.findall(r"'([^']+)' is a required property", err.message)
         name = missing[0] if missing else "?"
+        # bondstone: ENG-013
         return Diagnostic("bondstone/field-missing", ERROR, f"missing required field '{name}'",
                           node.path, 1, node.id)
     if err.validator == "additionalProperties":
         extras = [k for k in node.fields if k not in (err.schema.get("properties") or {})]
         links = sorted({l.name for l in cfg.links_from(node.type)})
         fields = sorted((err.schema.get("properties") or {}).keys())
+        # bondstone: ENG-014
         return Diagnostic("bondstone/field-unknown", ERROR,
                           f"unknown key(s) {', '.join(extras)} for {node.type}",
                           node.path, node.field_lines.get(extras[0]) if extras else 1, node.id,
                           hint=f"Fields: {', '.join(fields)}. Links: {', '.join(links) or 'none'}.")
     key = ".".join(str(p) for p in err.path) or "?"
     top = str(err.path[0]) if err.path else None
+    # bondstone: ENG-015
     return Diagnostic("bondstone/field-invalid", ERROR, f"field '{key}': {err.message}",
                       node.path, node.field_lines.get(top, 1) if top else 1, node.id)
 
@@ -248,26 +268,31 @@ def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
             for ref in refs:
                 target = graph.by_id.get(ref.target)
                 if target is None:
+                    # bondstone: ENG-018
                     out.append(Diagnostic("bondstone/link-broken", ERROR,
                                           f"{link.name} -> '{ref.target}': no such document",
                                           node.path, ref.line, node.id))
                 elif link.to_types and target.type not in link.to_types:
+                    # bondstone: ENG-019
                     out.append(Diagnostic("bondstone/link-type", ERROR,
                                           f"{link.name} -> {ref.target} is a {target.type}; "
                                           f"expected {', '.join(link.to_types)}",
                                           node.path, ref.line, node.id))
                 elif ref.target == node.id:
+                    # bondstone: ENG-020
                     out.append(Diagnostic("bondstone/link-self", ERROR,
                                           f"{link.name} points to itself", node.path, ref.line, node.id))
         for link in cfg.links_from(node.type):
             count = len(node.links.get(link.qname, []))
             if count < link.min:
+                # bondstone: ENG-021
                 out.append(Diagnostic("bondstone/link-min", ERROR,
                                       f"needs at least {link.min} '{link.name}' link(s) to "
                                       f"{', '.join(link.to_types)}; has {count}",
                                       node.path, node.line, node.id,
                                       hint=f"Add `{link.name}: [<id>]` to the frontmatter."))
             if link.max is not None and count > int(link.max):
+                # bondstone: ENG-022
                 out.append(Diagnostic("bondstone/link-max", ERROR,
                                       f"at most {link.max} '{link.name}' link(s) allowed; has {count}",
                                       node.path, node.field_lines.get(link.name, node.line), node.id))
@@ -289,6 +314,7 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 superseded_by.setdefault(ref.target, []).append(node)
                 target = graph.by_id.get(ref.target)
                 if target and has_lifecycle and target.status != "superseded":
+                    # bondstone: ENG-023
                     out.append(Diagnostic("bondstone/supersede-status", ERROR,
                                           f"{node.id} supersedes {target.id}, but {target.id} has status "
                                           f"'{target.status}'",
@@ -297,12 +323,14 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
         for target_id, sources in superseded_by.items():
             if len(sources) > 1:
                 target = graph.by_id.get(target_id)
+                # bondstone: ENG-024
                 out.append(Diagnostic("bondstone/supersede-multiple", ERROR,
                                       f"{target_id} is superseded by several nodes: "
                                       f"{', '.join(s.id or '?' for s in sources)}",
                                       target.path if target else None, 1, target_id))
         for node in (n for n in graph.nodes if n.type == tdef.qname):
             if has_lifecycle and node.status == "superseded" and node.id not in superseded_by:
+                # bondstone: ENG-025
                 out.append(Diagnostic("bondstone/supersede-orphan", WARN,
                                       f"{node.id} is superseded but nothing supersedes it",
                                       node.path, node.field_lines.get("status", 1), node.id))
@@ -317,6 +345,7 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 if nxt is None:
                     break
                 if nxt.id in seen:
+                    # bondstone: ENG-026
                     out.append(Diagnostic("bondstone/supersede-cycle", ERROR,
                                           f"supersede chain from {node.id} forms a cycle",
                                           node.path, 1, node.id))
@@ -334,6 +363,9 @@ def evaluate_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     for rule in cfg.rules:
         if "on_change" in rule.spec:
+            continue
+        if "for_each" in rule.spec:
+            out += _for_each(cfg, graph, rule)
             continue
         for node in graph.nodes:
             if not matches(cfg, node, rule.spec.get("when"), rule.context_pack):
@@ -384,7 +416,69 @@ def _eval_clause(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict
         return None if clause["section"] in node.heading_titles() else f"missing section '{clause['section']}'"
     if "contains" in clause:
         return None if re.search(clause["contains"], node.body, re.M) else f"body must match /{clause['contains']}/"
+    if "file_field" in clause:
+        return _file_field(cfg, node, clause["file_field"])
     return f"unsupported clause {sorted(clause)}"
+
+
+class _Template(dict):
+    def __missing__(self, key: str) -> str:
+        raise KeyError(key)
+
+
+def _render_path(template: str, values: dict[str, Any]) -> str | None:
+    try:
+        return template.format_map(_Template({k: str(v) for k, v in values.items()}))
+    except KeyError:
+        return None
+
+
+# bondstone: REQ-RUL-008
+def _file_field(cfg: Config, node: Node, spec: dict[str, Any]) -> str | None:
+    """A value in a YAML/JSON file must equal a node field (`equals`) or a literal (`value`)."""
+    directory = posixpath.dirname(node.path)
+    rel_path = _render_path(spec.get("path", ""), {**node.fields, "id": node.id, "dir": directory})
+    if rel_path is None:
+        return f"cannot build path from '{spec.get('path')}' (missing field)"
+    rel_path = posixpath.normpath(rel_path)
+    path = cfg.root / rel_path
+    if not path.is_file():
+        return f"{rel_path} does not exist"
+    try:
+        data: Any = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        return f"{rel_path} is not valid YAML/JSON ({exc.__class__.__name__})"
+    for part in str(spec.get("key", "")).split("."):
+        if not isinstance(data, dict) or part not in data:
+            return f"{rel_path} has no '{spec.get('key')}'"
+        data = data[part]
+    if "equals" in spec:
+        expected, what = node.fields.get(spec["equals"]), f"field '{spec['equals']}'"
+    else:
+        expected, what = spec.get("value"), "the expected value"
+    if str(data) != str(expected):
+        return f"{rel_path} {spec.get('key')} is '{data}', {what} is '{expected}'"
+    return None
+
+
+# bondstone: REQ-RUL-009
+def _for_each(cfg: Config, graph: Graph, rule: Rule) -> list[Diagnostic]:
+    """Every file matching `for_each.glob` has a document at `for_each.document`."""
+    spec = rule.spec["for_each"]
+    types = {qualify(t, rule.context_pack) for t in as_list(spec.get("type"))}
+    documents = {(n.path, n.type) for n in graph.nodes if n.parent is None}
+    out = []
+    for file in sorted(glob_files(cfg.root, spec["glob"])):
+        path = rel(cfg.root, file)
+        values = {"dir": posixpath.dirname(path), "name": file.stem, "path": path}
+        expected = posixpath.normpath(_render_path(spec["document"], values) or spec["document"])
+        found = [t for p, t in documents if p == expected and (not types or t in types)]
+        if not found:
+            kind = " or ".join(sorted(types)) if types else "document"
+            out.append(Diagnostic(rule.qid, rule.severity,
+                                  f"{rule.description or rule.qid} ({path} has no {kind} at {expected})",
+                                  path, None, None, rule.spec.get("hint")))
+    return out
 
 
 def _sel_text(sel: dict[str, Any] | None, word: str = "to") -> str:
@@ -405,9 +499,11 @@ def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
     for path, lineno, ref in graph.code_refs:
         node = graph.by_id.get(ref)
         if node is None:
+            # bondstone: ENG-027
             out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
                                   f"code references unknown id '{ref}'", path, lineno))
         elif not cfg.types[node.type].has_trait("code-traceable"):
+            # bondstone: ENG-028
             out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
                                   f"{ref} is {node.type}, a type that is not code-traceable",
                                   path, lineno, ref))
@@ -417,6 +513,7 @@ def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
             continue
         coverage = trait.get("coverage", WARN)
         if coverage != OFF and not node.covered:
+            # bondstone: ENG-029
             out.append(Diagnostic("bondstone/code-coverage", coverage,
                                   f"{node.id} is not referenced from code",
                                   node.path, node.line, node.id,
@@ -437,6 +534,7 @@ def check_views(cfg: Config, graph: Graph) -> list[Diagnostic]:
         path = cfg.root / output
         expected = render(cfg, graph, view)
         if not path.exists() or path.read_text(encoding="utf-8") != expected:
+            # bondstone: ENG-030
             out.append(Diagnostic("bondstone/view-stale", ERROR, f"generated view {view.qid} is out of date",
                                   output, None, hint="Run `bondstone gen`."))
     return out
@@ -541,6 +639,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     try:
         changes = changed_files(cfg.root, base)
     except RuntimeError as exc:
+        # bondstone: ENG-031
         return [Diagnostic("bondstone/git", ERROR, f"cannot diff against '{base}': {exc}")]
     changed = changes.files
     baseline = cfg.profile.get("baseline")
@@ -549,6 +648,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
         try:
             _git(cfg.root, "cat-file", "-e", f"{baseline}^{{commit}}")
         except RuntimeError:
+            # bondstone: ENG-035
             out.append(Diagnostic("bondstone/baseline-missing", ERROR,
                                   f"baseline commit {baseline} is not available in this clone",
                                   ".bondstone/profile.yaml",
@@ -568,6 +668,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
                 allowed = [str(s) for s in as_list(lifecycle.get("create_as"))] or \
                     [str(lifecycle.get("initial") or as_list(lifecycle.get("statuses"))[0])]
                 if node.status not in allowed:
+                    # bondstone: ENG-033
                     out.append(Diagnostic("bondstone/status-initial", ERROR,
                                           f"new {node.type} starts as '{node.status}'; "
                                           f"new documents must start as {', '.join(allowed)}",
@@ -581,6 +682,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
         if lifecycle and old_status and node.status and old_status != node.status:
             allowed = (lifecycle.get("transitions") or {}).get(old_status, [])
             if node.status not in allowed:
+                # bondstone: ENG-032
                 out.append(Diagnostic("bondstone/status-transition", ERROR,
                                       f"status change {old_status} -> {node.status} is not allowed "
                                       f"(allowed: {', '.join(allowed) or 'none'})",
@@ -591,6 +693,7 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
             new_fm = {k: v for k, v in node.raw_keys.items() if k not in allow}
             old_fm = {k: v for k, v in old.frontmatter.items() if k not in allow}
             if new_fm != old_fm or node.body.strip() != old.body.strip():
+                # bondstone: ENG-034
                 out.append(Diagnostic("bondstone/immutable", ERROR,
                                       f"{node.id} was '{old_status}' and may not be edited "
                                       f"(only {', '.join(sorted(allow))} may change)",
@@ -607,6 +710,13 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
             continue
         changed_nodes = [n for n in graph.nodes if n.path in changed]
         for clause in as_list(rule.spec.get("require")):
+            if "exists" in clause:
+                found = [n for n in graph.nodes if matches(cfg, n, clause["exists"], rule.context_pack)]
+                need = int(clause.get("min", 1))
+                if len(found) < need:
+                    out.append(_rule_diag(rule, f"changed {', '.join(triggering[:5])}; needs {need} document(s)"
+                                                f"{_sel_text(clause['exists'], 'matching')}", None))
+                continue
             if "changed" not in clause:
                 continue
             if clause.get("traced"):
@@ -655,8 +765,9 @@ def tag_regions(text: str) -> list[tuple[str, int, int]]:
 
     Consecutive tag lines form a block. The region runs from the block to the end of the
     code below it: the line before the first non-blank line that is indented no deeper
-    than the block's first code line and follows a blank line (the next function, method
-    or top-level statement), or before the next tag block."""
+    than the block's first code line and follows a blank line, or before the next tag
+    block at the same or lower indentation. Deeper tag blocks (inside a function) nest
+    and do not end the region of the tag above the function."""
     lines = text.splitlines()
     tags = scan_tags(text)
     tag_lines = sorted({line for line, _ in tags})
@@ -672,14 +783,18 @@ def tag_regions(text: str) -> list[tuple[str, int, int]]:
     for line, ref in tags:
         start = block_start[line]
         block_end = max(l for l in tag_lines if block_start[l] == start)
-        nxt = next((s for s in starts if s > start), len(lines) + 1)
-        anchor = next((i for i in range(block_end + 1, nxt) if lines[i - 1].strip()), None)
-        end = nxt - 1
+        anchor = next((i for i in range(block_end + 1, len(lines) + 1)
+                       if lines[i - 1].strip() and i not in block_start), None)
+        end = len(lines)
         if anchor is not None:
             base = indent(lines[anchor - 1])
-            for i in range(anchor + 1, nxt):
-                current, previous = lines[i - 1], lines[i - 2]
-                if current.strip() and indent(current) <= base and not previous.strip():
+            for i in range(block_end + 1, len(lines) + 1):
+                current = lines[i - 1]
+                if i in starts and i > start and indent(current) <= base:
+                    end = i - 1
+                    break
+                if i > anchor and current.strip() and indent(current) <= base \
+                        and not lines[i - 2].strip() and i not in block_start:
                     end = i - 1
                     break
         while end > start and not lines[end - 1].strip():
@@ -734,15 +849,18 @@ def apply_policy(cfg: Config, diags: list[Diagnostic]) -> list[Diagnostic]:
     extra: list[Diagnostic] = []
     for w in cfg.waivers:
         if not isinstance(w, dict) or not w.get("rule"):
+            # bondstone: ENG-036
             extra.append(Diagnostic("bondstone/waiver-invalid", ERROR, f"waiver needs a 'rule': {w}",
                                     ".bondstone/profile.yaml"))
             continue
         if not w.get("reason"):
+            # bondstone: ENG-036
             extra.append(Diagnostic("bondstone/waiver-invalid", ERROR,
                                     f"waiver for {w['rule']} has no 'reason'", ".bondstone/profile.yaml"))
             continue
         expires = w.get("expires")
         if expires and str(expires) < today:
+            # bondstone: ENG-037
             extra.append(Diagnostic("bondstone/waiver-expired", ERROR,
                                     f"waiver for {w['rule']} ({w.get('node', 'all nodes')}) expired on {expires}",
                                     ".bondstone/profile.yaml"))
@@ -767,6 +885,7 @@ def apply_policy(cfg: Config, diags: list[Diagnostic]) -> list[Diagnostic]:
             result.append(d)
     for w in active_waivers:
         if not w["_used"]:
+            # bondstone: ENG-038
             extra.append(Diagnostic("bondstone/waiver-unused", WARN,
                                     f"waiver for {w['rule']} ({w.get('node', 'all nodes')}) matches nothing",
                                     ".bondstone/profile.yaml"))

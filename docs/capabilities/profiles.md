@@ -72,3 +72,13 @@ Bondstone SHALL take role assignments from bridges and the profile only, and SHA
 - Given bridge adr-capability assigns living-spec
 - When the profile is loaded
 - Then capability:Capability has the living-spec role
+
+### REQ-PRF-007: Validate rule definitions
+
+Bondstone SHALL report rules that reference unknown types, links, roles or traits, that combine `when`, `on_change` and `for_each`, that have no requirement clauses (except `for_each` rules), and `for_each` rules without `glob` or `document`.
+
+#### Scenario: Misconfigured for-each rule
+
+- Given a rule with `for_each: {glob: "packs/*/pack.yaml"}`
+- When `bondstone profile check` runs
+- Then it reports that `document` is missing

@@ -1,0 +1,48 @@
+id: library
+version: 0.1.0
+description: A README for every built-in pack and bridge, kept in sync with its manifest.
+
+types:
+  Component:
+    description: The README next to a built-in `pack.yaml` or `bridge.yaml`.
+    id_pattern: "^(PACK|BRIDGE)-[a-z0-9]+(-[a-z0-9]+)*$"
+    paths: ["src/bondstone/library/*/*/README.md"]
+    fields:
+      title: {type: string, minLength: 3}
+      name: {type: string, pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"}
+      kind: {enum: [pack, bridge]}
+      version: {type: string, pattern: "^\\d+\\.\\d+\\.\\d+$"}
+    required_fields: [title, name, kind, version]
+    sections: [Purpose, Contents, Example]
+    traits:
+      lifecycle:
+        statuses: [draft, active, deprecated]
+        initial: draft
+        transitions: {draft: [active], active: [deprecated]}
+      indexed: {}
+
+rules:
+  - id: matches-manifest
+    description: A component README names the manifest's id and version.
+    when: {type: Component}
+    require:
+      - file_field: {path: "{dir}/{kind}.yaml", key: id, equals: name}
+      - file_field: {path: "{dir}/{kind}.yaml", key: version, equals: version}
+    hint: Update `name`/`version` in the README to match the manifest (or bump the manifest).
+
+  - id: every-pack-has-a-readme
+    description: Every built-in pack has a README.
+    for_each: {glob: "src/bondstone/library/packs/*/pack.yaml", document: "{dir}/README.md", type: Component}
+
+  - id: every-bridge-has-a-readme
+    description: Every built-in bridge has a README.
+    for_each: {glob: "src/bondstone/library/bridges/*/bridge.yaml", document: "{dir}/README.md", type: Component}
+
+views:
+  - id: catalog
+    title: Built-in packs and bridges
+    output: docs/generated/library.md
+    select: {type: Component}
+    columns: [id, title, kind, version, status]
+
+instructions: instructions.md

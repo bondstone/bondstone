@@ -6,6 +6,7 @@
 | [REQ-AGT-001](../capabilities/agent-instructions.md#req-agt-001-generate-instructions) | Generate instructions | CAP-agent-instructions |
 | [REQ-AGT-002](../capabilities/agent-instructions.md#req-agt-002-explain-rules) | Explain rules | CAP-agent-instructions |
 | [REQ-AGT-003](../capabilities/agent-instructions.md#req-agt-003-machine-readable-results) | Machine-readable results | CAP-agent-instructions |
+| [REQ-AGT-004](../capabilities/agent-instructions.md#req-agt-004-explain-engine-rules) | Explain engine rules | CAP-agent-instructions |
 | [REQ-DIF-001](../capabilities/diff-checks.md#req-dif-001-enforce-status-transitions) | Enforce status transitions | CAP-diff-checks |
 | [REQ-DIF-002](../capabilities/diff-checks.md#req-dif-002-protect-immutable-documents) | Protect immutable documents | CAP-diff-checks |
 | [REQ-DIF-003](../capabilities/diff-checks.md#req-dif-003-start-new-documents-in-a-creation-status) | Start new documents in a creation status | CAP-diff-checks |
@@ -35,6 +36,7 @@
 | [REQ-PRF-004](../capabilities/profiles.md#req-prf-004-waive-diagnostics-with-a-reason) | Waive diagnostics with a reason | CAP-profiles |
 | [REQ-PRF-005](../capabilities/profiles.md#req-prf-005-warn-about-unbridged-packs) | Warn about unbridged packs | CAP-profiles |
 | [REQ-PRF-006](../capabilities/profiles.md#req-prf-006-assign-roles-only-in-bridges-and-profiles) | Assign roles only in bridges and profiles | CAP-profiles |
+| [REQ-PRF-007](../capabilities/profiles.md#req-prf-007-validate-rule-definitions) | Validate rule definitions | CAP-profiles |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes) | Select nodes | CAP-rules |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-requirement-clauses) | Evaluate requirement clauses | CAP-rules |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-validate-frontmatter-against-the-type-schema) | Validate frontmatter against the type schema | CAP-rules |
@@ -42,6 +44,8 @@
 | [REQ-RUL-005](../capabilities/rules.md#req-rul-005-require-sections) | Require sections | CAP-rules |
 | [REQ-RUL-006](../capabilities/rules.md#req-rul-006-flag-unfinished-placeholders) | Flag unfinished placeholders | CAP-rules |
 | [REQ-RUL-007](../capabilities/rules.md#req-rul-007-select-by-code-coverage) | Select by code coverage | CAP-rules |
+| [REQ-RUL-008](../capabilities/rules.md#req-rul-008-compare-with-values-in-other-files) | Compare with values in other files | CAP-rules |
+| [REQ-RUL-009](../capabilities/rules.md#req-rul-009-require-a-document-for-every-matching-file) | Require a document for every matching file | CAP-rules |
 | [REQ-SCF-001](../capabilities/scaffolding.md#req-scf-001-assign-the-next-id) | Assign the next id | CAP-scaffolding |
 | [REQ-SCF-002](../capabilities/scaffolding.md#req-scf-002-pre-fill-required-frontmatter) | Pre-fill required frontmatter | CAP-scaffolding |
 | [REQ-SCF-003](../capabilities/scaffolding.md#req-scf-003-mark-unfinished-content) | Mark unfinished content | CAP-scaffolding |

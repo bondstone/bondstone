@@ -163,6 +163,7 @@ class Config:
         return self.profile.get("code") or {}
 
 
+# bondstone: ENG-001
 def _problem(message: str, rule: str = "bondstone/profile", severity: str = ERROR) -> Diagnostic:
     return Diagnostic(rule, severity, message, path=str(PROFILE_PATH))
 

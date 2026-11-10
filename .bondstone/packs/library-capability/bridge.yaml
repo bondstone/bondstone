@@ -1,0 +1,14 @@
+id: library-capability
+version: 0.1.0
+description: Built-in components provide the requirements of the built-in library capability.
+
+requires:
+  library: "^0.1"
+  capability: "^1"
+
+links:
+  provides:
+    from: library:Component
+    to: capability:Requirement
+    min: 1
+    description: Library requirements this component fulfils.

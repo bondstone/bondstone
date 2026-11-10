@@ -83,3 +83,23 @@ Selectors SHALL support `covered: true|false`, matching nodes that are (or are n
 - Given an implemented proposal that delivers REQ-AA-002
 - When no code is tagged with REQ-AA-002
 - Then `change-capability/delivered-requirements-are-implemented` is reported
+
+### REQ-RUL-008: Compare with values in other files
+
+A `file_field` clause SHALL read a YAML or JSON file at a path built from the document's directory (`{dir}`) and fields, and SHALL fail when the file or the dotted `key` is missing or its value differs from the field named in `equals` or the literal `value`.
+
+#### Scenario: Version drift
+
+- Given a README with `version: 1.0.0` next to a manifest with `version: 1.1.0`
+- When a rule requires `file_field: {path: "{dir}/pack.yaml", key: version, equals: version}`
+- Then the rule fails and shows both values
+
+### REQ-RUL-009: Require a document for every matching file
+
+A rule with `for_each: {glob, document, type}` SHALL report every file matching the glob that has no document of the type at the path built from `{dir}`, `{name}` and `{path}` of the file.
+
+#### Scenario: Pack without a README
+
+- Given `packs/ost/pack.yaml` and no `packs/ost/README.md`
+- When a rule has `for_each: {glob: "packs/*/pack.yaml", document: "{dir}/README.md"}`
+- Then the rule reports `packs/ost/pack.yaml`

@@ -10,7 +10,7 @@ This repository's living documentation is validated by `bondstone`. Before finis
 4. Run `bondstone check --format json` (add `--base origin/main` on branches) and fix every error.
 5. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass; ask instead.
 
-Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), change@0.1.0 (pack), release@0.1.0 (pack), cli@0.1.0 (pack), adr-capability@1.0.0 (bridge), change-capability@0.2.0 (bridge), change-adr@0.1.0 (bridge), release-change@0.1.0 (bridge), cli-capability@0.1.0 (bridge)
+Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), change@0.1.0 (pack), release@0.1.0 (pack), cli@0.1.0 (pack), library@0.1.0 (pack), engine@0.1.0 (pack), adr-capability@1.0.0 (bridge), change-capability@0.2.0 (bridge), change-adr@0.1.0 (bridge), release-change@0.1.0 (bridge), cli-capability@0.1.0 (bridge), library-capability@0.1.0 (bridge), engine-capability@0.1.0 (bridge)
 
 ## Document types
 
@@ -77,6 +77,31 @@ One CLI command (a subcommand, or a nested one such as `profile check`).
 - reference it from code with a `bondstone: <id>` comment
 - links: `implements` → capability:Capability (min 1)
 
+### `library:Component`
+The README next to a built-in `pack.yaml` or `bridge.yaml`.
+- location: `src/bondstone/library/*/*/README.md`
+- id: `^(PACK|BRIDGE)-[a-z0-9]+(-[a-z0-9]+)*$`
+- required fields: title, name, kind, version
+- required sections: Purpose, Contents, Example
+- status: draft | active | deprecated
+- transitions: draft → active; active → deprecated
+- links: `provides` → capability:Requirement (min 1)
+
+### `engine:Catalog`
+The engine rule catalog shipped with the package (`src/bondstone/engine_rules.md`).
+- location: `src/bondstone/engine_rules.md`
+- id: `^ENG-CATALOG$`
+- required sections: Purpose, Rules
+- status: draft | active
+- transitions: draft → active
+- links: `documents` → capability:Capability (min 1)
+
+### `engine:Rule`
+One engine rule, as `### ENG-NNN: bondstone/<rule>` with when it fires, why, fix and severity.
+- written as headings inside its parent document
+- id: `^ENG-\d{3}$`
+- reference it from code with a `bondstone: <id>` comment
+
 ## Roles
 
 - `decision`: adr:Decision
@@ -93,6 +118,10 @@ One CLI command (a subcommand, or a nested one such as `profile check`).
 - **`change/breaking-change-has-migration`** (error): Breaking changes explain how users migrate.
 - **`release/released-has-date`** (error): A released version records its release date.
 - **`cli/json-output-is-documented`** (error): Stable commands with JSON output document its shape.
+- **`library/matches-manifest`** (error): A component README names the manifest's id and version. — _Update `name`/`version` in the README to match the manifest (or bump the manifest)._
+- **`library/every-pack-has-a-readme`** (error): Every built-in pack has a README.
+- **`library/every-bridge-has-a-readme`** (error): Every built-in bridge has a README.
+- **`engine/rule-is-explained`** (error): Every engine rule says when it fires, why, how to fix it and its severity.
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. — _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
 - **`change-capability/accepted-proposal-names-capabilities`** (error): Accepted behaviour changes name the capability specs they modify.
@@ -103,7 +132,7 @@ One CLI command (a subcommand, or a nested one such as `profile check`).
 - **`release-change/implemented-proposal-is-released`** (warn): Every implemented proposal is part of a (planned or published) release.
 - **`cli-capability/stable-command-on-active-capability`** (error): Stable commands only expose active capabilities.
 - **`profile/source-change-updates-traced-spec`** (error): Changes to bondstone's source update the capability specs the changed code implements.
-- **`profile/source-change-has-proposal`** (warn): Changes to bondstone's source or library come with a change proposal.
+- **`profile/source-change-has-proposal`** (warn): Changes to bondstone's source or library happen under an accepted change proposal.
 
 ## Guidance from `adr`
 
@@ -137,6 +166,17 @@ One CLI command (a subcommand, or a nested one such as `profile check`).
 - Every command has a document in `docs/cli/`, and its implementation is tagged with
   `bondstone: CLI-<command>`. Adding or changing a command means updating its document.
 - Changing a `stable` command's options, exit codes or JSON output is a breaking change.
+
+## Guidance from `library`
+
+- Every built-in pack and bridge has a `README.md` next to its manifest. When you change a
+  manifest's version, update the README's `version` in the same change.
+
+## Guidance from `engine`
+
+- Every `Diagnostic("bondstone/<rule>", ...)` in the engine has an entry in
+  `src/bondstone/engine_rules.md` and a `bondstone: ENG-NNN` tag on the line above it.
+  New engine rules get the next free number; never renumber.
 
 ## Guidance from `adr-capability`
 

@@ -469,3 +469,67 @@ def test_incomplete_ids_are_not_tags():
     assert scan_tags("hint: tag it with `bondstone: REQ-...`") == []
     assert scan_tags("# bondstone: REQ-AA-001, CLI-pack-test.") == [(1, "REQ-AA-001"), (1, "CLI-pack-test")]
     assert scan_tags("# bondstone: A") == [(1, "A")]
+
+
+def test_nested_tags_keep_the_outer_region():
+    from bondstone.checks import tag_regions
+
+    py = ("# bondstone: A-1\ndef f():\n    x = 1\n    # bondstone: E-1\n    raise E()\n\n    return x\n\n\n"
+          "# bondstone: B-1\ndef g():\n    pass\n")
+    assert sorted(tag_regions(py)) == [("A-1", 1, 7), ("B-1", 10, 12), ("E-1", 4, 5)]
+
+
+def test_file_field_and_for_each(project):
+    project.write(".bondstone/packs/docs/pack.yaml", """
+        id: docs
+        version: 1.0.0
+        types:
+          Readme:
+            paths: ["lib/*/README.md"]
+            fields:
+              name: {type: string}
+              version: {type: string}
+        rules:
+          - id: version-matches
+            when: {type: Readme}
+            require:
+              - file_field: {path: "{dir}/manifest.yaml", key: meta.version, equals: version}
+              - file_field: {path: "{dir}/manifest.yaml", key: kind, value: pack}
+          - id: manifest-has-readme
+            for_each: {glob: "lib/*/manifest.yaml", document: "{dir}/README.md", type: Readme}
+    """)
+    project.profile(packs=["docs@1"], sources=[".bondstone/packs"], overrides={"bondstone/view-stale": "off"})
+    project.write("lib/a/manifest.yaml", "kind: pack\nmeta: {version: 1.2.0}\n")
+    project.write("lib/a/README.md", "---\nid: R-a\ntitle: A\nname: a\nversion: 1.2.0\n---\n")
+    project.write("lib/b/manifest.yaml", "kind: bridge\nmeta: {version: 2.0.0}\n")
+    project.write("lib/b/README.md", "---\nid: R-b\ntitle: B\nname: b\nversion: 1.0.0\n---\n")
+    project.write("lib/c/manifest.yaml", "kind: pack\nmeta: {version: 1.0.0}\n")
+    diags = project.check()
+    assert sorted((d.rule, d.node or d.path) for d in diags) == [
+        ("docs/manifest-has-readme", "lib/c/manifest.yaml"),
+        ("docs/version-matches", "R-b"), ("docs/version-matches", "R-b")]
+    assert "is '2.0.0', field 'version' is '1.0.0'" in " ".join(d.message for d in diags)
+
+
+def test_exists_clause_in_diff_rules(project):
+    project.write(".bondstone/packs/p/pack.yaml", """
+        id: p
+        version: 1.0.0
+        types:
+          Proposal:
+            paths: ["docs/p/*.md"]
+            traits:
+              lifecycle: {statuses: [draft, accepted], initial: draft, transitions: {draft: [accepted]}}
+    """)
+    _git_project(project, packs=["p@1"], sources=[".bondstone/packs"], roles={"change": ["p:Proposal"]},
+                 rules=[{"id": "work-has-proposal", "on_change": {"paths": ["src/**"]},
+                         "require": [{"exists": {"role": "change", "status": "accepted"}, "min": 1}]}])
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: draft\n---\n")
+    project.write("src/a.py", "x = 1\n")
+    project.commit()
+    project.write("src/a.py", "x = 2\n")
+    assert project.rules(base="HEAD") == ["profile/work-has-proposal"]
+    project.write("docs/p/a.md", "---\nid: P-1\ntitle: P\nstatus: accepted\n---\n")
+    project.commit()
+    project.write("src/a.py", "x = 3\n")
+    assert project.rules(base="HEAD") == []

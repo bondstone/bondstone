@@ -1,0 +1,14 @@
+id: engine-capability
+version: 0.1.0
+description: The engine rule catalog documents the capabilities whose checks emit those rules.
+
+requires:
+  engine: "^0.1"
+  capability: "^1"
+
+links:
+  documents:
+    from: engine:Catalog
+    to: capability:Capability
+    min: 1
+    description: Capabilities whose diagnostics the catalog explains.

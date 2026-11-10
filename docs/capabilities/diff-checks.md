@@ -56,7 +56,7 @@ Bondstone SHALL compare a renamed or moved document with its previous version in
 
 ### REQ-DIF-005: Run on-change rules
 
-Rules with `on_change` SHALL run only when changed files match their globs, and `changed` clauses SHALL count changed documents that match a selector.
+Rules with `on_change` SHALL run only when changed files match their globs, `changed` clauses SHALL count changed documents that match a selector, and `exists` clauses SHALL count all documents that match a selector.
 
 #### Scenario: Code without a spec change
 
@@ -64,9 +64,15 @@ Rules with `on_change` SHALL run only when changed files match their globs, and 
 - When only code changes
 - Then the rule fails
 
+#### Scenario: Work under an accepted proposal
+
+- Given a rule requiring `exists: {role: change, status: accepted}` for `src/**`
+- When only code changes and a proposal is accepted
+- Then the rule passes
+
 ### REQ-DIF-006: Require the traced specs to change
 
-A `changed` clause with `traced: true` SHALL require every matching document tagged in the changed regions of the code to change, and SHALL fall back to `min` when no tagged region changed. A tag's region is the code it annotates: from its block of consecutive tag lines to the end of the block of code below it (before the next line at the same or lower indentation that follows a blank line, or before the next tag block). Regions are taken in the current file for changed lines and in the base file for removed lines; changes to tag lines alone do not count.
+A `changed` clause with `traced: true` SHALL require every matching document tagged in the changed regions of the code to change, and SHALL fall back to `min` when no tagged region changed. A tag's region is the code it annotates: from its block of consecutive tag lines to the end of the block of code below it (before the next line at the same or lower indentation that follows a blank line, or before the next tag block at the same or lower indentation; tags inside the block nest). Regions are taken in the current file for changed lines and in the base file for removed lines; changes to tag lines alone do not count.
 
 #### Scenario: Wrong spec changed
 
@@ -79,6 +85,12 @@ A `changed` clause with `traced: true` SHALL require every matching document tag
 - Given a file with a REQ-AA-001 region and a REQ-BB-001 region
 - When only the REQ-BB-001 region changes
 - Then only CAP-b has to change
+
+#### Scenario: Tag inside a function
+
+- Given a function tagged REQ-AA-001 with a tag ENG-001 inside its body
+- When a line below the inner block changes
+- Then CAP-a has to change
 
 ### REQ-DIF-007: Compare adopted documents with the baseline
 

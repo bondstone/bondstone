@@ -181,11 +181,20 @@ Selectors (`when`, `to`, `from`) combine with AND: `type`, `role`, `trait`, `sta
 | `field: NAME` | field present and non-empty |
 | `section: TITLE` | heading present |
 | `contains: REGEX` | node body matches |
+| `file_field: {path, key, equals \| value}` | a value in a YAML/JSON file (path built from `{dir}` and fields, dotted `key`) equals a field or a literal |
 | `changed: SEL, min: N` | (diff rules) N changed nodes match SEL |
+| `exists: SEL, min: N` | (diff rules) N nodes match SEL, changed or not |
 | `changed: SEL, traced: true` | (diff rules) every document matching SEL that is tagged in a changed code region must change; a tag's region is the block of code below it; untagged code falls back to `min` |
 
 Diff rules use `on_change: {paths: [globs]}` instead of `when` and only run with
 `bondstone check --base REF`.
+
+Existence rules use `for_each: {glob, document, type}` instead of `when`: every file
+matching the glob must have a document of the type at `document` (built from `{dir}`,
+`{name}` and `{path}` of the file).
+
+Engine rules (`bondstone/...`) are documented in `src/bondstone/engine_rules.md`, which
+ships with the package; `bondstone explain bondstone/<rule>` reads it.
 
 ### Views
 

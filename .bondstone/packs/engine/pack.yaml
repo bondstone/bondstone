@@ -1,0 +1,38 @@
+id: engine
+version: 0.1.0
+description: The catalog of bondstone's own engine rules, tied to the code that emits them.
+
+types:
+  Catalog:
+    description: The engine rule catalog shipped with the package (`src/bondstone/engine_rules.md`).
+    id_pattern: "^ENG-CATALOG$"
+    paths: ["src/bondstone/engine_rules.md"]
+    sections: [Purpose, Rules]
+    items:
+      type: Rule
+      heading_level: 3
+      section: Rules
+      pattern: "^(?P<id>ENG-\\d{3}):\\s*(?P<title>bondstone/[a-z]+(-[a-z]+)*)$"
+    traits:
+      lifecycle:
+        statuses: [draft, active]
+        initial: draft
+        transitions: {draft: [active]}
+  Rule:
+    description: "One engine rule, as `### ENG-NNN: bondstone/<rule>` with when it fires, why, fix and severity."
+    embedded: true
+    id_pattern: "^ENG-\\d{3}$"
+    traits:
+      code-traceable: {coverage: error}
+
+rules:
+  - id: rule-is-explained
+    description: Every engine rule says when it fires, why, how to fix it and its severity.
+    when: {type: Rule}
+    require:
+      - contains: "^Fires when: "
+      - contains: "\\*\\*Why:\\*\\*"
+      - contains: "\\*\\*Fix:\\*\\*"
+      - contains: "\\*\\*Severity:\\*\\*"
+
+instructions: instructions.md
