@@ -12,3 +12,4 @@
 | [CHG-007](../changes/CHG-007-document-every-built-in-pack-and-bridge-self-hosting-phase-3.md) | Document every built-in pack and bridge (self-hosting phase 3) | docs |
 | [CHG-008](../changes/CHG-008-promote-change-and-release-packs-to-the-built-in-library.md) | Promote change and release packs to the built-in library | feature |
 | [CHG-009](../changes/CHG-009-alternative-clauses-any.md) | Alternative clauses (any) | feature |
+| [CHG-010](../changes/CHG-010-leave-test-fixtures-out-of-the-built-package.md) | Leave test fixtures out of the built package | fix |

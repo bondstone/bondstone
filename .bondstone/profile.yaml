@@ -1,6 +1,6 @@
 # bondstone documents itself. See docs/self-hosting.md.
 bondstone: 0.1
-baseline: '99e6db79ad201f78b65a7784cb1153653f2dd115'
+baseline: 'ca499b453e339044b7fa9d90ce7ed77878a62f8f'
 packs: [adr@1, capability@1, change@0.1, release@0.1, cli@0.1, library@0.1, engine@0.1]
 bridges: [adr-capability@1, change-capability@0.2, change-adr@0.1, release-change@0.1, cli-capability@0.1, library-capability@0.1, engine-capability@0.1]
 sources: [.bondstone/packs]
