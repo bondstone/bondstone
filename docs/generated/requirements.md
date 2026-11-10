@@ -29,6 +29,7 @@
 | [REQ-LIB-004](../capabilities/built-in-library.md#req-lib-004-change-proposals) | Change proposals | CAP-built-in-library |
 | [REQ-LIB-005](../capabilities/built-in-library.md#req-lib-005-releases-and-changelog) | Releases and changelog | CAP-built-in-library |
 | [REQ-LIB-006](../capabilities/built-in-library.md#req-lib-006-bridges-between-built-in-packs) | Bridges between built-in packs | CAP-built-in-library |
+| [REQ-LIB-007](../capabilities/built-in-library.md#req-lib-007-ship-the-library-without-test-fixtures) | Ship the library without test fixtures | CAP-built-in-library |
 | [REQ-PKT-001](../capabilities/pack-testing.md#req-pkt-001-run-fixtures) | Run fixtures | CAP-pack-testing |
 | [REQ-PKT-002](../capabilities/pack-testing.md#req-pkt-002-test-the-local-version) | Test the local version | CAP-pack-testing |
 | [REQ-PRF-001](../capabilities/profiles.md#req-prf-001-resolve-packs-and-bridges-by-version) | Resolve packs and bridges by version | CAP-profiles |

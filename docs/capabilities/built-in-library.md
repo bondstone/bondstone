@@ -74,3 +74,13 @@ The built-in library SHALL include the bridges `ost-capability`, `adr-capability
 - Given a profile with `change@0.1`, `capability@1` and `change-capability@0.2`
 - When an implemented proposal delivers a requirement
 - Then the requirement must exist and be tagged in code
+
+### REQ-LIB-007: Ship the library without test fixtures
+
+The installed package SHALL contain every built-in manifest, template, instructions file and README and the engine rule catalog, and MUST NOT contain the `fixtures/` folders used to test them.
+
+#### Scenario: Building the wheel
+
+- Given the built-in library with fixtures
+- When the wheel is built
+- Then it contains `bondstone/library/packs/adr/pack.yaml` and no path containing `/fixtures/`

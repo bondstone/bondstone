@@ -23,6 +23,9 @@ bondstone = "bondstone.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bondstone"]
+# bondstone: REQ-LIB-007
+# fixtures are test data for `bondstone pack test` in this repository; the sdist keeps them
+exclude = ["src/bondstone/library/**/fixtures"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
