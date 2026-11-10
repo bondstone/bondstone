@@ -490,9 +490,12 @@ def test_view_checks(project):
     ]
 
 
-def test_reserved_component_ids(project):
-    project.pack("profile", "id: profile\nversion: 1.0.0\n")
+def test_reserved_component_ids_and_missing_instructions(project):
+    project.pack("profile", "id: profile\nversion: 1.0.0\ninstructions: instructions.md\n")
     project.profile(packs=["profile"])
+    assert [d.message for d in load_config(project.root).errors] == [
+        "id: 'profile' is reserved", "instructions: file 'instructions.md' not found"]
+    project.write(".bondstone/packs/profile/instructions.md", "- Guidance.\n")
     assert [d.message for d in load_config(project.root).errors] == ["id: 'profile' is reserved"]
 
 

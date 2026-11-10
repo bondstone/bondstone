@@ -267,6 +267,9 @@ class _Builder:
         for comp in cfg.components:
             if comp.id in RESERVED_OWNERS:
                 self.bad(f"id: '{comp.id}' is reserved", comp.manifest)
+            instructions = comp.data.get("instructions")
+            if instructions and not (comp.dir / instructions).is_file():
+                self.bad(f"instructions: file '{instructions}' not found", comp.manifest)
             if comp.kind != "pack":
                 continue
             for name, spec in (comp.data.get("types") or {}).items():
