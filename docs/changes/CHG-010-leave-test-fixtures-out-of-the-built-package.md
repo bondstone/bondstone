@@ -1,9 +1,11 @@
 ---
 id: CHG-010
 title: Leave test fixtures out of the built package
-status: draft
+status: accepted
 owner: dworek
 kind: fix
+modifies:
+- CAP-built-in-library
 ---
 
 ## Why
