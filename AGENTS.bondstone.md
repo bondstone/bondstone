@@ -10,7 +10,7 @@ This repository's living documentation is validated by `bondstone`. Before finis
 4. Run `bondstone check --format json` (add `--base origin/main` on branches) and fix every error.
 5. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass; ask instead.
 
-Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), change@0.1.0 (pack), release@0.1.0 (pack), adr-capability@1.0.0 (bridge), change-capability@0.1.0 (bridge), change-adr@0.1.0 (bridge), release-change@0.1.0 (bridge)
+Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), change@0.1.0 (pack), release@0.1.0 (pack), cli@0.1.0 (pack), adr-capability@1.0.0 (bridge), change-capability@0.2.0 (bridge), change-adr@0.1.0 (bridge), release-change@0.1.0 (bridge), cli-capability@0.1.0 (bridge)
 
 ## Document types
 
@@ -66,11 +66,23 @@ One published version.
 - immutable once released: supersede instead of editing
 - links: `includes` → change:Proposal
 
+### `cli:Command`
+One CLI command (a subcommand, or a nested one such as `profile check`).
+- location: `docs/cli/*.md`
+- id: `^CLI-[a-z]+(-[a-z]+)*$`
+- required fields: title, synopsis
+- required sections: Options, Exit codes, Examples
+- status: draft | experimental | stable | deprecated
+- transitions: draft → experimental, stable; experimental → stable, deprecated; stable → deprecated
+- reference it from code with a `bondstone: <id>` comment
+- links: `implements` → capability:Capability (min 1)
+
 ## Roles
 
 - `decision`: adr:Decision
 - `living-spec`: capability:Capability
 - `change`: change:Proposal
+- `interface`: cli:Command
 
 ## Rules
 
@@ -80,13 +92,16 @@ One published version.
 - **`capability/active-capability-has-requirements`** (error): An active capability lists at least one requirement.
 - **`change/breaking-change-has-migration`** (error): Breaking changes explain how users migrate.
 - **`release/released-has-date`** (error): A released version records its release date.
+- **`cli/json-output-is-documented`** (error): Stable commands with JSON output document its shape.
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. — _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
 - **`change-capability/accepted-proposal-names-capabilities`** (error): Accepted behaviour changes name the capability specs they modify.
 - **`change-capability/implemented-proposal-delivers-requirements`** (error): An implemented feature points at the requirements it delivered in the living spec. — _Add the requirement to the capability spec, then `delivers: [REQ-...]`._
+- **`change-capability/delivered-requirements-are-implemented`** (error): Requirements delivered by an implemented proposal are tagged in code. — _Tag the implementing code with `bondstone: REQ-...`._
 - **`change-adr/implemented-proposal-has-accepted-decisions`** (error): A proposal is implemented only on accepted decisions.
 - **`release-change/release-includes-only-implemented`** (error): Releases include only implemented proposals.
 - **`release-change/implemented-proposal-is-released`** (warn): Every implemented proposal is part of a (planned or published) release.
+- **`cli-capability/stable-command-on-active-capability`** (error): Stable commands only expose active capabilities.
 - **`profile/source-change-updates-traced-spec`** (error): Changes to bondstone's source update the capability specs the changed code implements.
 - **`profile/source-change-has-proposal`** (warn): Changes to bondstone's source or library come with a change proposal.
 
@@ -116,6 +131,12 @@ One published version.
 
 - Plan a release with `bondstone new release:Release --title "..." --set version=X.Y.Z`.
 - `CHANGELOG.md` is generated from releases and the proposals they include; never edit it.
+
+## Guidance from `cli`
+
+- Every command has a document in `docs/cli/`, and its implementation is tagged with
+  `bondstone: CLI-<command>`. Adding or changing a command means updating its document.
+- Changing a `stable` command's options, exit codes or JSON output is a breaking change.
 
 ## Guidance from `adr-capability`
 

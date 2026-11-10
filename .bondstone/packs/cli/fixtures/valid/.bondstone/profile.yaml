@@ -1,0 +1,9 @@
+bondstone: 0.1
+packs:
+- cli@0.1
+bridges: []
+code:
+  include:
+  - src/*.py
+overrides:
+  bondstone/view-stale: 'off'

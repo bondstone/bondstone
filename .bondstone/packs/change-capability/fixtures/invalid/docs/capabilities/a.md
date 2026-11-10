@@ -18,3 +18,11 @@ It SHALL work.
 #### Scenario: s
 
 - Then ok
+
+### REQ-AA-002: Other
+
+It SHALL work too.
+
+#### Scenario: s
+
+- Then ok

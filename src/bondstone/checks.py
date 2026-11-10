@@ -11,7 +11,7 @@ from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 
-from .graph import Graph, build_graph, glob_files, rel
+from .graph import Graph, build_graph, scan_tags
 from .loader import Config, as_list, qualify
 from .model import ERROR, OFF, PART_OF, WARN, Diagnostic, Node, Rule
 from .parser import ParsedDoc, parse_document
@@ -26,7 +26,6 @@ from .select import (
 from .views import render
 
 TODO_RE = re.compile(r"<!--\s*todo\b", re.I)
-CODE_TAG_RE = re.compile(r"\bbondstone:[ \t]+([A-Z][\w-]*(?:[ \t]*,[ \t]*[A-Z][\w-]*)*)")
 
 
 # =========================================================================== entry point
@@ -398,52 +397,26 @@ def _sel_text(sel: dict[str, Any] | None, word: str = "to") -> str:
 # =========================================================================== code tags
 
 
-# bondstone: REQ-TRC-001
-def scan_tags(text: str) -> list[tuple[int, str]]:
-    """(line, id) for every bondstone tag (comma-separated ids) in a text."""
-    found = []
-    for lineno, line in enumerate(text.splitlines(), 1):
-        for m in CODE_TAG_RE.finditer(line):
-            found.extend((lineno, ref.strip()) for ref in m.group(1).split(","))
-    return found
-
-
 # bondstone: REQ-TRC-001, REQ-TRC-002, REQ-TRC-003
 def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
-    settings = cfg.code_settings()
-    include = as_list(settings.get("include"))
-    if not include:
+    if not as_list(cfg.code_settings().get("include")):
         return []
-    exclude = as_list(settings.get("exclude"))
-    excluded = {rel(cfg.root, p) for pat in exclude for p in glob_files(cfg.root, pat)}
     out: list[Diagnostic] = []
-    covered: set[str] = set()
-    for pattern in include:
-        for file in sorted(glob_files(cfg.root, pattern)):
-            path = rel(cfg.root, file)
-            if path in excluded:
-                continue
-            try:
-                text = file.read_text(encoding="utf-8")
-            except (UnicodeDecodeError, OSError):
-                continue
-            for lineno, ref in scan_tags(text):
-                node = graph.by_id.get(ref)
-                if node is None:
-                    out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
-                                          f"code references unknown id '{ref}'", path, lineno))
-                elif not cfg.types[node.type].has_trait("code-traceable"):
-                    out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
-                                          f"{ref} is {node.type}, a type that is not code-traceable",
-                                          path, lineno, ref))
-                else:
-                    covered.add(ref)
+    for path, lineno, ref in graph.code_refs:
+        node = graph.by_id.get(ref)
+        if node is None:
+            out.append(Diagnostic("bondstone/code-ref-unknown", ERROR,
+                                  f"code references unknown id '{ref}'", path, lineno))
+        elif not cfg.types[node.type].has_trait("code-traceable"):
+            out.append(Diagnostic("bondstone/code-ref-not-traceable", ERROR,
+                                  f"{ref} is {node.type}, a type that is not code-traceable",
+                                  path, lineno, ref))
     for node in graph.nodes:
         trait = cfg.types[node.type].traits.get("code-traceable")
         if trait is None or not node.id:
             continue
         coverage = trait.get("coverage", WARN)
-        if coverage != OFF and node.id not in covered:
+        if coverage != OFF and not node.covered:
             out.append(Diagnostic("bondstone/code-coverage", coverage,
                                   f"{node.id} is not referenced from code",
                                   node.path, node.line, node.id,
@@ -549,7 +522,20 @@ def glob_to_regex(pattern: str) -> re.Pattern[str]:
     return re.compile(out + r"\Z")
 
 
-# bondstone: REQ-DIF-001, REQ-DIF-002, REQ-DIF-003, REQ-DIF-005
+# bondstone: REQ-DIF-007, REQ-DIF-008
+def _baseline_version(cfg: Config, baseline: str, changes: Changes, node: Node) -> ParsedDoc | None:
+    """The node's document at the profile's baseline commit, if it existed there."""
+    for path in (node.path, changes.renames.get(node.path)):
+        if path:
+            text = file_at(cfg.root, baseline, path)
+            if text is not None:
+                doc = parse_document(text)
+                if doc.frontmatter and str(doc.frontmatter.get("id")) == node.id:
+                    return doc
+    return None
+
+
+# bondstone: REQ-DIF-001, REQ-DIF-002, REQ-DIF-003, REQ-DIF-005, REQ-DIF-007, REQ-DIF-008
 def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     out: list[Diagnostic] = []
     try:
@@ -557,12 +543,25 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
     except RuntimeError as exc:
         return [Diagnostic("bondstone/git", ERROR, f"cannot diff against '{base}': {exc}")]
     changed = changes.files
+    baseline = cfg.profile.get("baseline")
+    if baseline is not None:
+        baseline = str(baseline)
+        try:
+            _git(cfg.root, "cat-file", "-e", f"{baseline}^{{commit}}")
+        except RuntimeError:
+            out.append(Diagnostic("bondstone/baseline-missing", ERROR,
+                                  f"baseline commit {baseline} is not available in this clone",
+                                  ".bondstone/profile.yaml",
+                                  hint=f"Fetch full history (`git fetch --unshallow`) or `git fetch origin {baseline}`."))
+            baseline = None
 
     for node in graph.nodes:
         if node.parent is not None or node.path not in changed:
             continue
         traits = cfg.types[node.type].traits
         old = _base_version(cfg, base, changes, node)
+        if (old is None or not old.frontmatter) and baseline:
+            old = _baseline_version(cfg, baseline, changes, node)
         if old is None or not old.frontmatter:
             lifecycle = traits.get("lifecycle")
             if lifecycle and node.status is not None:
@@ -631,24 +630,97 @@ def check_diff(cfg: Config, graph: Graph, base: str) -> list[Diagnostic]:
 
 
 # bondstone: REQ-DIF-006
+HUNK_RE = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
+
+
+def _changed_lines(root: Path, base: str, path: str) -> tuple[set[int], set[int]] | None:
+    """(changed lines in the current file, removed lines in the base file); None if new."""
+    if file_at(root, base, path) is None:
+        return None
+    diff = _git(root, "diff", "-U0", base, "--", path)
+    new_lines: set[int] = set()
+    old_lines: set[int] = set()
+    for m in HUNK_RE.finditer(diff):
+        old_start, old_count = int(m.group(1)), int(m.group(2) or 1)
+        new_start, new_count = int(m.group(3)), int(m.group(4) or 1)
+        old_lines.update(range(old_start, old_start + old_count))
+        new_lines.update(range(new_start, new_start + new_count))
+        if new_count == 0:  # pure deletion: the lines around it changed
+            new_lines.update({new_start, new_start + 1})
+    return new_lines, old_lines
+
+
+def tag_regions(text: str) -> list[tuple[str, int, int]]:
+    """(id, first line, last line) of the code each tag annotates.
+
+    Consecutive tag lines form a block. The region runs from the block to the end of the
+    code below it: the line before the first non-blank line that is indented no deeper
+    than the block's first code line and follows a blank line (the next function, method
+    or top-level statement), or before the next tag block."""
+    lines = text.splitlines()
+    tags = scan_tags(text)
+    tag_lines = sorted({line for line, _ in tags})
+    block_start: dict[int, int] = {}
+    for line in tag_lines:
+        block_start[line] = block_start.get(line - 1, line)
+    starts = sorted(set(block_start.values()))
+
+    def indent(line: str) -> int:
+        return len(line) - len(line.lstrip())
+
+    regions = []
+    for line, ref in tags:
+        start = block_start[line]
+        block_end = max(l for l in tag_lines if block_start[l] == start)
+        nxt = next((s for s in starts if s > start), len(lines) + 1)
+        anchor = next((i for i in range(block_end + 1, nxt) if lines[i - 1].strip()), None)
+        end = nxt - 1
+        if anchor is not None:
+            base = indent(lines[anchor - 1])
+            for i in range(anchor + 1, nxt):
+                current, previous = lines[i - 1], lines[i - 2]
+                if current.strip() and indent(current) <= base and not previous.strip():
+                    end = i - 1
+                    break
+        while end > start and not lines[end - 1].strip():
+            end -= 1
+        regions.append((ref, start, end))
+    return regions
+
+
+def _tags_in_lines(text: str, lines: set[int] | None) -> set[str]:
+    """Ids of tags whose region touches `lines`; changes to tag lines themselves are ignored."""
+    tags = scan_tags(text)
+    if lines is None:
+        return {ref for _, ref in tags}
+    lines = lines - {line for line, _ in tags}
+    return {ref for ref, start, end in tag_regions(text) if any(start <= l <= end for l in lines)}
+
+
 def _traced_documents(cfg: Config, graph: Graph, base: str, files: list[str]) -> dict[str, set[str]]:
-    """Top-level documents referenced by tags in `files`, now or at `base` -> referencing files."""
+    """Top-level documents tagged in the changed regions of `files` -> those files.
+
+    A tag's region runs from the tag to the line before the next tag. Regions are taken from
+    the current file (changed lines) and from the base file (removed lines)."""
     traced: dict[str, set[str]] = {}
     for path in files:
-        texts = [file_at(cfg.root, base, path)]
+        lines = _changed_lines(cfg.root, base, path)
+        refs: set[str] = set()
         current = cfg.root / path
         if current.is_file():
             try:
-                texts.append(current.read_text(encoding="utf-8"))
+                refs |= _tags_in_lines(current.read_text(encoding="utf-8"), lines[0] if lines else None)
             except (UnicodeDecodeError, OSError):
                 pass
-        for text in filter(None, texts):
-            for _, ref in scan_tags(text):
-                node = graph.by_id.get(ref)
-                while node is not None and node.parent is not None:
-                    node = graph.by_id.get(node.parent)
-                if node is not None and node.id:
-                    traced.setdefault(node.id, set()).add(path)
+        old_text = file_at(cfg.root, base, path)
+        if old_text is not None:
+            refs |= _tags_in_lines(old_text, lines[1] if lines else set())
+        for ref in refs:
+            node = graph.by_id.get(ref)
+            while node is not None and node.parent is not None:
+                node = graph.by_id.get(node.parent)
+            if node is not None and node.id:
+                traced.setdefault(node.id, set()).add(path)
     return traced
 
 

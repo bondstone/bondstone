@@ -1,0 +1,4 @@
+errors:
+- bondstone/link-min
+- cli-capability/stable-command-on-active-capability
+warnings: []

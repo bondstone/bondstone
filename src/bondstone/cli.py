@@ -17,7 +17,7 @@ from .graph import build_graph
 from .loader import LIBRARY, Config, find_root, index_components, load_config
 from .model import ERROR, WARN, BondstoneError, Diagnostic
 from .packtest import run_fixtures
-from .scaffold import init_profile, new_document, supersede
+from .scaffold import init_profile, new_document, set_baseline, supersede
 from .views import generate
 
 
@@ -44,6 +44,7 @@ def _emit(diags: list[Diagnostic], fmt: str, extra: dict[str, Any] | None = None
 
 
 # bondstone: REQ-AGT-003
+# bondstone: CLI-check
 def cmd_check(args: argparse.Namespace) -> int:
     cfg = _config(args)
     graph = build_graph(cfg)
@@ -52,6 +53,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 1 if has_errors(diags, args.fail_on) else 0
 
 
+# bondstone: CLI-gen
 def cmd_gen(args: argparse.Namespace) -> int:
     cfg = _config(args)
     written = generate(cfg, build_graph(cfg))
@@ -62,25 +64,28 @@ def cmd_gen(args: argparse.Namespace) -> int:
     return 0
 
 
+def _sets(items: list[str] | None) -> dict[str, Any]:
+    sets: dict[str, Any] = {}
+    for item in items or []:
+        key, sep, value = item.partition("=")
+        if not sep or not key:
+            raise BondstoneError(f"--set expects KEY=VALUE, got '{item}'")
+        try:
+            sets[key] = yaml.safe_load(value) if value else ""
+        except yaml.YAMLError:
+            sets[key] = value  # not YAML (e.g. "bondstone check [--base REF]"): keep the text
+    return sets
+
+
+# bondstone: CLI-new
 def cmd_new(args: argparse.Namespace) -> int:
     cfg = _config(args)
-    sets: dict[str, Any] = {}
-    for item in args.set or []:
-        key, _, value = item.partition("=")
-        sets[key] = yaml.safe_load(value) if value else ""
-    path = new_document(cfg, build_graph(cfg), args.type, args.title, sets)
+    path = new_document(cfg, build_graph(cfg), args.type, args.title, _sets(args.set))
     print(path.relative_to(cfg.root).as_posix())
     return 0
 
 
-def _sets(items: list[str] | None) -> dict[str, Any]:
-    sets: dict[str, Any] = {}
-    for item in items or []:
-        key, _, value = item.partition("=")
-        sets[key] = yaml.safe_load(value) if value else ""
-    return sets
-
-
+# bondstone: CLI-supersede
 def cmd_supersede(args: argparse.Namespace) -> int:
     cfg = _config(args)
     result = supersede(cfg, build_graph(cfg), args.id, args.title, _sets(args.set),
@@ -97,6 +102,15 @@ def cmd_supersede(args: argparse.Namespace) -> int:
 
 
 # bondstone: REQ-SCF-005
+# bondstone: CLI-baseline
+def cmd_baseline(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else find_root(Path.cwd())
+    commit = set_baseline(root, args.ref)
+    print(f"baseline: {commit}")
+    return 0
+
+
+# bondstone: CLI-init
 def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.root or ".").resolve()
     packs = [p for p in (args.packs or "").split(",") if p]
@@ -112,6 +126,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 1 if has_errors(problems) else 0
 
 
+# bondstone: CLI-profile-check
 def cmd_profile_check(args: argparse.Namespace) -> int:
     cfg = _config(args)
     diags = profile_problems(cfg)
@@ -119,6 +134,7 @@ def cmd_profile_check(args: argparse.Namespace) -> int:
     return 1 if has_errors(diags) else 0
 
 
+# bondstone: CLI-rules
 def cmd_rules(args: argparse.Namespace) -> int:
     cfg = _config(args)
     if args.format == "json":
@@ -132,6 +148,7 @@ def cmd_rules(args: argparse.Namespace) -> int:
 
 
 # bondstone: REQ-AGT-002
+# bondstone: CLI-explain
 def cmd_explain(args: argparse.Namespace) -> int:
     cfg = _config(args)
     text = explain_rule(cfg, args.rule)
@@ -142,6 +159,7 @@ def cmd_explain(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: CLI-agent
 def cmd_agent(args: argparse.Namespace) -> int:
     cfg = _config(args)
     text = agent_instructions(cfg)
@@ -153,6 +171,7 @@ def cmd_agent(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: CLI-graph
 def cmd_graph(args: argparse.Namespace) -> int:
     cfg = _config(args)
     graph = build_graph(cfg)
@@ -168,6 +187,7 @@ def cmd_graph(args: argparse.Namespace) -> int:
     return 0
 
 
+# bondstone: CLI-packs
 def cmd_packs(args: argparse.Namespace) -> int:
     index = index_components([LIBRARY / "packs", LIBRARY / "bridges"])
     for (kind, cid), comps in sorted(index.items()):
@@ -177,6 +197,7 @@ def cmd_packs(args: argparse.Namespace) -> int:
 
 
 # bondstone: REQ-PKT-001
+# bondstone: CLI-pack-test
 def cmd_pack_test(args: argparse.Namespace) -> int:
     failed = 0
     for directory in args.dirs:
@@ -216,6 +237,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--set", action="append", metavar="KEY=VALUE")
     p.add_argument("--no-repoint", action="store_true", help="keep incoming links on the old document")
     p.set_defaults(func=cmd_supersede)
+
+    p = sub.add_parser("baseline", help="record a commit whose documents count as already adopted")
+    p.add_argument("ref", nargs="?", default="HEAD", help="git ref (default: HEAD)")
+    p.set_defaults(func=cmd_baseline)
 
     p = sub.add_parser("init", help="create .bondstone/profile.yaml")
     p.add_argument("--packs", default="", help="comma-separated, e.g. adr@1,ost@1")

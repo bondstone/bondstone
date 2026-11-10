@@ -171,7 +171,7 @@ the profile** — never by packs. Rules and views can select by role, so a gener
 ```
 
 Selectors (`when`, `to`, `from`) combine with AND: `type`, `role`, `trait`, `status`,
-`where: {field: value}`. Requirement clauses:
+`where: {field: value}`, `covered: true|false` (tagged in code). Requirement clauses:
 
 | Clause | Meaning |
 |---|---|
@@ -182,7 +182,7 @@ Selectors (`when`, `to`, `from`) combine with AND: `type`, `role`, `trait`, `sta
 | `section: TITLE` | heading present |
 | `contains: REGEX` | node body matches |
 | `changed: SEL, min: N` | (diff rules) N changed nodes match SEL |
-| `changed: SEL, traced: true` | (diff rules) every document matching SEL that is tagged in the changed code (now or at the base) must change; untagged code falls back to `min` |
+| `changed: SEL, traced: true` | (diff rules) every document matching SEL that is tagged in a changed code region must change; a tag's region is the block of code below it; untagged code falls back to `min` |
 
 Diff rules use `on_change: {paths: [globs]}` instead of `when` and only run with
 `bondstone check --base REF`.
@@ -224,6 +224,7 @@ date in the past turns the waiver into an error.
 | `bondstone check [--base REF] [--format json] [--fail-on warn]` | validate everything; exit 1 on failure |
 | `bondstone gen` | regenerate views |
 | `bondstone new TYPE --title T [--set k=v]` | scaffold a valid document with the next id |
+| `bondstone baseline [REF]` | record the adoption commit for diff checks |
 | `bondstone supersede ID --title T [--no-repoint]` | create a successor, mark the old one superseded, move incoming links (skipping immutable sources), regenerate views |
 | `bondstone profile check` | validate the profile itself: versions, bridges, references, unbridged packs |
 | `bondstone rules` / `bondstone explain RULE` | list / explain active rules |
@@ -260,6 +261,15 @@ warnings: []
 In: engine, traits, roles, rules, diff rules (`--base`), views, overrides, waivers,
 code tags, scaffolding, agent instructions, pack tests; packs `adr`, `ost`,
 `capability`; bridges `ost-capability`, `adr-capability`; an example project.
+
+### Baseline
+
+When bondstone is adopted in an existing repository, or a long-lived branch is merged,
+every document looks new against the target branch. `bondstone baseline [REF]` records a
+commit in the profile (`baseline: '<sha>'`); a document missing at the base but present
+at the baseline is compared with its baseline version (transitions, immutability)
+instead of being treated as new. Move the baseline forward when merging a long-lived
+branch. CI needs full history (`fetch-depth: 0`).
 
 Renames are followed when comparing with `--base` (git rename detection, or a deleted
 file at the base with the same id).

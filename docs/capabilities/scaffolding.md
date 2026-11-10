@@ -16,7 +16,7 @@ Create and replace documents so that people and agents start from a valid skelet
 
 ### REQ-SCF-001: Assign the next id
 
-`bondstone new` SHALL assign the next id from the type's `id_format`: the highest existing number plus one, the slug, or values passed with `--set`.
+`bondstone new` SHALL assign the next id from the type's `id_format`: the highest existing number plus one, the slug, or values passed with `--set`. `--set` values are parsed as YAML, and kept as text when they are not valid YAML.
 
 #### Scenario: Next ADR number
 

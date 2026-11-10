@@ -73,3 +73,13 @@ Bondstone SHALL report `<!-- todo: ... -->` markers outside code spans as a warn
 - Given an accepted decision with a todo marker
 - When check runs
 - Then `bondstone/todo-left` is an error
+
+### REQ-RUL-007: Select by code coverage
+
+Selectors SHALL support `covered: true|false`, matching nodes that are (or are not) referenced by a code tag.
+
+#### Scenario: Delivered but not implemented
+
+- Given an implemented proposal that delivers REQ-AA-002
+- When no code is tagged with REQ-AA-002
+- Then `change-capability/delivered-requirements-are-implemented` is reported

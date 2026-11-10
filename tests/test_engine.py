@@ -367,3 +367,97 @@ def test_frontmatter_edits_handle_flow_style():
     assert changed and "ADR-009" in edited and "ADR-002" in edited
     block = "---\nid: X\nlinks: [A, B]   # keep\n---\n"
     assert replace_id(block, "links", "A", "C")[0] == "---\nid: X\nlinks: [C, B]   # keep\n---\n"
+
+
+def test_baseline_adopts_existing_documents(project, capsys):
+    _git_project(project, packs=["adr@1"])
+    project.commit("empty")
+    project.git("branch", "-M", "main")
+    project.git("checkout", "-q", "-b", "feature")
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "proposed"))
+    project.commit("adopt")
+    assert project.rules(base="main") == ["bondstone/status-initial"]
+
+    assert main(["--root", str(project.root), "baseline"]) == 0
+    assert "baseline: " in capsys.readouterr().out
+    project.commit("baseline")
+    assert project.rules(base="main") == []
+
+    # after the baseline, changes are still checked against the baseline version
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted").replace("\nc\n", "\nedited\n"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", "deprecated"))
+    project.write("docs/adr/ADR-003-c.md", adr("ADR-003", "accepted"))
+    assert project.rules(base="main") == [
+        "bondstone/immutable", "bondstone/status-initial", "bondstone/status-transition"]
+
+    profile = (project.root / ".bondstone/profile.yaml").read_text()
+    (project.root / ".bondstone/profile.yaml").write_text(
+        profile.replace(profile.split("baseline: ")[1].split("\n")[0], "0" * 40))
+    assert "bondstone/baseline-missing" in project.rules(base="main")
+
+
+def test_traced_rule_uses_changed_regions(project):
+    _git_project(
+        project, packs=["adr@1", "capability@1"], bridges=["adr-capability@1"],
+        code={"include": ["src/*.py"]},
+        overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+        rules=[{"id": "code-needs-spec", "on_change": {"paths": ["src/**"]},
+                "require": [{"changed": {"role": "living-spec"}, "traced": True, "min": 1}]}],
+    )
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted"))
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001"))
+    project.write("docs/capabilities/b.md", CAP.format(adr="ADR-001").replace("CAP-a", "CAP-b").replace("AA", "BB"))
+    project.write("src/m.py", "# bondstone: REQ-AA-001\ndef a():\n    return 1\n\n"
+                              "# bondstone: REQ-BB-001\ndef b():\n    return 1\n")
+    project.commit()
+    project.write("src/m.py", "# bondstone: REQ-AA-001\ndef a():\n    return 1\n\n"
+                              "# bondstone: REQ-BB-001\ndef b():\n    return 2\n")
+    diags = [d.node for d in project.check(base="HEAD") if d.rule == "profile/code-needs-spec"]
+    assert diags == ["CAP-b"]  # only the region that changed
+
+
+def test_covered_selector(project):
+    project.profile(packs=["capability@1"], code={"include": ["src/*.py"]},
+                    overrides={"bondstone/view-stale": "off", "bondstone/code-coverage": "off"},
+                    rules=[{"id": "covered-only", "when": {"type": "capability:Requirement", "covered": False},
+                            "require": [{"field": "nope"}]}])
+    project.write("docs/capabilities/a.md", CAP.format(adr="ADR-001").replace("constrained_by: [ADR-001]\n", "")
+                  + "\n### REQ-AA-002: Other\n\nIt SHALL.\n\n#### Scenario: s\n\n- ok\n")
+    project.write("src/a.py", "# bondstone: REQ-AA-001\n")
+    assert [d.node for d in project.check() if d.rule == "profile/covered-only"] == ["REQ-AA-002"]
+
+
+def test_stacked_tags_share_a_region():
+    from bondstone.checks import _tags_in_lines
+
+    text = "# bondstone: A-1\n# bondstone: B-1\ndef f():\n    pass\n# bondstone: C-1\ndef g():\n    pass\n"
+    assert _tags_in_lines(text, {4}) == {"A-1", "B-1"}
+    assert _tags_in_lines(text, {7}) == {"C-1"}
+
+
+def test_set_values_that_are_not_yaml(project):
+    project.profile(packs=["adr@1"])
+    assert main(["--root", str(project.root), "new", "adr:Decision", "--title", "X y z",
+                 "--set", "tags=[a, b]", "--set", "context=bondstone check [--base REF] [x]"]) == 0
+    text = next((project.root / "docs/adr").glob("*.md")).read_text()
+    assert "- a\n- b" in text and "context: bondstone check [--base REF] [x]" in text
+    assert main(["--root", str(project.root), "new", "adr:Decision", "--title", "X", "--set", "novalue"]) == 2
+
+
+def test_tag_only_changes_do_not_trace():
+    from bondstone.checks import _tags_in_lines
+
+    text = "# bondstone: A-1\n# bondstone: B-1\ndef f():\n    pass\n"
+    assert _tags_in_lines(text, {2}) == set()
+    assert _tags_in_lines(text, {2, 4}) == {"A-1", "B-1"}
+
+
+def test_tag_regions_end_with_the_tagged_block():
+    from bondstone.checks import tag_regions
+
+    py = ("# bondstone: A-1\ndef f(x,\n      y):\n    a = 1\n\n    return a\n\n\n"
+          "def untagged():\n    pass\n\n\nclass C:\n    # bondstone: B-1\n    def m(self):\n        pass\n\n    def n(self):\n        pass\n")
+    assert tag_regions(py) == [("A-1", 1, 6), ("B-1", 14, 16)]
+    js = "// bondstone: J-1\nfunction f() {\n  return 1;\n}\n\nfunction g() {}\n"
+    assert tag_regions(js) == [("J-1", 1, 4)]

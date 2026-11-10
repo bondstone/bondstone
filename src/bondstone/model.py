@@ -125,6 +125,7 @@ class Node:
     raw_keys: dict[str, Any] = field(default_factory=dict)
     parent: str | None = None
     body_line: int = 1
+    covered: bool = False  # referenced by a code tag
 
     @property
     def status(self) -> str | None:

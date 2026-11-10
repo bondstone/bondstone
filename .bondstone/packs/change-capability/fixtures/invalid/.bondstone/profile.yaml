@@ -3,6 +3,10 @@ packs:
 - change@0.1
 - capability@1
 bridges:
-- change-capability@0.1
+- change-capability@0.2
 overrides:
   bondstone/view-stale: 'off'
+  bondstone/code-coverage: 'off'
+code:
+  include:
+  - src/*.py

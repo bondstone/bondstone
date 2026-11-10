@@ -12,6 +12,7 @@ from .model import ERROR, PART_OF, Diagnostic, LinkRef, Node
 from .parser import ParsedDoc, parse_document
 
 GENERATED_MARK = "<!-- bondstone:generated"
+CODE_TAG_RE = re.compile(r"\bbondstone:[ \t]+([A-Z][\w-]*(?:[ \t]*,[ \t]*[A-Z][\w-]*)*)")
 RESERVED = {"id", "type"}
 
 
@@ -21,6 +22,7 @@ class Graph:
     by_id: dict[str, Node] = field(default_factory=dict)
     incoming: dict[str, list[tuple[str, Node]]] = field(default_factory=dict)
     diagnostics: list[Diagnostic] = field(default_factory=list)
+    code_refs: list[tuple[str, int, str]] = field(default_factory=list)  # (path, line, id)
 
     def add(self, node: Node) -> None:
         self.nodes.append(node)
@@ -114,7 +116,44 @@ def build_graph(cfg: Config) -> Graph:
         _add_document(cfg, graph, path, qname, doc)
 
     graph.index()
+    _scan_code(cfg, graph)
     return graph
+
+
+# bondstone: REQ-TRC-001
+def scan_tags(text: str) -> list[tuple[int, str]]:
+    """(line, id) for every bondstone tag (comma-separated ids) in a text."""
+    found = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for m in CODE_TAG_RE.finditer(line):
+            found.extend((lineno, ref.strip()) for ref in m.group(1).split(","))
+    return found
+
+
+def code_files(cfg: Config) -> list[str]:
+    settings = cfg.code_settings()
+    excluded = {rel(cfg.root, p) for pat in as_list(settings.get("exclude")) for p in glob_files(cfg.root, pat)}
+    files: list[str] = []
+    for pattern in as_list(settings.get("include")):
+        for file in sorted(glob_files(cfg.root, pattern)):
+            path = rel(cfg.root, file)
+            if path not in excluded and path not in files:
+                files.append(path)
+    return files
+
+
+# bondstone: REQ-TRC-001, REQ-RUL-007
+def _scan_code(cfg: Config, graph: Graph) -> None:
+    for path in code_files(cfg):
+        try:
+            text = (cfg.root / path).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for lineno, ref in scan_tags(text):
+            graph.code_refs.append((path, lineno, ref))
+            node = graph.by_id.get(ref)
+            if node is not None:
+                node.covered = True
 
 
 # bondstone: REQ-GRA-004

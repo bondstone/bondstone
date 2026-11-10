@@ -1,7 +1,7 @@
 # bondstone documents itself. See docs/self-hosting.md.
 bondstone: 0.1
-packs: [adr@1, capability@1, change@0.1, release@0.1]
-bridges: [adr-capability@1, change-capability@0.1, change-adr@0.1, release-change@0.1]
+packs: [adr@1, capability@1, change@0.1, release@0.1, cli@0.1]
+bridges: [adr-capability@1, change-capability@0.2, change-adr@0.1, release-change@0.1, cli-capability@0.1]
 sources: [.bondstone/packs]
 scan: ["docs/**/*.md"]
 defaults:
@@ -25,3 +25,19 @@ rules:
     require:
       - changed: {role: change}
         min: 1
+
+waivers:
+  # CHG-003 moved code-tag scanning from checks.py into graph.py so selectors can use it.
+  # Behaviour is unchanged (covered by the existing tests); remove after the push that lands it.
+  - rule: profile/source-change-updates-traced-spec
+    node: CAP-code-traceability
+    reason: Refactor in CHG-003 - tag scanning moved into the graph, no behaviour change.
+    expires: 2026-11-17
+  - rule: profile/source-change-updates-traced-spec
+    node: CAP-graph
+    reason: Refactor in CHG-003 - build_graph now records code tags; behaviour specified in REQ-RUL-007.
+    expires: 2026-11-17
+  - rule: profile/source-change-updates-traced-spec
+    node: CAP-views
+    reason: Same build_graph region as CAP-graph (shared tag block); views are unaffected.
+    expires: 2026-11-17

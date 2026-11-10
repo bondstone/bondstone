@@ -5,7 +5,7 @@ status: active
 owner: dworek
 code: DIF
 depends_on: [CAP-graph, CAP-rules]
-constrained_by: [ADR-005]
+constrained_by: [ADR-005, ADR-008]
 ---
 
 ## Purpose
@@ -66,10 +66,52 @@ Rules with `on_change` SHALL run only when changed files match their globs, and 
 
 ### REQ-DIF-006: Require the traced specs to change
 
-A `changed` clause with `traced: true` SHALL require every matching document tagged in the changed code, now or at the base, to change, and SHALL fall back to `min` for untagged code.
+A `changed` clause with `traced: true` SHALL require every matching document tagged in the changed regions of the code to change, and SHALL fall back to `min` when no tagged region changed. A tag's region is the code it annotates: from its block of consecutive tag lines to the end of the block of code below it (before the next line at the same or lower indentation that follows a blank line, or before the next tag block). Regions are taken in the current file for changed lines and in the base file for removed lines; changes to tag lines alone do not count.
 
 #### Scenario: Wrong spec changed
 
 - Given code tagged REQ-AA-001 changes
 - When only CAP-b changes
 - Then the rule fails for CAP-a
+
+#### Scenario: Change in another function
+
+- Given a file with a REQ-AA-001 region and a REQ-BB-001 region
+- When only the REQ-BB-001 region changes
+- Then only CAP-b has to change
+
+### REQ-DIF-007: Compare adopted documents with the baseline
+
+When a document is missing at the base but exists with the same id at the profile's `baseline` commit, Bondstone SHALL compare it with its baseline version (transitions and immutability) instead of treating it as new.
+
+#### Scenario: Adoption pull request
+
+- Given ADR-001 is accepted at the baseline and missing on main
+- When check runs with `--base main`
+- Then no status-initial error is reported for ADR-001
+
+#### Scenario: Edited after the baseline
+
+- Given ADR-001 was accepted at the baseline
+- When its decision text changes and check runs with `--base main`
+- Then `bondstone/immutable` is reported
+
+### REQ-DIF-008: Report a missing baseline commit
+
+Bondstone SHALL report an error, with a fix hint, when the baseline commit is not available in the clone.
+
+#### Scenario: Shallow clone
+
+- Given a profile baseline that is not in the clone
+- When check runs with a base
+- Then `bondstone/baseline-missing` is reported
+
+### REQ-DIF-009: Set the baseline
+
+`bondstone baseline [REF]` SHALL resolve REF (default HEAD) to a commit and record it, quoted, as the profile's `baseline`.
+
+#### Scenario: Adopting bondstone
+
+- Given a repository with existing documents
+- When `bondstone baseline` runs
+- Then the profile contains `baseline: '<commit>'`

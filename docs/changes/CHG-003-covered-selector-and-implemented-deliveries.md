@@ -16,6 +16,7 @@ modifies:
 
 - A `covered` selector key that matches nodes tagged in code.
 - `change-capability` 0.2.0: requirements delivered by an implemented proposal must be covered.
+- Traced diff rules use the changed regions of a file instead of the whole file (found while implementing: any change to `cli.py` required three unrelated specs to change).
 
 ## Out of scope
 

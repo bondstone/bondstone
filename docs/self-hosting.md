@@ -1,6 +1,6 @@
 # Bondstone on bondstone: self-hosting profile
 
-Status: phase 1 implemented · Applies to: this repository
+Status: phases 1 and 2 implemented · Applies to: this repository
 
 This document designs the packs and bridges bondstone uses to document **itself**. The
 goal is to dogfood every part of the engine on a real project and to find out what the
@@ -293,7 +293,7 @@ Ordered by value. Each one is useful well beyond bondstone itself.
 | 1 | **File-field clause**: compare a field with a value in another file | `library` | `require: [{file_field: {path: "{dir}/pack.yaml", key: version, equals: version}}]` |
 | 2 | **Existence rules**: every file matching a glob has a document | `library`, `cli` | top-level `expect: {for_each: "src/bondstone/library/*/*/pack.yaml", document: "{dir}/README.md", type: library:Component}` |
 | 3 | **`explain` for engine rules** from a rule catalog | `engine` | `explain` falls back to `engine:Rule` items whose title is the rule id |
-| 4 | **`covered` selector**: node is tagged in code | `change-capability` | `to: {type: capability:Requirement, covered: true}`, so delivered requirements must be implemented |
+| 4 | ~~**`covered` selector**~~ (done in phase 2): node is tagged in code | `change-capability` | `to: {type: capability:Requirement, covered: true}`, so delivered requirements must be implemented |
 | 5 | ~~**`id_format` placeholders from `--set`**~~ | `release` | done in phase 1: `v{version}` |
 | 6 | **Views outside `docs/`** with a custom header | `release` (`CHANGELOG.md`) | already works; check the header renders well on GitHub |
 

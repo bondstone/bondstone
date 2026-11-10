@@ -1,0 +1,5 @@
+errors:
+- bondstone/code-coverage
+- bondstone/id-format
+- cli/json-output-is-documented
+warnings: []

@@ -10,6 +10,8 @@ jobs:
         python: ["3.10", "3.13"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # base and baseline commits must be available
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -22,11 +24,7 @@ jobs:
         run: bondstone check
       - name: bondstone check against the previous state
         if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
-        run: |
-          git fetch --depth=1 origin ${{ github.event.before }}
-          bondstone check --base ${{ github.event.before }}
+        run: bondstone check --base ${{ github.event.before }}
       - name: bondstone check against the PR base
         if: github.event_name == 'pull_request'
-        run: |
-          git fetch --depth=1 origin ${{ github.base_ref }}
-          bondstone check --base origin/${{ github.base_ref }}
+        run: bondstone check --base origin/${{ github.base_ref }}

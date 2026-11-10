@@ -1,5 +1,5 @@
 id: change-capability
-version: 0.1.0
+version: 0.2.0
 description: Proposals modify capabilities and deliver requirements into the living spec.
 
 requires:
@@ -35,5 +35,14 @@ rules:
       - link: delivers
         min: 1
     hint: "Add the requirement to the capability spec, then `delivers: [REQ-...]`."
+
+  - id: delivered-requirements-are-implemented
+    description: Requirements delivered by an implemented proposal are tagged in code.
+    when: {type: change:Proposal, status: implemented}
+    require:
+      - link: delivers
+        all: true
+        to: {type: capability:Requirement, covered: true}
+    hint: "Tag the implementing code with `bondstone: REQ-...`."
 
 instructions: instructions.md

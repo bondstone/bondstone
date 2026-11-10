@@ -15,6 +15,7 @@ The CLI is bondstone's public interface, and it is only described by `--help`. S
 - Local pack `cli` (one `cli:Command` document per command, code-traceable with coverage error) and bridge `cli-capability`.
 - A document for every command in `docs/cli/`, tagged in `cli.py`.
 - A test that every parser command has a document.
+- `--set` keeps values that are not valid YAML as text (found while scaffolding the command documents).
 
 ## Out of scope
 

@@ -1,0 +1,26 @@
+id: cli-capability
+version: 0.1.0
+description: Commands implement capabilities.
+
+requires:
+  cli: "^0.1"
+  capability: "^1"
+
+links:
+  implements:
+    from: cli:Command
+    to: capability:Capability
+    min: 1
+    description: Capabilities this command exposes.
+
+roles:
+  interface: [cli:Command]
+
+rules:
+  - id: stable-command-on-active-capability
+    description: Stable commands only expose active capabilities.
+    when: {type: cli:Command, status: stable}
+    require:
+      - link: implements
+        all: true
+        to: {type: capability:Capability, status: active}

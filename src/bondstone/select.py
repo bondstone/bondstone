@@ -9,10 +9,10 @@ from .loader import Config, as_list, qualify
 from .model import LinkDef, Node
 
 KNOWN_TRAITS = {"lifecycle", "owned", "supersedable", "immutable", "code-traceable", "indexed"}
-SELECTOR_KEYS = {"type", "role", "trait", "status", "where"}
+SELECTOR_KEYS = {"type", "role", "trait", "status", "where", "covered"}
 
 
-# bondstone: REQ-RUL-001
+# bondstone: REQ-RUL-001, REQ-RUL-007
 def matches(cfg: Config, node: Node, selector: dict[str, Any] | None, context: str | None) -> bool:
     if not selector:
         return True
@@ -33,6 +33,8 @@ def matches(cfg: Config, node: Node, selector: dict[str, Any] | None, context: s
     if "status" in selector:
         if node.status not in {str(s) for s in as_list(selector["status"])}:
             return False
+    if "covered" in selector and node.covered != bool(selector["covered"]):
+        return False
     for key, expected in (selector.get("where") or {}).items():
         value = node.fields.get(key)
         if isinstance(expected, list):

@@ -70,6 +70,7 @@ docs/discovery/solutions/SOL-2-streak-freeze.md:5: error bondstone/link-broken: 
 | `check [--base REF] [--format json] [--fail-on warn]` | validate; exit 1 on failure |
 | `gen` | regenerate views |
 | `new TYPE --title T [--set k=v]` | scaffold a document with the next id |
+| `baseline [REF]` | record the commit where documents were adopted (for `--base` checks) |
 | `supersede ID --title T` | replace a document: successor, `superseded` status, links moved |
 | `init --packs … --bridges …` | create a profile and generate views |
 | `profile check` | validate the profile, packs and bridges |

@@ -204,3 +204,24 @@ def _read_id(path: Path) -> str:
     from .parser import parse_document
 
     return str(parse_document(path.read_text(encoding="utf-8")).frontmatter["id"])
+
+
+# bondstone: REQ-DIF-009
+def set_baseline(root: Path, ref: str = "HEAD") -> str:
+    """Record the commit `ref` points to as the profile's baseline; returns the commit id."""
+    result = subprocess.run(["git", "rev-parse", "--verify", f"{ref}^{{commit}}"], cwd=root,
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        raise BondstoneError(f"cannot resolve '{ref}' to a commit: {result.stderr.strip()}")
+    commit = result.stdout.strip()
+    path = root / PROFILE_PATH
+    text = path.read_text(encoding="utf-8")
+    line = f"baseline: '{commit}'"  # quoted: ids like 1e5… would parse as numbers
+    if re.search(r"^baseline:.*$", text, re.M):
+        text = re.sub(r"^baseline:.*$", line, text, count=1, flags=re.M)
+    elif re.search(r"^bondstone:.*$", text, re.M):
+        text = re.sub(r"^(bondstone:.*)$", rf"\1\n{line}", text, count=1, flags=re.M)
+    else:
+        text = f"{line}\n{text}"
+    path.write_text(text, encoding="utf-8")
+    return commit
