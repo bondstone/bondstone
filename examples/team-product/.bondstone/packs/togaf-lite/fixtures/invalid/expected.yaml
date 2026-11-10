@@ -1,0 +1,9 @@
+errors:
+- bondstone/link-min
+- togaf-lite/done-work-package-delivered
+- togaf-lite/live-solution-realizes-approved-block
+- togaf-lite/no-dependency-on-retired-blocks
+- togaf-lite/satisfied-requirement-has-approved-block
+warnings:
+- togaf-lite/approved-block-is-realized
+- togaf-lite/approved-requirement-is-motivated

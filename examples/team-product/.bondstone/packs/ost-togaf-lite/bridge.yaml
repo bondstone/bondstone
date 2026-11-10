@@ -1,0 +1,59 @@
+id: ost-togaf-lite
+version: 0.1.0
+description: Hands committed discovery solutions over to architecture requirements.
+
+requires:
+  ost: "^1"
+  togaf-lite: "^0.1"
+
+links:
+  specified_by:
+    from: ost:Solution
+    to: togaf-lite:Requirement
+    description: Architecture requirements that state what this solution needs from the system.
+
+roles:
+  intent: [ost:Opportunity]
+
+rules:
+  - id: committed-solution-is-specified
+    description: A committed solution is specified by at least one architecture requirement.
+    when: {type: ost:Solution, status: committed}
+    require:
+      - link: specified_by
+        min: 1
+    hint: "bondstone new togaf-lite:Requirement --title '...' --set kind=functional --set priority=must, then add `specified_by: [AREQ-NNN]`."
+
+  - id: specified-by-agreed-requirements
+    description: A committed solution is only specified by approved or satisfied requirements.
+    severity: warn
+    when: {type: ost:Solution, status: committed}
+    require:
+      - link: specified_by
+        all: true
+        to: {type: togaf-lite:Requirement, status: [approved, satisfied]}
+
+  - id: functional-requirement-traces-to-discovery
+    description: An approved functional requirement comes from a committed solution.
+    severity: warn
+    when: {type: togaf-lite:Requirement, status: [approved, satisfied], where: {kind: functional}}
+    require:
+      - incoming: specified_by
+        from: {type: ost:Solution, status: committed}
+        min: 1
+    hint: "Add `specified_by: [AREQ-NNN]` to the solution this requirement came from."
+
+views:
+  - id: outcome-to-solution-block
+    title: From outcomes to solution blocks
+    output: docs/generated/outcome-to-solution-block.md
+    render: tree
+    select: {type: ost:Outcome}
+    levels:
+      - {incoming: serves}
+      - {incoming: addresses}
+      - {link: specified_by}
+      - {incoming: satisfies}
+      - {incoming: realizes}
+
+instructions: instructions.md

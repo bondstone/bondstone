@@ -1,0 +1,40 @@
+id: adr-togaf-lite
+version: 0.1.0
+description: Connects building blocks to the decisions that shape them.
+
+requires:
+  adr: "^1"
+  togaf-lite: "^0.1"
+
+links:
+  # Authored on the block, not on the decision: accepted decisions are immutable.
+  constrained_by:
+    from: [togaf-lite:ArchitectureBlock, togaf-lite:SolutionBlock]
+    to: adr:Decision
+    description: Decisions this building block must respect.
+
+roles:
+  decision: [adr:Decision]
+  living-spec: [togaf-lite:SolutionBlock]
+
+rules:
+  - id: constrained-by-live-decision
+    description: Building blocks are constrained only by proposed or accepted decisions.
+    when: {type: [togaf-lite:ArchitectureBlock, togaf-lite:SolutionBlock]}
+    require:
+      - link: constrained_by
+        all: true
+        to: {type: adr:Decision, status: [proposed, accepted]}
+    hint: Point to the decision that superseded it.
+
+  - id: live-solution-block-has-decision
+    description: A live solution block is backed by at least one accepted decision.
+    severity: warn
+    when: {type: togaf-lite:SolutionBlock, status: live}
+    require:
+      - link: constrained_by
+        to: {type: adr:Decision, status: accepted}
+        min: 1
+    hint: "bondstone new adr:Decision --title '...', then add `constrained_by: [ADR-NNN]`."
+
+instructions: instructions.md

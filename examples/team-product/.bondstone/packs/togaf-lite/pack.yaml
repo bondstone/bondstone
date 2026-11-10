@@ -1,0 +1,243 @@
+id: togaf-lite
+version: 0.1.0
+description: A small subset of TOGAF for product teams - principles, architecture requirements, building blocks and work packages.
+
+types:
+  Principle:
+    description: A lasting rule that guides architecture choices.
+    id_format: "PRIN-{n:02d}"
+    id_pattern: "^PRIN-\\d{2,}$"
+    paths: ["docs/architecture/principles/*.md"]
+    dir: docs/architecture/principles
+    filename: "{id}-{slug}.md"
+    template: templates/principle.md
+    fields:
+      title: {type: string, minLength: 5}
+    required_fields: [title]
+    sections: [Statement, Rationale, Implications]
+    traits:
+      lifecycle:
+        statuses: [draft, approved, retired]
+        initial: draft
+        transitions:
+          draft: [approved]
+          approved: [retired]
+      owned: {}
+      indexed: {}
+
+  Requirement:
+    description: An architecture requirement - a function the system must offer, a quality it must have, or a constraint it must respect.
+    id_format: "AREQ-{n:03d}"
+    id_pattern: "^AREQ-\\d{3,}$"
+    paths: ["docs/architecture/requirements/*.md"]
+    dir: docs/architecture/requirements
+    filename: "{id}-{slug}.md"
+    template: templates/requirement.md
+    fields:
+      title: {type: string, minLength: 5}
+      kind: {enum: [functional, quality, constraint]}
+      priority: {enum: [must, should, could]}
+    required_fields: [title, kind, priority]
+    sections: [Statement, Fit criterion]
+    traits:
+      lifecycle:
+        statuses: [draft, approved, satisfied, withdrawn]
+        initial: draft
+        transitions:
+          draft: [approved, withdrawn]
+          approved: [satisfied, withdrawn]
+          satisfied: [approved, withdrawn]
+      owned: {}
+      indexed: {}
+
+  ArchitectureBlock:
+    description: What the architecture needs, independent of product or vendor (a TOGAF architecture building block).
+    id_format: "ABB-{slug}"
+    id_pattern: "^ABB-[a-z0-9]+(-[a-z0-9]+)*$"
+    paths: ["docs/architecture/architecture-blocks/*.md"]
+    dir: docs/architecture/architecture-blocks
+    filename: "{slug}.md"
+    template: templates/architecture-block.md
+    fields:
+      title: {type: string, minLength: 3}
+      layer: {enum: [business, data, application, technology]}
+    required_fields: [title, layer]
+    sections: [Responsibility, Interfaces]
+    traits:
+      lifecycle:
+        statuses: [draft, approved, retired]
+        initial: draft
+        transitions:
+          draft: [approved]
+          approved: [retired]
+      owned: {}
+      indexed: {}
+
+  SolutionBlock:
+    description: The concrete component that implements an architecture block (a TOGAF solution building block). Its code is tagged with its id.
+    id_format: "SBB-{slug}"
+    id_pattern: "^SBB-[a-z0-9]+(-[a-z0-9]+)*$"
+    paths: ["docs/architecture/solution-blocks/*.md"]
+    dir: docs/architecture/solution-blocks
+    filename: "{slug}.md"
+    template: templates/solution-block.md
+    fields:
+      title: {type: string, minLength: 3}
+      technology: {type: string}
+    required_fields: [title]
+    sections: [Responsibility, Interfaces, Operations]
+    traits:
+      lifecycle:
+        statuses: [planned, live, retiring, retired, cancelled]
+        initial: planned
+        transitions:
+          planned: [live, cancelled]
+          live: [retiring]
+          retiring: [retired]
+      owned: {}
+      code-traceable: {coverage: warn}
+      indexed: {}
+
+  WorkPackage:
+    description: A unit of change that creates or alters solution blocks.
+    id_format: "WP-{n:03d}"
+    id_pattern: "^WP-\\d{3,}$"
+    paths: ["docs/architecture/work-packages/*.md"]
+    dir: docs/architecture/work-packages
+    filename: "{id}-{slug}.md"
+    template: templates/work-package.md
+    fields:
+      title: {type: string, minLength: 5}
+      target_date: {type: string, format: date}
+    required_fields: [title]
+    sections: [Scope, Expected result]
+    traits:
+      lifecycle:
+        statuses: [planned, in-progress, done, cancelled]
+        initial: planned
+        transitions:
+          planned: [in-progress, cancelled]
+          in-progress: [done, cancelled]
+      owned: {}
+      immutable: {when: [done, cancelled], allow_fields: [status]}
+      indexed: {}
+
+links:
+  motivated_by:
+    from: Requirement
+    to: Principle
+    description: Principles this requirement follows from.
+  satisfies:
+    from: ArchitectureBlock
+    to: Requirement
+    description: Requirements this architecture block exists to satisfy.
+  realizes:
+    from: SolutionBlock
+    to: ArchitectureBlock
+    min: 1
+    description: Architecture blocks this solution block implements.
+  depends_on:
+    from: SolutionBlock
+    to: SolutionBlock
+    description: Solution blocks this one needs at run time.
+  delivers:
+    from: WorkPackage
+    to: SolutionBlock
+    min: 1
+    description: Solution blocks this work package creates or changes.
+
+rules:
+  - id: approved-requirement-is-motivated
+    description: An approved requirement follows from at least one approved principle.
+    severity: warn
+    when: {type: Requirement, status: [approved, satisfied]}
+    require:
+      - link: motivated_by
+        to: {type: Principle, status: approved}
+        min: 1
+    hint: "Add `motivated_by: [PRIN-NN]`."
+
+  - id: satisfied-requirement-has-approved-block
+    description: A requirement marked satisfied is satisfied by an approved architecture block.
+    when: {type: Requirement, status: satisfied}
+    require:
+      - incoming: satisfies
+        from: {type: ArchitectureBlock, status: approved}
+        min: 1
+    hint: "Add `satisfies: [AREQ-NNN]` to the architecture block, or move the requirement back to approved."
+
+  - id: approved-block-is-realized
+    description: An approved architecture block is realized by a planned or running solution block.
+    severity: warn
+    when: {type: ArchitectureBlock, status: approved}
+    require:
+      - incoming: realizes
+        from: {type: SolutionBlock, status: [planned, live, retiring]}
+        min: 1
+    hint: "bondstone new togaf-lite:SolutionBlock --title '...' --set 'realizes=[ABB-...]'"
+
+  - id: live-solution-realizes-approved-block
+    description: A live solution block only realizes approved architecture blocks.
+    when: {type: SolutionBlock, status: live}
+    require:
+      - link: realizes
+        all: true
+        to: {type: ArchitectureBlock, status: approved}
+    hint: Approve the architecture block first, or point at the block that replaced it.
+
+  - id: no-dependency-on-retired-blocks
+    description: A live solution block does not depend on retired or cancelled blocks.
+    when: {type: SolutionBlock, status: live}
+    require:
+      - link: depends_on
+        all: true
+        to: {type: SolutionBlock, status: [planned, live, retiring]}
+
+  - id: done-work-package-delivered
+    description: A work package is done only when every block it delivers has gone live.
+    when: {type: WorkPackage, status: done}
+    require:
+      - link: delivers
+        all: true
+        to: {type: SolutionBlock, status: [live, retiring, retired]}
+
+views:
+  - id: principles
+    title: Architecture principles
+    output: docs/generated/principles.md
+    render: table
+    select: {type: Principle}
+    columns: [id, title, status, owner]
+
+  - id: requirements
+    title: Architecture requirements
+    output: docs/generated/architecture-requirements.md
+    render: table
+    select: {type: Requirement}
+    columns: [id, title, kind, priority, status, owner]
+
+  - id: traceability
+    title: Requirements traceability
+    description: Each requirement, the architecture blocks that satisfy it, and the solution blocks that realize them.
+    output: docs/generated/traceability.md
+    render: tree
+    select: {type: Requirement, status: [approved, satisfied]}
+    levels:
+      - {incoming: satisfies}
+      - {incoming: realizes}
+
+  - id: solution-blocks
+    title: Solution block catalogue
+    output: docs/generated/solution-blocks.md
+    render: table
+    select: {type: SolutionBlock}
+    columns: [id, title, technology, status, owner]
+
+  - id: roadmap
+    title: Work packages
+    output: docs/generated/work-packages.md
+    render: table
+    select: {type: WorkPackage}
+    columns: [id, title, status, target_date, owner]
+
+instructions: instructions.md

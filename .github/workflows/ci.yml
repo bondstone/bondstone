@@ -19,6 +19,8 @@ jobs:
       - run: pytest -q
       - run: bondstone pack test src/bondstone/library/packs/* src/bondstone/library/bridges/*
       - run: bondstone --root examples/habit-tracker check
+      - run: bondstone pack test examples/team-product/.bondstone/packs/*
+      - run: bondstone --root examples/team-product check
       - run: bondstone pack test .bondstone/packs/*
       - name: bondstone check (self-hosted docs)
         run: bondstone check

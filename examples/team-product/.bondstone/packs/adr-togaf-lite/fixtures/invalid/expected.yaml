@@ -1,0 +1,5 @@
+errors:
+- adr-togaf-lite/constrained-by-live-decision
+warnings:
+- adr-togaf-lite/live-solution-block-has-decision
+- adr-togaf-lite/live-solution-block-has-decision

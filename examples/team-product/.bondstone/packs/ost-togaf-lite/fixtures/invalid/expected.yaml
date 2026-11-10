@@ -1,0 +1,5 @@
+errors:
+- ost-togaf-lite/committed-solution-is-specified
+warnings:
+- ost-togaf-lite/functional-requirement-traces-to-discovery
+- ost-togaf-lite/specified-by-agreed-requirements

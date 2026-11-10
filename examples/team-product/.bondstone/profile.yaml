@@ -1,0 +1,31 @@
+# Product team: discovery (OST) -> architecture requirements -> building blocks (TOGAF-lite), plus ADRs.
+# togaf-lite and its two bridges are custom components kept in this repository.
+bondstone: 0.1
+packs: [adr@1, ost@1, togaf-lite@0.1]
+bridges: [ost-togaf-lite@0.1, adr-togaf-lite@0.1]
+sources: [.bondstone/packs]
+defaults:
+  owner: tracking-team
+code:
+  include: ["services/**/*.py"]
+
+rules:
+  - id: service-change-updates-solution-block
+    description: Changes to a service come with an update to the solution block that service implements.
+    on_change: {paths: ["services/**"]}
+    require:
+      # the blocks tagged in the changed code must change; untagged code needs any solution block
+      - changed: {role: living-spec}
+        traced: true
+        min: 1
+
+overrides:
+  # A team gate: no commitment without evidence, no running block without a decision.
+  ost/committed-solution-has-evidence: error
+  togaf-lite/approved-requirement-is-motivated: error
+
+waivers:
+  - rule: adr-togaf-lite/live-solution-block-has-decision
+    node: SBB-parcel-events
+    reason: Predates the decision log; the storage decision is being backfilled.
+    expires: 2027-03-31

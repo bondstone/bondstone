@@ -1,0 +1,5 @@
+bondstone: 0.1
+packs:
+- togaf-lite@0.1
+overrides:
+  bondstone/view-stale: 'off'

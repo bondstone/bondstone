@@ -54,6 +54,10 @@ bondstone agent --output AGENTS.bondstone.md      # instructions for coding agen
 A complete example lives in [`examples/habit-tracker`](examples/habit-tracker): a solo
 mobile app using Opportunity Solution Tree discovery, living capability specs and ADRs.
 
+[`examples/team-product`](examples/team-product) shows a team setup built from custom
+components kept in the repository: a `togaf-lite` pack (principles, architecture
+requirements, building blocks, work packages) bridged to the built-in `ost` and `adr` packs.
+
 ```text
 $ bondstone check --base HEAD
 app/lib/habits.dart:10: error bondstone/code-ref-unknown: code references unknown id 'REQ-HAB-009'
