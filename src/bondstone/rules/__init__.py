@@ -1,4 +1,4 @@
-"""Rules: engine rules, node rules and existence rules, and the policy applied to their results.
+"""Rules: engine rules, node rules, existence rules and stale views, and the policy applied to them.
 
 Diff rules, immutability and lifecycle transitions compare with a base commit and need the git
 layer; they are declared and validated but not evaluated yet."""
@@ -10,6 +10,7 @@ import datetime as dt
 from ..config import Config
 from ..graph import Graph
 from ..model import ERROR, WARN, Diagnostic
+from ..views import check_views
 from .engine import check_engine
 from .node import check_rules
 from .policy import apply_policy
@@ -26,6 +27,7 @@ def run_check(cfg: Config, graph: Graph, today: dt.date | None = None) -> list[D
     diagnostics += graph.diagnostics
     diagnostics += check_engine(cfg, graph)
     diagnostics += check_rules(cfg, graph)
+    diagnostics += check_views(cfg, graph)
     return apply_policy(cfg, diagnostics, today)
 
 
