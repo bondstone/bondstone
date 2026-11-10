@@ -1,0 +1,9 @@
+errors:
+- bondstone/field-invalid
+- bondstone/field-missing
+- bondstone/id-format
+- bondstone/section-missing
+- bondstone/supersede-status
+- bondstone/type-missing
+warnings:
+- adr/alternatives-considered
