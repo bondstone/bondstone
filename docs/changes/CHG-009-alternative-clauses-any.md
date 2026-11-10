@@ -1,13 +1,16 @@
 ---
 id: CHG-009
 title: Alternative clauses (any)
-status: accepted
+status: implemented
 owner: dworek
 kind: feature
 modifies:
 - CAP-rules
 - CAP-diff-checks
 - CAP-profiles
+delivers:
+- REQ-RUL-010
+- REQ-DIF-010
 ---
 
 ## Why
