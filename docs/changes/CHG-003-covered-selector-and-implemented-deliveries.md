@@ -1,7 +1,7 @@
 ---
 id: CHG-003
 title: Covered selector and implemented deliveries
-status: draft
+status: accepted
 owner: dworek
 kind: feature
 modifies:

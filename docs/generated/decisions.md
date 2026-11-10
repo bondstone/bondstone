@@ -10,4 +10,4 @@
 | [ADR-005](../adr/ADR-005-deterministic-gate.md) | The check is deterministic; quality review is separate | accepted | 2026-11-10 | dworek |
 | [ADR-006](../adr/ADR-006-generated-views-are-committed.md) | Generated views are committed and checked for staleness | accepted | 2026-11-10 | dworek |
 | [ADR-007](../adr/ADR-007-agent-instructions-from-profile.md) | Agent instructions are generated from the active profile | accepted | 2026-11-10 | dworek |
-| [ADR-008](../adr/ADR-008-adopt-existing-documents-with-a-baseline-commit.md) | Adopt existing documents with a baseline commit | proposed | 2026-11-10 | dworek |
+| [ADR-008](../adr/ADR-008-adopt-existing-documents-with-a-baseline-commit.md) | Adopt existing documents with a baseline commit | accepted | 2026-11-10 | dworek |

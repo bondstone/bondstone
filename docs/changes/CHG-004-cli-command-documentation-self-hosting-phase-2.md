@@ -1,7 +1,7 @@
 ---
 id: CHG-004
 title: CLI command documentation (self-hosting phase 2)
-status: draft
+status: accepted
 owner: dworek
 kind: docs
 ---

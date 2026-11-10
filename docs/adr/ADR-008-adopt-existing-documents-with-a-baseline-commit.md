@@ -1,7 +1,7 @@
 ---
 id: ADR-008
 title: Adopt existing documents with a baseline commit
-status: proposed
+status: accepted
 owner: dworek
 date: '2026-11-10'
 ---

@@ -1,7 +1,7 @@
 ---
 id: CHG-002
 title: Baseline for adopting bondstone in existing repositories
-status: draft
+status: accepted
 owner: dworek
 kind: feature
 modifies:
