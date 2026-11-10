@@ -1,7 +1,7 @@
 ---
 id: CHG-009
 title: Alternative clauses (any)
-status: draft
+status: accepted
 owner: dworek
 kind: feature
 modifies:

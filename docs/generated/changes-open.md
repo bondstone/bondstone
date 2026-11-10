@@ -3,4 +3,4 @@
 
 | Id | Title | Kind | Status | Owner |
 |---|---|---|---|---|
-| [CHG-009](../changes/CHG-009-alternative-clauses-any.md) | Alternative clauses (any) | feature | draft | dworek |
+| [CHG-009](../changes/CHG-009-alternative-clauses-any.md) | Alternative clauses (any) | feature | accepted | dworek |
