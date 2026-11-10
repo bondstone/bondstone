@@ -1,0 +1,27 @@
+bondstone: 0.1
+packs:
+- adr@1
+- capability@1
+bridges:
+- adr-capability@1
+sources:
+- .bondstone/packs
+code:
+  include:
+  - src/bondstone/**/*.py
+  exclude: []
+overrides: {}
+waivers: []
+defaults:
+  owner: dworek
+rules:
+- id: code-change-updates-living-spec
+  description: Changes to bondstone's source come with an update to a capability spec.
+  severity: warn
+  on_change:
+    paths:
+    - src/bondstone/**/*.py
+  require:
+  - changed:
+      role: living-spec
+    min: 1

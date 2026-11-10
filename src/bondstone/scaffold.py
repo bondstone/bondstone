@@ -29,6 +29,7 @@ def _git_user(root: Path) -> str:
         return ""
 
 
+# bondstone: REQ-SCF-001
 def next_id(tdef_qname: str, id_format: str, graph: Graph, slug: str) -> str:
     if "{slug" in id_format and "{n" not in id_format:
         return id_format.format(slug=slug.upper() if id_format.isupper() else slug)
@@ -41,6 +42,7 @@ def next_id(tdef_qname: str, id_format: str, graph: Graph, slug: str) -> str:
     return id_format.format(n=max(numbers, default=0) + 1, slug=slug)
 
 
+# bondstone: REQ-SCF-002, REQ-SCF-003
 def new_document(cfg: Config, graph: Graph, type_name: str, title: str,
                  sets: dict[str, Any]) -> Path:
     qname = type_name if ":" in type_name else next(
