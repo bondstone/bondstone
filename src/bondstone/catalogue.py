@@ -7,8 +7,9 @@ on an invalid configuration, so it always stops the run with exit code 2."""
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .model import ERROR, WARN
+from .model import ERROR, WARN, Diagnostic
 
 
 @dataclass(frozen=True)
@@ -192,3 +193,10 @@ def engine_rule(rule_id: str) -> EngineRule | None:
 
 def default_severity(rule_id: str) -> str:
     return BY_ID[rule_id].severity
+
+
+def diagnostic(rule_id: str, message: str, path: str | None = None, line: int | None = None,
+               node: str | None = None, hint: str | None = None, severity: str | None = None,
+               fix: dict[str, Any] | None = None) -> Diagnostic:
+    """A diagnostic of an engine rule, at the rule's default severity unless one is given."""
+    return Diagnostic(rule_id, severity or BY_ID[rule_id].severity, message, path, line, node, hint, fix)
