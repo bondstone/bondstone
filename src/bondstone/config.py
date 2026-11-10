@@ -240,6 +240,8 @@ def load_config(root: Path, extra_sources: list[Path] | None = None) -> Config:
     if resolution.profile is None:
         return cfg
     cfg.profile = resolution.profile
+    if cfg.errors:
+        return cfg  # a pack or bridge is missing or invalid: checking the rest would only add noise
     builder = _Builder(cfg)
     builder.types()
     builder.links()

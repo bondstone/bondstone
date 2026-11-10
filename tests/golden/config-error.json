@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "summary": {
+    "errors": 2,
+    "warnings": 0,
+    "info": 0
+  },
+  "diagnostics": [
+    {
+      "rule": "bondstone/profile",
+      "severity": "error",
+      "path": ".bondstone/profile.yaml",
+      "message": "pack 'capability': no version matches '2' (available: 1.0.0)"
+    },
+    {
+      "rule": "bondstone/profile",
+      "severity": "error",
+      "path": ".bondstone/profile.yaml",
+      "message": "pack 'missing' not found in the profile's sources"
+    }
+  ]
+}
