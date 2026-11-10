@@ -1,7 +1,7 @@
 ---
 id: BRIDGE-ost-capability
 title: OST to capabilities
-status: draft
+status: active
 name: ost-capability
 kind: bridge
 version: 1.0.0

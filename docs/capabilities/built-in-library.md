@@ -1,7 +1,7 @@
 ---
 id: CAP-built-in-library
 title: Built-in library
-status: draft
+status: active
 owner: dworek
 code: LIB
 constrained_by:

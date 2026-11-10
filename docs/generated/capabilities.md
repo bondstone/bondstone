@@ -4,7 +4,7 @@
 | Id | Title | Status | Owner |
 |---|---|---|---|
 | [CAP-agent-instructions](../capabilities/agent-instructions.md) | Agent support | active | dworek |
-| [CAP-built-in-library](../capabilities/built-in-library.md) | Built-in library | draft | dworek |
+| [CAP-built-in-library](../capabilities/built-in-library.md) | Built-in library | active | dworek |
 | [CAP-code-traceability](../capabilities/code-traceability.md) | Code traceability | active | dworek |
 | [CAP-diff-checks](../capabilities/diff-checks.md) | Checks against a git base | active | dworek |
 | [CAP-graph](../capabilities/graph.md) | Document graph | active | dworek |

@@ -1,13 +1,17 @@
 ---
 id: CHG-005
 title: File-field and for-each rules
-status: accepted
+status: implemented
 owner: dworek
 kind: feature
 modifies:
 - CAP-rules
 - CAP-profiles
 - CAP-diff-checks
+delivers:
+- REQ-RUL-008
+- REQ-RUL-009
+- REQ-PRF-007
 ---
 
 ## Why

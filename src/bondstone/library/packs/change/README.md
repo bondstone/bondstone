@@ -1,7 +1,7 @@
 ---
 id: PACK-change
 title: Change proposals
-status: draft
+status: active
 name: change
 kind: pack
 version: 0.1.0

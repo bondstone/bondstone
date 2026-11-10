@@ -1,7 +1,7 @@
 ---
 id: PACK-adr
 title: Architecture Decision Records
-status: draft
+status: active
 name: adr
 kind: pack
 version: 1.0.0

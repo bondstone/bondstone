@@ -1,7 +1,7 @@
 ---
 id: BRIDGE-adr-capability
 title: Decisions constrain capabilities
-status: draft
+status: active
 name: adr-capability
 kind: bridge
 version: 1.0.0

@@ -1,7 +1,7 @@
 ---
 id: PACK-capability
 title: Living capability specs
-status: draft
+status: active
 name: capability
 kind: pack
 version: 1.0.0

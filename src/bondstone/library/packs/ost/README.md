@@ -1,7 +1,7 @@
 ---
 id: PACK-ost
 title: Opportunity Solution Tree
-status: draft
+status: active
 name: ost
 kind: pack
 version: 1.0.0

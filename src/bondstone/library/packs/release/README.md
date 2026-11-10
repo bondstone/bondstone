@@ -1,7 +1,7 @@
 ---
 id: PACK-release
 title: Releases and changelog
-status: draft
+status: active
 name: release
 kind: pack
 version: 0.1.0

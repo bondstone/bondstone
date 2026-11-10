@@ -1,7 +1,7 @@
 ---
 id: ENG-CATALOG
 title: Engine rule catalog
-status: draft
+status: active
 documents: [CAP-profiles, CAP-graph, CAP-rules, CAP-diff-checks, CAP-code-traceability, CAP-views]
 ---
 

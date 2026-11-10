@@ -1,11 +1,18 @@
 ---
 id: CHG-008
 title: Promote change and release packs to the built-in library
-status: accepted
+status: implemented
 owner: dworek
 kind: feature
 modifies:
 - CAP-built-in-library
+delivers:
+- REQ-LIB-001
+- REQ-LIB-002
+- REQ-LIB-003
+- REQ-LIB-004
+- REQ-LIB-005
+- REQ-LIB-006
 ---
 
 ## Why

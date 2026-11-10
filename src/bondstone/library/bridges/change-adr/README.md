@@ -1,7 +1,7 @@
 ---
 id: BRIDGE-change-adr
 title: Proposals rely on decisions
-status: draft
+status: active
 name: change-adr
 kind: bridge
 version: 0.1.0

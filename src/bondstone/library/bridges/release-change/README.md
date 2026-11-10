@@ -1,7 +1,7 @@
 ---
 id: BRIDGE-release-change
 title: Releases include proposals
-status: draft
+status: active
 name: release-change
 kind: bridge
 version: 0.1.0

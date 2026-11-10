@@ -1,12 +1,14 @@
 ---
 id: CHG-006
 title: Engine rule catalog and explain for engine rules
-status: accepted
+status: implemented
 owner: dworek
 kind: feature
 modifies:
 - CAP-agent-instructions
 - CAP-diff-checks
+delivers:
+- REQ-AGT-004
 ---
 
 ## Why

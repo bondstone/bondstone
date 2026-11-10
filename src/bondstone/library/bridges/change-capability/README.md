@@ -1,7 +1,7 @@
 ---
 id: BRIDGE-change-capability
 title: Proposals update living specs
-status: draft
+status: active
 name: change-capability
 kind: bridge
 version: 0.2.0
