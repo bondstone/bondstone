@@ -1,11 +1,15 @@
 ---
 id: CHG-003
 title: Covered selector and implemented deliveries
-status: accepted
+status: implemented
 owner: dworek
 kind: feature
 modifies:
 - CAP-rules
+- CAP-diff-checks
+delivers:
+- REQ-RUL-007
+- REQ-DIF-006
 ---
 
 ## Why

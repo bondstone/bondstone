@@ -1,7 +1,7 @@
 ---
 id: CLI-supersede
 title: supersede
-status: draft
+status: stable
 synopsis: bondstone supersede ID --title TITLE [--set KEY=VALUE]... [--no-repoint]
 implements:
 - CAP-scaffolding

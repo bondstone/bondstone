@@ -1,7 +1,7 @@
 ---
 id: CLI-graph
 title: graph
-status: draft
+status: experimental
 synopsis: bondstone graph
 implements:
 - CAP-graph

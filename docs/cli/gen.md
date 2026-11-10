@@ -1,7 +1,7 @@
 ---
 id: CLI-gen
 title: gen
-status: draft
+status: stable
 synopsis: bondstone gen
 implements:
 - CAP-views

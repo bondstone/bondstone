@@ -1,7 +1,7 @@
 ---
 id: CLI-baseline
 title: baseline
-status: draft
+status: experimental
 synopsis: bondstone baseline [REF]
 implements:
 - CAP-diff-checks

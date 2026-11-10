@@ -1,7 +1,7 @@
 ---
 id: CLI-pack-test
 title: pack test
-status: draft
+status: stable
 synopsis: bondstone pack test DIR...
 implements:
 - CAP-pack-testing

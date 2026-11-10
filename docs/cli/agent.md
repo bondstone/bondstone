@@ -1,7 +1,7 @@
 ---
 id: CLI-agent
 title: agent
-status: draft
+status: stable
 synopsis: bondstone agent [--output FILE]
 implements:
 - CAP-agent-instructions

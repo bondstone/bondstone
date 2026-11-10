@@ -1,7 +1,7 @@
 ---
 id: CLI-packs
 title: packs
-status: draft
+status: experimental
 synopsis: bondstone packs
 implements:
 - CAP-profiles

@@ -1,7 +1,7 @@
 ---
 id: CLI-new
 title: new
-status: draft
+status: stable
 synopsis: bondstone new TYPE --title TITLE [--set KEY=VALUE]...
 implements:
 - CAP-scaffolding

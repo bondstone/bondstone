@@ -1,7 +1,7 @@
 ---
 id: CLI-profile-check
 title: profile check
-status: draft
+status: stable
 synopsis: bondstone profile check [--format text|json]
 implements:
 - CAP-profiles

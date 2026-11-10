@@ -1,7 +1,7 @@
 ---
 id: CLI-init
 title: init
-status: draft
+status: stable
 synopsis: bondstone init [--packs LIST] [--bridges LIST]
 implements:
 - CAP-scaffolding

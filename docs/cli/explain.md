@@ -1,7 +1,7 @@
 ---
 id: CLI-explain
 title: explain
-status: draft
+status: stable
 synopsis: bondstone explain RULE
 implements:
 - CAP-agent-instructions

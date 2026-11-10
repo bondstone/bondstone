@@ -1,7 +1,7 @@
 ---
 id: CLI-rules
 title: rules
-status: draft
+status: stable
 synopsis: bondstone rules [--format text|json]
 implements:
 - CAP-agent-instructions

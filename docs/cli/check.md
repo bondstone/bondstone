@@ -1,7 +1,7 @@
 ---
 id: CLI-check
 title: check
-status: draft
+status: stable
 synopsis: bondstone check [--base REF] [--format text|json] [--fail-on error|warn]
 implements:
 - CAP-rules
