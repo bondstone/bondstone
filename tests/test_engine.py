@@ -199,3 +199,13 @@ def test_code_tags_ignore_non_tag_mentions(project):
         # bondstone: REQ-ZZ-001
     ''')
     assert project.rules() == ["bondstone/code-ref-unknown"]
+
+
+def test_todo_markers_inside_code_are_ignored(project):
+    project.profile(packs=["adr@1"], overrides={"bondstone/view-stale": "off"})
+    body = ("\n## Context\n\nUse `<!-- todo: ... -->` markers.\n\n```md\n<!-- todo: x -->\n```\n\n"
+            "## Decision\n\nd\n\n## Alternatives considered\n\na\n\n## Consequences\n\nx\n")
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", body=body))
+    assert project.rules() == []
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "accepted", body=body + "\n<!-- todo: y -->\n"))
+    assert project.rules() == ["bondstone/todo-left"]

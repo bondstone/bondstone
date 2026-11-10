@@ -181,10 +181,11 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
             for err in sorted(validator.iter_errors(node.fields), key=lambda e: list(e.path)):
                 out.append(_schema_diag(cfg, node, err))
 
-        if node.parent is None and TODO_RE.search(node.body):
+        todo = TODO_RE.search(_mask_code(node.body)) if node.parent is None else None
+        if todo:
             lifecycle = tdef.traits.get("lifecycle") or {}
             draft = node.status is not None and node.status == lifecycle.get("initial")
-            todo_line = node.body_line + node.body[: TODO_RE.search(node.body).start()].count("\n")
+            todo_line = node.body_line + node.body[: todo.start()].count("\n")
             out.append(Diagnostic("bondstone/todo-left", WARN if draft else ERROR,
                                   "document still contains template placeholders (<!-- todo: ... -->)",
                                   node.path, todo_line, node.id,
@@ -198,6 +199,14 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
                                       node.path, node.line, node.id,
                                       hint=f"Add a heading '## {section}'."))
     return out
+
+
+def _mask_code(text: str) -> str:
+    """Blank out fenced blocks and inline code spans, keeping offsets and newlines."""
+    def blank(m: re.Match[str]) -> str:
+        return re.sub(r"[^\n]", " ", m.group(0))
+    text = re.sub(r"(?ms)^\s*(```|~~~).*?^\s*\1[^\n]*$", blank, text)
+    return re.sub(r"(`+)(?!`).+?(?<!`)\1(?!`)", blank, text)
 
 
 def _schema_diag(cfg: Config, node: Node, err: Any) -> Diagnostic:
