@@ -1,7 +1,7 @@
 ---
 id: ADR-001
 title: Use Markdown with YAML frontmatter as the document format
-status: accepted
+status: superseded
 owner: dworek
 date: '2026-11-10'
 ---

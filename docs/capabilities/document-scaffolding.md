@@ -4,7 +4,7 @@ title: Document scaffolding
 status: active
 owner: dworek
 code: SCF
-constrained_by: [ADR-001]
+constrained_by: [ADR-002]
 ---
 
 ## Purpose
@@ -17,7 +17,7 @@ and agents start from a valid skeleton instead of writing frontmatter by hand.
 ### REQ-SCF-001: Assign the next id
 
 `bondstone new` SHALL assign the next free id from the type's `id_format`: the highest
-existing number plus one, or a slug for slug-based formats.
+existing number plus one, or a slug (also used in the filename) for slug-based formats.
 
 #### Scenario: Next ADR number
 

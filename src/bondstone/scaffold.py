@@ -53,7 +53,7 @@ def new_document(cfg: Config, graph: Graph, type_name: str, title: str,
     if tdef.spec.get("embedded"):
         raise BondstoneError(f"{qname} is an item type; add it as a heading inside its parent document")
     spec = tdef.spec
-    slug = slugify(title)
+    slug = slugify(title)  # slug used for ids and filenames
     id_format = spec.get("id_format")
     if not id_format:
         raise BondstoneError(f"{qname} has no id_format; cannot scaffold")
