@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "Definitions shared by bondstone pack, bridge and profile manifests",
+  "$defs": {
+    "severity": {
+      "description": "How a violation counts: error fails the run, warn fails only with --fail-on warn, info never fails, ignore disables the rule.",
+      "enum": ["error", "warn", "info", "ignore"],
+      "x-error": "expected one of error, warn, info, ignore"
+    },
+    "stringOrList": {
+      "anyOf": [
+        {"type": "string"},
+        {"type": "array", "items": {"type": "string"}}
+      ],
+      "x-error": "expected a string or a list of strings"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:[-+][0-9A-Za-z.-]+)?$",
+      "x-error": "expected a semantic version such as 1.0.0"
+    },
+    "componentId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "x-error": "expected a lower-case id such as adr or adr-capability"
+    },
+    "selector": {
+      "description": "Selects nodes; keys combine with AND and a list means any of.",
+      "type": "object",
+      "properties": {
+        "type": {"$ref": "#/$defs/stringOrList"},
+        "role": {"$ref": "#/$defs/stringOrList"},
+        "trait": {"$ref": "#/$defs/stringOrList"},
+        "status": {"$ref": "#/$defs/stringOrList"},
+        "where": {"type": "object"},
+        "covered": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "clause": {
+      "description": "One requirement of a rule. Exactly one of link, incoming, field, section, contains, items, covered, file_field, any, changed or exists names the kind.",
+      "type": "object",
+      "properties": {
+        "link": {"type": "string"},
+        "to": {"$ref": "#/$defs/selector"},
+        "incoming": {"type": "string"},
+        "from": {"$ref": "#/$defs/selector"},
+        "min": {"type": "integer", "minimum": 0},
+        "all": {"type": "boolean"},
+        "field": {"type": "string"},
+        "section": {"type": "string"},
+        "contains": {"type": "string"},
+        "items": {
+          "type": "object",
+          "properties": {
+            "type": {"type": "string"},
+            "min": {"type": "integer", "minimum": 0}
+          },
+          "required": ["type"],
+          "additionalProperties": false
+        },
+        "covered": {"type": "boolean"},
+        "file_field": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"},
+            "key": {"type": "string"},
+            "equals": {"type": "string"},
+            "value": {}
+          },
+          "required": ["path", "key"],
+          "additionalProperties": false
+        },
+        "any": {"type": "array", "items": {"$ref": "#/$defs/clause"}, "minItems": 1},
+        "changed": {"$ref": "#/$defs/selector"},
+        "traced": {"type": "boolean"},
+        "exists": {"$ref": "#/$defs/selector"}
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "description": "A node rule (when), a diff rule (on_change) or an existence rule (for_each).",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "x-error": "expected a lower-case rule id such as alternatives-considered"
+        },
+        "description": {"type": "string"},
+        "severity": {"$ref": "#/$defs/severity"},
+        "locked": {"type": "boolean"},
+        "hint": {"type": "string"},
+        "fix": {
+          "type": "object",
+          "properties": {
+            "command": {"type": "array", "items": {"type": "string"}, "minItems": 1}
+          },
+          "required": ["command"],
+          "additionalProperties": false
+        },
+        "when": {"$ref": "#/$defs/selector"},
+        "require": {"type": "array", "items": {"$ref": "#/$defs/clause"}},
+        "on_change": {
+          "type": "object",
+          "properties": {
+            "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "kinds": {
+              "type": "array",
+              "items": {"enum": ["added", "modified", "deleted"]}
+            }
+          },
+          "required": ["paths"],
+          "additionalProperties": false
+        },
+        "exempt": {
+          "type": "object",
+          "properties": {"trailer": {"type": "string"}},
+          "required": ["trailer"],
+          "additionalProperties": false
+        },
+        "for_each": {
+          "type": "object",
+          "properties": {
+            "glob": {"type": "string"},
+            "document": {"type": "string"},
+            "type": {"$ref": "#/$defs/stringOrList"}
+          },
+          "required": ["glob", "document"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "view": {
+      "description": "A generated Markdown file.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "x-error": "expected a lower-case view id such as decision-log"
+        },
+        "title": {"type": "string"},
+        "description": {"type": "string"},
+        "output": {"type": "string"},
+        "render": {"enum": ["table", "tree"], "x-error": "expected one of table, tree"},
+        "select": {"$ref": "#/$defs/selector"},
+        "columns": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "sort": {"$ref": "#/$defs/stringOrList"},
+        "levels": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "link": {"type": "string"},
+              "incoming": {"type": "string"}
+            },
+            "additionalProperties": false,
+            "minProperties": 1,
+            "maxProperties": 1,
+            "x-error": "expected exactly one of `link` or `incoming`"
+          }
+        }
+      },
+      "required": ["id", "output"],
+      "additionalProperties": false
+    },
+    "link": {
+      "description": "A typed edge, written in the frontmatter of the source node as a list of ids.",
+      "type": "object",
+      "properties": {
+        "from": {"$ref": "#/$defs/stringOrList"},
+        "to": {"$ref": "#/$defs/stringOrList"},
+        "min": {"type": "integer", "minimum": 0},
+        "max": {"type": "integer", "minimum": 1},
+        "description": {"type": "string"}
+      },
+      "required": ["from", "to"],
+      "additionalProperties": false
+    },
+    "roles": {
+      "description": "Role names mapped to qualified type names.",
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/stringOrList"}
+    }
+  }
+}
