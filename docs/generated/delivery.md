@@ -42,6 +42,11 @@
 | [REQ-GRA-009](../capabilities/graph.md#req-gra-009-check-links-against-their-definition) | Check links against their definition | active | CAP-graph |  |
 | [REQ-GRA-010](../capabilities/graph.md#req-gra-010-require-the-path-to-carry-the-id) | Require the path to carry the id | active | CAP-graph | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
 | [REQ-GRA-011](../capabilities/graph.md#req-gra-011-derive-a-status-from-files) | Derive a status from files | active | CAP-graph | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
+| [REQ-LIB-001](../capabilities/library.md#req-lib-001-document-commands-with-the-cli-pack) | Document commands with the cli pack | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
+| [REQ-LIB-002](../capabilities/library.md#req-lib-002-tie-commands-to-capabilities) | Tie commands to capabilities | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
+| [REQ-LIB-003](../capabilities/library.md#req-lib-003-record-releases-and-generate-the-changelog) | Record releases and generate the changelog | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
+| [REQ-LIB-004](../capabilities/library.md#req-lib-004-tie-releases-to-features) | Tie releases to features | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
+| [REQ-LIB-005](../capabilities/library.md#req-lib-005-ship-every-component-with-fixtures) | Ship every component with fixtures | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
 | [REQ-PKT-001](../capabilities/pack-tooling.md#req-pkt-001-run-the-fixtures-of-a-pack-a-bridge-or-a-preset) | Run the fixtures of a pack, a bridge or a preset | active | CAP-pack-tooling |  |
 | [REQ-PKT-002](../capabilities/pack-tooling.md#req-pkt-002-compare-a-fixture-with-what-it-expects) | Compare a fixture with what it expects | active | CAP-pack-tooling |  |
 | [REQ-PKT-003](../capabilities/pack-tooling.md#req-pkt-003-list-the-packs-bridges-and-presets-that-are-available) | List the packs, bridges and presets that are available | active | CAP-pack-tooling |  |

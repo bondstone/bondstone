@@ -1,0 +1,48 @@
+id: cli-capability
+version: 1.0.0
+bondstone: ">=1.0"
+description: Commands implement capabilities.
+
+requires:
+  cli: "^1"
+  capability: "^1"
+
+# bondstone: REQ-LIB-002
+links:
+  implements:
+    from: cli:Command
+    to: capability:Capability
+    description: Capabilities this command exposes.
+
+roles:
+  interface: [cli:Command]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: stable-command-implements-capability
+    description: A stable command implements at least one capability.
+    when: {type: cli:Command, status: stable}
+    require:
+      - link: implements
+        min: 1
+    hint: List the capabilities the command exposes under `implements`.
+
+  - id: stable-command-on-active-capability
+    description: A stable command exposes only active capabilities.
+    when: {type: cli:Command, status: stable}
+    require:
+      - link: implements
+        all: true
+        to: {type: capability:Capability, status: active}
+    hint: Activate the capability, or keep the command experimental until it is.
+
+views:
+  - id: commands-by-capability
+    title: Capabilities and the commands that expose them
+    output: docs/generated/commands-by-capability.md
+    render: matrix
+    rows: {type: cli:Command}
+    cols: {type: capability:Capability}
+    via: [implements]
+
+instructions: instructions.md

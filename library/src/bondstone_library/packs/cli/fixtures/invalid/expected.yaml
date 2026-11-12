@@ -1,0 +1,7 @@
+errors:
+- cli/json-output-is-documented
+- cli/stable-command-is-implemented
+- bondstone/field-missing
+- bondstone/section-missing
+- bondstone/section-missing
+warnings: []

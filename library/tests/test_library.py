@@ -17,8 +17,8 @@ PRESETS = sorted(p.parent for p in SOURCE.glob("*/preset.yaml"))
 
 
 def test_the_library_ships_these_packs_bridges_and_presets():
-    assert [c.name for c in COMPONENTS] == ["adr", "adr-capability", "capability", "speckit", "speckit-adr",
-                                            "speckit-capability"]
+    assert [c.name for c in COMPONENTS] == ["adr", "adr-capability", "capability", "cli", "cli-capability", "release",
+                                            "release-speckit", "speckit", "speckit-adr", "speckit-capability"]
     assert [p.name for p in PRESETS] == ["starter", "starter-speckit"]
 
 
@@ -34,6 +34,7 @@ def test_every_folder_is_named_after_its_component():
         assert yaml.safe_load(manifest.read_text(encoding="utf-8"))["id"] == component.name
 
 
+# bondstone: REQ-LIB-005
 @pytest.mark.parametrize("component", COMPONENTS, ids=lambda c: c.name)
 def test_fixtures_pass_with_a_valid_and_an_invalid_case(component: Path):
     results = run_fixtures(component, today=TODAY)

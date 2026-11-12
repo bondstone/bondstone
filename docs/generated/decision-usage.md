@@ -14,7 +14,7 @@
 | [ADR-009](../adr/ADR-009-make-coverage-depend-on-status.md) | Make code coverage depend on status | accepted | [CAP-code-traceability](../capabilities/code-traceability.md) |
 | [ADR-010](../adr/ADR-010-add-matrix-views-and-link-columns.md) | Add matrix views and link columns in v1 | accepted | [CAP-views](../capabilities/views.md) |
 | [ADR-011](../adr/ADR-011-support-remote-packs-with-a-lock-file.md) | Support remote packs with a lock file in v1 | accepted |  |
-| [ADR-012](../adr/ADR-012-ship-the-pack-library-separately.md) | Ship the pack library as a separate optional package | accepted | [CAP-pack-tooling](../capabilities/pack-tooling.md), [CAP-profiles](../capabilities/profiles.md) |
+| [ADR-012](../adr/ADR-012-ship-the-pack-library-separately.md) | Ship the pack library as a separate optional package | accepted | [CAP-library](../capabilities/library.md), [CAP-pack-tooling](../capabilities/pack-tooling.md), [CAP-profiles](../capabilities/profiles.md) |
 | [ADR-013](../adr/ADR-013-integrate-tools-through-adapters.md) | Integrate other tools through adapters, Spec Kit first | accepted | [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) |
 | [ADR-014](../adr/ADR-014-leave-portfolio-links-until-after-v1.md) | Leave portfolio and cross-repository links until after v1 | accepted |  |
 | [ADR-015](../adr/ADR-015-require-a-type-in-every-document.md) | Require a type in every document's frontmatter | accepted | [CAP-graph](../capabilities/graph.md) |

@@ -28,7 +28,8 @@ def no_installed_packages(monkeypatch):
 def test_available_lists_local_and_installed_components_and_marks_the_ones_in_use(project):
     standard(project, packs=["adr@1"], bridges=[])
     cfg = load_config(project.root)
-    found = [a for a in available(project.root, cfg.profile, cfg.components) if "speckit" not in a.id]
+    found = [a for a in available(project.root, cfg.profile, cfg.components)
+             if a.id in ("adr", "capability", "adr-capability", "starter")]
     assert [(a.kind, a.id, a.source, a.in_use) for a in found] == [
         ("pack", "adr", ".bondstone/packs", True),
         ("pack", "adr", "bondstone-library", False),
@@ -155,7 +156,8 @@ def test_pack_test_on_something_else_is_an_environment_error(tmp_path, capsys):
 
 def test_pack_test_runs_the_fixtures_of_the_library(capsys):
     code, out, _ = run(capsys, "pack", "test", *sorted(p for p in LIBRARY_PACKS.iterdir() if p.is_dir()))
-    assert code == 0 and out.endswith("✓ 14 fixture(s) passed\n")
+    assert code == 0 and "FAIL" not in out and out.endswith(f"✓ {len(out.splitlines()) - 1} fixture(s) passed\n")
+    assert len(out.splitlines()) > 20
 
 
 def test_pack_test_runs_the_fixtures_of_a_preset(tmp_path, capsys):

@@ -15,7 +15,7 @@
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
 9. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
 
-Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), speckit@1.0.0 (pack), adr-capability@1.0.0 (bridge), speckit-capability@1.0.0 (bridge), speckit-adr@1.0.0 (bridge), starter@1.0.0 (preset), starter-speckit@1.0.0 (preset)
+Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), speckit@1.0.0 (pack), cli@1.0.0 (pack), release@1.0.0 (pack), adr-capability@1.0.0 (bridge), speckit-capability@1.0.0 (bridge), speckit-adr@1.0.0 (bridge), cli-capability@1.0.0 (bridge), release-speckit@1.0.0 (bridge), starter@1.0.0 (preset), starter-speckit@1.0.0 (preset)
 
 ## Document types
 
@@ -69,6 +69,34 @@ One change planned with Spec Kit: the folder `specs/NNN-name/` with `spec.md`, `
 - status: taken from the files in the document's folder, never written in frontmatter; the first that holds: `implemented` when every task in `tasks.md` is ticked; `planned` when `plan.md` exists; `specified` when `spec.md` exists
 - links: `modifies` → capability:Capability; `delivers` → capability:Requirement; `decided_by` → adr:Decision
 
+### `cli:Command`
+
+One command of a command-line tool: a subcommand, or a nested one such as `profile check`. The document is the reference for that command.
+
+- location: `docs/cli/{slug}.md`
+- id: `CLI-{slug}`
+- create: `bondstone new cli:Command --title "..." --set synopsis=...`
+- fields: title (required), synopsis (required), json_output
+- required sections: Options, Exit codes, Examples
+- status: experimental | stable | deprecated (new ones start as `experimental`)
+- allowed status changes: experimental → stable, deprecated; stable → deprecated
+- tag the code that implements it with a comment `bondstone: <ID>`
+- links: `implements` → capability:Capability
+
+### `release:Release`
+
+One version of the product, planned or published.
+
+- location: `docs/releases/{id}.md`
+- id: `v{version}`
+- create: `bondstone new release:Release --title "..." --set version=...`
+- fields: title (required), version (required), date
+- required sections: Highlights
+- status: planned | released (new ones start as `planned`)
+- allowed status changes: planned → released
+- immutable once released: only status may change; supersede it instead of editing it
+- links: `includes` → speckit:Feature
+
 ## Roles
 
 Rules name roles so that they work across packs.
@@ -76,6 +104,7 @@ Rules name roles so that they work across packs.
 - `decision`: adr:Decision
 - `living-spec`: capability:Capability
 - `change`: speckit:Feature
+- `interface`: cli:Command
 
 ## Rules
 
@@ -85,11 +114,18 @@ Severities are the effective ones, after this repository's overrides.
 - **`capability/requirement-has-scenario`** (error): Every requirement has at least one scenario. _Add '#### Scenario: <name>' with Given/When/Then lines._
 - **`capability/requirement-uses-normative-language`** (error): Requirements use SHALL or MUST.
 - **`capability/active-capability-has-requirements`** (error): An active capability lists at least one requirement.
+- **`cli/stable-command-is-implemented`** (error): A stable command is tagged in the code that implements it. _Tag the command's handler or its parser with `bondstone: {id}`._
+- **`cli/json-output-is-documented`** (error): A stable command with JSON output documents its shape. _Add a "## JSON output" section with an example._
+- **`release/released-has-date`** (error): A released version records the day it was published. _Add `date:` before the release is marked as released._
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
 - **`speckit-capability/implemented-feature-delivers-covered-requirements`** (error): An implemented feature delivers only requirements that are active and tagged in code. _Tag the code with `bondstone: REQ-...`, and remove `Status: planned` from the requirement with `bondstone status REQ-... active`._
 - **`speckit-capability/implemented-feature-is-folded-in`** (warn): An implemented feature names the capabilities it modifies or the requirements it delivers. _List the capabilities under `modifies` or the requirements under `delivers` in the frontmatter of spec.md._
 - **`speckit-adr/implemented-feature-rests-on-accepted-decisions`** (error): An implemented feature rests only on accepted decisions. _Accept the decision with `bondstone status ADR-... accepted` before the last task is ticked, or point to the decision that replaced it._
+- **`cli-capability/stable-command-implements-capability`** (error): A stable command implements at least one capability. _List the capabilities the command exposes under `implements`._
+- **`cli-capability/stable-command-on-active-capability`** (error): A stable command exposes only active capabilities. _Activate the capability, or keep the command experimental until it is._
+- **`release-speckit/release-includes-only-implemented`** (error): A released version includes only implemented features. _Finish the feature's tasks, or move the feature to the next release._
+- **`release-speckit/implemented-feature-is-released`** (warn): An implemented feature is part of a planned or published release. _List the feature under `includes` in the release it ships with._
 - **`starter/code-change-updates-living-spec`** (error): A change to code updates the living specs that code implements. _Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed._
 - **`starter-speckit/source-change-has-feature`** (error): A change to code comes with a Spec Kit feature. _Plan the change as a feature under specs/ (`/speckit.specify`), or tick the tasks of the feature it belongs to. A change with no effect on behaviour may carry the commit trailer "Spec-Impact: none (<reason>)"._
 
@@ -103,8 +139,12 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 - `docs/generated/capabilities.md` (capability/index)
 - `docs/generated/requirements.md` (capability/requirements)
 - `docs/generated/features.md` (speckit/features)
+- `docs/generated/cli-reference.md` (cli/reference)
+- `CHANGELOG.md` (release/changelog)
 - `docs/generated/delivery.md` (speckit-capability/delivery)
 - `docs/generated/feature-decisions.md` (speckit-adr/decisions-by-feature)
+- `docs/generated/commands-by-capability.md` (cli-capability/commands-by-capability)
+- `docs/generated/release-contents.md` (release-speckit/release-contents)
 - `docs/generated/decisions-applied.md` (profile/decisions-applied)
 - `docs/generated/decision-usage.md` (profile/decision-usage)
 
@@ -138,6 +178,22 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
   `plan.md` exists, and `implemented` when every task in `tasks.md` is ticked. Tick a task
   only when it is done: rules for implemented features apply from the last tick.
 
+## Guidance from `cli`
+
+- Every command of the command-line tool has a document in `docs/cli/`. When you add, change
+  or remove an option, update that command's document in the same change.
+- Tag the code that defines or handles a command with a comment `bondstone: CLI-<name>`.
+- A new command starts as `experimental`. Move it to `stable` with
+  `bondstone status CLI-<name> stable` once its interface is meant to stay.
+
+## Guidance from `release`
+
+- A version is planned in `docs/releases/v<version>.md` before it ships. Create it with
+  `bondstone new release:Release --title "..." --set version=1.2.0`.
+- When the version is published, add `date:` and run `bondstone status v<version> released`.
+  A released document can no longer be edited.
+- `CHANGELOG.md` is generated from the release documents. Never edit it.
+
 ## Guidance from `adr-capability`
 
 - When a capability's behaviour depends on a decision, list it in `constrained_by`.
@@ -159,6 +215,16 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 - When planning a feature makes a decision that deserves an ADR, write the ADR and list it
   under `decided_by` in the feature's frontmatter.
 - A decision a feature rests on must be accepted before the feature's last task is ticked.
+
+## Guidance from `cli-capability`
+
+- List the capabilities a command exposes under `implements` in its document.
+- A command becomes `stable` only when every capability it implements is `active`.
+
+## Guidance from `release-speckit`
+
+- List every feature a version ships under `includes` in its release document.
+- A version is marked `released` only when every feature it includes is implemented.
 
 ## Guidance from `starter`
 

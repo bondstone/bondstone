@@ -1,0 +1,45 @@
+id: release
+version: 1.0.0
+bondstone: ">=1.0"
+description: Releases, and a changelog generated from them.
+
+# bondstone: REQ-LIB-003
+types:
+  Release:
+    description: One version of the product, planned or published.
+    id: "v{version}"
+    path: "docs/releases/{id}.md"
+    template: templates/release.md
+    fields:
+      title: {type: string, minLength: 3}
+      version: {type: string, pattern: "^\\d+\\.\\d+\\.\\d+([a-z]+\\d*)?$", description: "the version without the leading v"}
+      date: {type: string, format: date, description: "the day the version was published"}
+    required: [title, version]
+    sections: [Highlights]
+    traits:
+      lifecycle:
+        statuses: [planned, released]
+        initial: planned
+        transitions:
+          planned: [released]
+      immutable: {when: [released]}
+      indexed: {}
+
+rules:
+  - id: released-has-date
+    description: A released version records the day it was published.
+    when: {type: Release, status: released}
+    require:
+      - field: date
+    hint: Add `date:` before the release is marked as released.
+
+views:
+  - id: changelog
+    title: Changelog
+    description: Generated from the release documents in docs/releases.
+    output: CHANGELOG.md
+    render: table
+    select: {type: Release}
+    columns: [id, title, status, date]
+
+instructions: instructions.md

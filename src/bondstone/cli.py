@@ -294,6 +294,7 @@ def build_parser() -> argparse.ArgumentParser:
                         help="repository root (default: the nearest folder with .bondstone/profile.yaml)")
     commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
+    # bondstone: CLI-check
     check = commands.add_parser("check", parents=[common, output],
                                 help="validate documents, links, rules, code tags and views")
     check.add_argument("--fail-on", choices=[ERROR, WARN], default=ERROR,
@@ -304,9 +305,11 @@ def build_parser() -> argparse.ArgumentParser:
                        help="with --base, ignore the commit trailers that exempt a change from a diff rule")
     check.set_defaults(func=cmd_check)
 
+    # bondstone: CLI-gen
     gen = commands.add_parser("gen", parents=[common], help="regenerate views")
     gen.set_defaults(func=cmd_gen)
 
+    # bondstone: CLI-baseline
     baseline = commands.add_parser("baseline", parents=[common],
                                    help="record the commit whose documents count as already adopted")
     baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
@@ -317,22 +320,26 @@ def build_parser() -> argparse.ArgumentParser:
     setting.add_argument("--set", action="append", metavar="KEY=VALUE",
                          help="a frontmatter field or link of the new document; may be repeated")
 
+    # bondstone: CLI-new
     new = commands.add_parser("new", parents=[common, output, setting],
                               help="scaffold a document with the next id at its type's path")
     new.add_argument("type", metavar="TYPE", help="a document type such as adr:Decision")
     new.set_defaults(func=cmd_new)
 
+    # bondstone: CLI-status
     status = commands.add_parser("status", parents=[common, output],
                                  help="change the status of a document or an item, if its lifecycle allows it")
     status.add_argument("id", metavar="ID")
     status.add_argument("status", metavar="STATUS")
     status.set_defaults(func=cmd_status)
 
+    # bondstone: CLI-supersede
     supersede = commands.add_parser("supersede", parents=[common, output, setting],
                                     help="replace a document: successor, `superseded` status, links moved")
     supersede.add_argument("id", metavar="ID", help="the document to replace")
     supersede.set_defaults(func=cmd_supersede)
 
+    # bondstone: CLI-context
     ctx = commands.add_parser("context", parents=[common, output],
                               help="list what to read before editing: traced documents and the rules that will fire")
     what = ctx.add_mutually_exclusive_group(required=True)
@@ -340,6 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     what.add_argument("--base", metavar="REF", help="the files changed since REF")
     ctx.set_defaults(func=cmd_context)
 
+    # bondstone: CLI-agent
     instructions = commands.add_parser("agent", parents=[common],
                                        help="write the instructions for coding agents from the active profile")
     instructions.add_argument("--format", choices=["md", "skill"], default="md",
@@ -349,6 +357,7 @@ def build_parser() -> argparse.ArgumentParser:
                                    "for a skill); `-` prints instead")
     instructions.set_defaults(func=cmd_agent)
 
+    # bondstone: CLI-graph
     graph = commands.add_parser("graph", parents=[common], help="export the graph of documents, links and code tags")
     graph.add_argument("--format", choices=["json", "mermaid"], default="json",
                        help="JSON (default) or a Mermaid diagram")
@@ -356,25 +365,30 @@ def build_parser() -> argparse.ArgumentParser:
                        help="only nodes of this type; may be repeated (a diagram shows documents only by default)")
     graph.set_defaults(func=cmd_graph)
 
+    # bondstone: CLI-rules
     rules = commands.add_parser("rules", parents=[common, output],
                                 help="list the active rules with their effective severity")
     rules.set_defaults(func=cmd_rules)
 
+    # bondstone: CLI-explain
     explain = commands.add_parser("explain", parents=[common, output],
                                   help="explain one rule: what it asks, why, and how to satisfy it")
     explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
     explain.set_defaults(func=cmd_explain)
 
+    # bondstone: CLI-init
     init = commands.add_parser("init", parents=[common], help="create a profile in this folder")
     init.add_argument("--preset", metavar="NAME", help="extend this preset, such as `starter`")
     init.set_defaults(func=cmd_init)
 
+    # bondstone: CLI-packs
     listing = commands.add_parser("packs", parents=[common, output],
                                   help="list the packs, bridges and presets available to this repository")
     listing.set_defaults(func=cmd_packs)
 
     pack = commands.add_parser("pack", help="pack commands")
     pack_commands = pack.add_subparsers(dest="pack_command", required=True, metavar="COMMAND")
+    # bondstone: CLI-pack-test
     pack_test = pack_commands.add_parser("test", parents=[output],
                                          help="run the fixtures of packs, bridges and presets")
     pack_test.add_argument("dirs", nargs="+", metavar="DIR", help="folder of a pack, a bridge or a preset")
@@ -382,6 +396,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     profile = commands.add_parser("profile", help="profile commands")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True, metavar="COMMAND")
+    # bondstone: CLI-profile-check
     profile_check = profile_commands.add_parser("check", parents=[common, output],
                                                 help="validate the profile, packs and bridges")
     profile_check.set_defaults(func=cmd_profile_check)

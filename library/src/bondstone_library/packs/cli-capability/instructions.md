@@ -1,0 +1,2 @@
+- List the capabilities a command exposes under `implements` in its document.
+- A command becomes `stable` only when every capability it implements is `active`.

@@ -1,0 +1,4 @@
+errors:
+- release-speckit/release-includes-only-implemented
+warnings:
+- release-speckit/implemented-feature-is-released

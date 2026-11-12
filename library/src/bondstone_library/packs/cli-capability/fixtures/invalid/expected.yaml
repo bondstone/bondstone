@@ -1,0 +1,4 @@
+errors:
+- cli-capability/stable-command-on-active-capability
+- cli-capability/stable-command-implements-capability
+warnings: []
