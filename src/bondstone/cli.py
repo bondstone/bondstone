@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from . import __version__, agent, context, edit
+from . import __version__, agent, context, edit, export
 from .baseline import record_baseline
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
@@ -171,6 +171,32 @@ def cmd_context(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# bondstone: REQ-AGT-005
+def cmd_agent(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    if cfg is None:
+        return EXIT_CONFIG
+    if args.output == "-":
+        sys.stdout.write(agent.skill(cfg) if args.format == "skill" else agent.instructions(cfg))
+        return EXIT_OK
+    path, changed = agent.write(cfg, args.format, args.output)
+    print(f"wrote {path}" if changed else f"{path} is up to date")
+    return EXIT_OK
+
+
+# bondstone: REQ-AGT-007
+def cmd_graph(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    if cfg is None:
+        return EXIT_CONFIG
+    graph = build_graph(cfg)
+    if args.format == "mermaid":
+        sys.stdout.write(export.graph_mermaid(cfg, graph, args.type))
+    else:
+        sys.stdout.write(export.to_json(export.graph_json(cfg, graph, args.type)))
+    return EXIT_OK
+
+
 def _print_json(payload: object) -> None:
     sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
@@ -259,6 +285,22 @@ def build_parser() -> argparse.ArgumentParser:
     what.add_argument("--for", dest="paths", nargs="+", metavar="PATH", help="files or folders about to be edited")
     what.add_argument("--base", metavar="REF", help="the files changed since REF")
     ctx.set_defaults(func=cmd_context)
+
+    instructions = commands.add_parser("agent", parents=[common],
+                                       help="write the instructions for coding agents from the active profile")
+    instructions.add_argument("--format", choices=["md", "skill"], default="md",
+                              help="Markdown (default) or a Claude Code skill")
+    instructions.add_argument("--output", metavar="FILE",
+                              help=f"where to write (default: {agent.MARKDOWN_PATH}, or {agent.SKILL_PATH} "
+                                   "for a skill); `-` prints instead")
+    instructions.set_defaults(func=cmd_agent)
+
+    graph = commands.add_parser("graph", parents=[common], help="export the graph of documents, links and code tags")
+    graph.add_argument("--format", choices=["json", "mermaid"], default="json",
+                       help="JSON (default) or a Mermaid diagram")
+    graph.add_argument("--type", action="append", metavar="TYPE",
+                       help="only nodes of this type; may be repeated (a diagram shows documents only by default)")
+    graph.set_defaults(func=cmd_graph)
 
     rules = commands.add_parser("rules", parents=[common, output],
                                 help="list the active rules with their effective severity")

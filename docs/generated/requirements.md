@@ -7,6 +7,9 @@
 | [REQ-AGT-002](../capabilities/agent-guidance.md#req-agt-002-explain-one-rule) | Explain one rule | CAP-agent-guidance |
 | [REQ-AGT-003](../capabilities/agent-guidance.md#req-agt-003-say-what-to-read-before-editing) | Say what to read before editing | CAP-agent-guidance |
 | [REQ-AGT-004](../capabilities/agent-guidance.md#req-agt-004-say-which-diff-rules-will-fire) | Say which diff rules will fire | CAP-agent-guidance |
+| [REQ-AGT-005](../capabilities/agent-guidance.md#req-agt-005-generate-the-instructions-for-agents) | Generate the instructions for agents | CAP-agent-guidance |
+| [REQ-AGT-006](../capabilities/agent-guidance.md#req-agt-006-offer-the-instructions-as-a-skill) | Offer the instructions as a skill | CAP-agent-guidance |
+| [REQ-AGT-007](../capabilities/agent-guidance.md#req-agt-007-export-the-graph) | Export the graph | CAP-agent-guidance |
 | [REQ-CLI-001](../capabilities/cli.md#req-cli-001-check-a-repository) | Check a repository | CAP-cli |
 | [REQ-CLI-002](../capabilities/cli.md#req-cli-002-regenerate-views) | Regenerate views | CAP-cli |
 | [REQ-CLI-003](../capabilities/cli.md#req-cli-003-check-the-configuration-alone) | Check the configuration alone | CAP-cli |

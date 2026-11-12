@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "graph.schema.json",
+  "title": "bondstone graph export",
+  "description": "What `bondstone graph` prints: the nodes of one repository, the links between them and the code that is tagged for them. `version` changes when a key changes its meaning or goes away.",
+  "type": "object",
+  "properties": {
+    "version": {"const": 1},
+    "components": {
+      "description": "The packs and bridges the repository uses.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {"enum": ["pack", "bridge"]},
+          "id": {"type": "string"},
+          "version": {"type": "string"}
+        },
+        "required": ["kind", "id", "version"],
+        "additionalProperties": false
+      }
+    },
+    "roles": {
+      "description": "Role name to the types that have it.",
+      "type": "object",
+      "additionalProperties": {"type": "array", "items": {"type": "string"}}
+    },
+    "nodes": {
+      "description": "Documents and items, in the order of their files.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "type": {"description": "Qualified type, such as adr:Decision.", "type": "string"},
+          "path": {"description": "File of the node, relative to the repository root.", "type": "string"},
+          "line": {"type": "integer", "minimum": 1},
+          "title": {"type": "string"},
+          "status": {"type": "string"},
+          "parent": {"description": "For an item: the id of its document.", "type": "string"},
+          "covered": {"description": "Whether a code tag names the node.", "type": "boolean"},
+          "fields": {"description": "The other frontmatter fields; links are in `edges`.", "type": "object"}
+        },
+        "required": ["id", "type", "path", "line", "title", "covered", "fields"],
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "description": "One entry per link target, as written; `to` may name a node that does not exist.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from": {"type": "string"},
+          "to": {"type": "string"},
+          "link": {"description": "Qualified link, such as adr:supersedes.", "type": "string"}
+        },
+        "required": ["from", "to", "link"],
+        "additionalProperties": false
+      }
+    },
+    "code": {
+      "description": "One entry per code tag: the node it names and the lines of the code it annotates.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string"},
+          "path": {"type": "string"},
+          "start": {"type": "integer", "minimum": 1},
+          "end": {"type": "integer", "minimum": 1}
+        },
+        "required": ["id", "path", "start", "end"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["version", "components", "roles", "nodes", "edges", "code"],
+  "additionalProperties": false
+}

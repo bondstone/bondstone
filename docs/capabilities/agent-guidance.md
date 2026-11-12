@@ -71,3 +71,48 @@ says to add one only when the user asks for it.
 - Given a rule that asks for an update of the living specs tagged in changed code
 - When `bondstone context --for src/code.py` runs and that file is tagged for CAP-a
 - Then the rule is listed with `must change: CAP-a`
+
+### REQ-AGT-005: Generate the instructions for agents
+
+`bondstone agent` SHALL write `AGENTS.bondstone.md` from the active profile: the workflow in
+commands, every type with its location, id template, the command that creates it, fields,
+required sections, statuses, allowed status changes and links, every role, every declared rule
+with the severity `check` applies, the generated files, and each component's own guidance. A
+rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
+weaken the profile to make a check pass and, when a rule can be exempted, not to add an
+exemption trailer unless the user asked for one. Writing the file again without a change of
+the configuration changes nothing; `--output -` prints it instead.
+
+#### Scenario: Overridden severity
+
+- Given a rule with the default severity `warn` that the profile sets to `error`
+- When `bondstone agent` runs
+- Then the instructions list the rule as `error`
+
+### REQ-AGT-006: Offer the instructions as a skill
+
+`bondstone agent --format skill` SHALL write the same instructions as a Claude Code skill at
+`.claude/skills/bondstone/SKILL.md`, with a `name` and a `description` that says when to load
+it: before documents in the types' folders or tagged code change, and before a task ends.
+
+#### Scenario: Skill file
+
+- Given a profile with the `adr` pack
+- When `bondstone agent --format skill` runs
+- Then the file starts with frontmatter whose description names `docs/adr/`
+
+### REQ-AGT-007: Export the graph
+
+`bondstone graph` SHALL print the repository's graph as JSON that matches the schema shipped
+with bondstone: `version`, the components, the roles, a list of nodes with id, type, path,
+line, title, status, parent, coverage and frontmatter fields, a list of edges with `from`,
+`to` and the qualified `link`, and a list of code regions. A link to a node that does not
+exist MUST stay in the edges. `--format mermaid` prints a flowchart grouped by type, which
+shows documents and leaves items out unless `--type` names their type. `--type` limits either
+format to nodes of the given types and the edges between them.
+
+#### Scenario: Diagram of decisions
+
+- Given decisions where ADR-002 supersedes ADR-001
+- When `bondstone graph --format mermaid --type Decision` runs
+- Then the diagram has both decisions and an arrow labelled `supersedes`
