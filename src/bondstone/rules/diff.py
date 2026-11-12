@@ -279,7 +279,10 @@ def _check_diff_rules(cfg: Config, graph: Graph, repo: Repository, changes: Chan
     rules = [rule for rule in cfg.rules
              if rule.kind == "diff" and cfg.severity(rule.qid, rule.severity) != IGNORE]
     out += _invalid_exemptions(rules, trailers)
-    changed_nodes = [node for node in graph.nodes if node.path in changes.present]
+    touched = {path for change in changes.changes for path in (change.path, change.old_path) if path}
+    # bondstone: REQ-DIF-014
+    changed_nodes = [node for node in graph.nodes
+                     if node.path in changes.present or any(path in touched for path in node.companions)]
     for rule in rules:
         triggering = fired_by(cfg, rule, changes.changes)
         if not triggering:

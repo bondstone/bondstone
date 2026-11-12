@@ -91,7 +91,8 @@ commands, every type with its location, id template, the command that creates it
 required sections, statuses, allowed status changes and links, every role, every declared rule
 with the severity `check` applies, the generated files, and each component's own guidance. For
 an item type they say that it is added by hand, with which heading, and what each part of its
-id stands for. The workflow says to run `gen` after editing documents and that `check --base`
+id stands for. For a type whose status is derived from files they say which file gives which
+status, and that the status is never written in frontmatter. The workflow says to run `gen` after editing documents and that `check --base`
 includes uncommitted changes. A rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
 weaken the profile to make a check pass and, when a rule can be exempted, not to add an
 exemption trailer unless the user asked for one. Writing the file again without a change of

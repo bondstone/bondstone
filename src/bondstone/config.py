@@ -115,6 +115,21 @@ def id_regex(template: str, values: dict[str, Any] | None = None) -> str:
     return "^" + out + re.escape(template[position:]) + "$"
 
 
+# bondstone: REQ-GRA-010
+def path_regex(template: str, node_id: str) -> str:
+    """The pattern the path of a document with this id must match in full.
+
+    `{id}` is the id itself and `{slug}` a lower-case slug; any other placeholder is anything
+    within one path segment."""
+    out, position = "", 0
+    for match in PLACEHOLDER.finditer(template):
+        out += re.escape(template[position:match.start()])
+        position = match.end()
+        name = match.group(1)
+        out += re.escape(node_id) if name == "id" else SLUG_PATTERN if name == "slug" else r"[^/]+"
+    return out + re.escape(template[position:])
+
+
 # bondstone: REQ-GRA-002
 def path_glob(template: str) -> str:
     """The glob that finds a type's documents: `docs/adr/{id}-{slug}.md` gives `docs/adr/*.md`."""
@@ -239,6 +254,8 @@ class Config:
         if "lifecycle" in traits:
             properties["status"] = {"enum": list(traits["lifecycle"].get("statuses") or [])}
             required.append("status")
+        if "derived-status" in traits:
+            properties["status"] = {"enum": list(traits["derived-status"])}  # set by the graph, never required
         if "owned" in traits:
             properties.setdefault("owner", {"type": "string", "minLength": 1})
             required.append("owner")
@@ -380,12 +397,24 @@ class _Builder:
     def _check_traits(self, tdef: TypeDef, bad: Any) -> None:
         traits = tdef.traits
         lifecycle = traits.get("lifecycle")
-        statuses = list((lifecycle or {}).get("statuses") or [])
+        derived = traits.get("derived-status")
+        statuses = list((lifecycle or {}).get("statuses") or []) or list(derived or {})
+        # bondstone: REQ-GRA-011
+        if derived is not None:
+            if lifecycle is not None:
+                bad("a type takes its status from `lifecycle` or from `derived-status`, not from both")
+            if tdef.embedded:
+                bad("derived-status: an embedded type has no folder of its own to derive a status from")
+            for status, condition in derived.items():
+                for path in condition.values():
+                    if path.startswith("/") or ".." in path.split("/"):
+                        bad(f"derived-status.{status}: '{path}' must be a path inside the document's folder")
 
         def known(values: Any, what: str) -> None:
             for value in as_list(values):
                 if value not in statuses:
-                    bad(f"{what}: '{value}' is not one of the lifecycle statuses")
+                    bad(f"{what}: '{value}' is not one of the "
+                        f"{'lifecycle' if lifecycle is not None else 'derived'} statuses")
 
         if lifecycle is not None:
             known(lifecycle.get("initial"), "lifecycle.initial")
@@ -402,7 +431,7 @@ class _Builder:
                 continue
             for key in keys:
                 if options.get(key) is not None:
-                    if lifecycle is None:
+                    if lifecycle is None and derived is None:
                         bad(f"{trait}.{key} lists statuses, so the type needs the lifecycle trait")
                     else:
                         known(options[key], f"{trait}.{key}")

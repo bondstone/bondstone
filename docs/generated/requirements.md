@@ -30,6 +30,7 @@
 | [REQ-DIF-011](../capabilities/diff-checks.md#req-dif-011-let-a-commit-trailer-exempt-a-change) | Let a commit trailer exempt a change | CAP-diff-checks |
 | [REQ-DIF-012](../capabilities/diff-checks.md#req-dif-012-reject-malformed-exemptions-and-allow-strict-runs) | Reject malformed exemptions and allow strict runs | CAP-diff-checks |
 | [REQ-DIF-013](../capabilities/diff-checks.md#req-dif-013-trigger-diff-rules-on-the-repositorys-code) | Trigger diff rules on the repository's code | CAP-diff-checks |
+| [REQ-DIF-014](../capabilities/diff-checks.md#req-dif-014-count-a-change-to-a-companion-file-as-a-change-to-the-document) | Count a change to a companion file as a change to the document | CAP-diff-checks |
 | [REQ-GRA-001](../capabilities/graph.md#req-gra-001-read-markdown-with-yaml-frontmatter) | Read Markdown with YAML frontmatter | CAP-graph |
 | [REQ-GRA-002](../capabilities/graph.md#req-gra-002-derive-the-id-pattern-and-the-path-glob-from-templates) | Derive the id pattern and the path glob from templates | CAP-graph |
 | [REQ-GRA-003](../capabilities/graph.md#req-gra-003-require-every-document-to-state-its-type) | Require every document to state its type | CAP-graph |
@@ -39,6 +40,8 @@
 | [REQ-GRA-007](../capabilities/graph.md#req-gra-007-check-that-ids-are-present-well-formed-and-unique) | Check that ids are present, well formed and unique | CAP-graph |
 | [REQ-GRA-008](../capabilities/graph.md#req-gra-008-check-fields-and-sections-against-the-type) | Check fields and sections against the type | CAP-graph |
 | [REQ-GRA-009](../capabilities/graph.md#req-gra-009-check-links-against-their-definition) | Check links against their definition | CAP-graph |
+| [REQ-GRA-010](../capabilities/graph.md#req-gra-010-require-the-path-to-carry-the-id) | Require the path to carry the id | CAP-graph |
+| [REQ-GRA-011](../capabilities/graph.md#req-gra-011-derive-a-status-from-files) | Derive a status from files | CAP-graph |
 | [REQ-PKT-001](../capabilities/pack-tooling.md#req-pkt-001-run-the-fixtures-of-a-pack-a-bridge-or-a-preset) | Run the fixtures of a pack, a bridge or a preset | CAP-pack-tooling |
 | [REQ-PKT-002](../capabilities/pack-tooling.md#req-pkt-002-compare-a-fixture-with-what-it-expects) | Compare a fixture with what it expects | CAP-pack-tooling |
 | [REQ-PKT-003](../capabilities/pack-tooling.md#req-pkt-003-list-the-packs-bridges-and-presets-that-are-available) | List the packs, bridges and presets that are available | CAP-pack-tooling |

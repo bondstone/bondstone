@@ -313,6 +313,11 @@ def change_status(cfg: Config, graph: Graph, node_id: str, new: str) -> StatusCh
     """Move a document or an item to another status, when its lifecycle allows the step."""
     node = _node(graph, node_id)
     lifecycle = cfg.types[node.type].traits.get("lifecycle")
+    derived = cfg.types[node.type].traits.get("derived-status")
+    if derived:
+        files = ", ".join(dict.fromkeys(path for condition in derived.values() for path in condition.values()))
+        raise Refused(f"{node_id} is a {node.type}, whose status is derived from its files ({files}); "
+                      "it cannot be set")
     if lifecycle is None:
         raise Refused(f"{node_id} is a {node.type}, which has no lifecycle")
     statuses = [str(status) for status in as_list(lifecycle.get("statuses"))]
