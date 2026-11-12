@@ -312,7 +312,7 @@ def test_usage_errors_and_version(capsys):
 
 
 def test_commands_of_later_phases_do_not_exist_yet(capsys):
-    for command in (["new", "adr:Decision"], ["check", "--format", "sarif"], ["explain", "x"], ["pack", "test", "."]):
+    for command in (["report"], ["check", "--format", "sarif"], ["init"], ["pack", "test", "."]):
         with pytest.raises(SystemExit) as exit_info:
             main(command)
         assert exit_info.value.code == 2

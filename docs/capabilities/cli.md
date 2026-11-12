@@ -92,7 +92,9 @@ changes its meaning or goes away.
 Bondstone SHALL exit with 0 when no diagnostic reaches the `--fail-on` severity (`error` by
 default, or `warn`), with 1 when one does, with 2 on a configuration error, and with 3 on an
 environment error: no profile found, a root that is not a directory, `--base` or `baseline`
-outside a git repository, or a ref that is not a commit.
+outside a git repository, or a ref that is not a commit. A command that refuses what it was
+asked, such as explaining a rule that does not exist, MUST say why on standard error and exit
+with 1.
 
 #### Scenario: Unknown base ref
 

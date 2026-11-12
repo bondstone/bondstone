@@ -38,6 +38,10 @@ class EnvironmentProblem(BondstoneError):
     """The checker could not run here at all (exit code 3)."""
 
 
+class Refused(BondstoneError):
+    """A command was asked for something the rules do not allow or that does not exist (exit code 1)."""
+
+
 # --------------------------------------------------------------------------- diagnostics
 
 

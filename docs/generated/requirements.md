@@ -3,6 +3,8 @@
 
 | Id | Title | Parent |
 |---|---|---|
+| [REQ-AGT-001](../capabilities/agent-guidance.md#req-agt-001-list-the-active-rules-with-their-effective-severity) | List the active rules with their effective severity | CAP-agent-guidance |
+| [REQ-AGT-002](../capabilities/agent-guidance.md#req-agt-002-explain-one-rule) | Explain one rule | CAP-agent-guidance |
 | [REQ-CLI-001](../capabilities/cli.md#req-cli-001-check-a-repository) | Check a repository | CAP-cli |
 | [REQ-CLI-002](../capabilities/cli.md#req-cli-002-regenerate-views) | Regenerate views | CAP-cli |
 | [REQ-CLI-003](../capabilities/cli.md#req-cli-003-check-the-configuration-alone) | Check the configuration alone | CAP-cli |

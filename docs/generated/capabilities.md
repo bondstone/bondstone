@@ -3,6 +3,7 @@
 
 | Id | Title | Status | Owner |
 |---|---|---|---|
+| [CAP-agent-guidance](../capabilities/agent-guidance.md) | Guidance for agents | draft | dworek |
 | [CAP-cli](../capabilities/cli.md) | Command line and output | active | dworek |
 | [CAP-code-traceability](../capabilities/code-traceability.md) | Code traceability | active | dworek |
 | [CAP-diff-checks](../capabilities/diff-checks.md) | Checks against a base commit | active | dworek |

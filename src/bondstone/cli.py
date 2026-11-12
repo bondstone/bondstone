@@ -5,17 +5,18 @@ Exit codes: 0 no violations, 1 violations found, 2 configuration error, 3 enviro
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import replace
 from pathlib import Path
 
-from . import __version__
+from . import __version__, agent
 from .baseline import record_baseline
 from .config import Config, load_config
-from .format import FORMATS, render
+from .format import FORMATS, JSON_VERSION, render
 from .git import GitRepository
 from .graph import build_graph
-from .model import ERROR, IGNORE, WARN, EnvironmentProblem
+from .model import ERROR, IGNORE, WARN, EnvironmentProblem, Refused
 from .resolve import find_root
 from .rules import fails, run_check
 from .views import generate
@@ -90,6 +91,35 @@ def cmd_profile_check(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _print_json(payload: object) -> None:
+    sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+
+
+# bondstone: REQ-AGT-001
+def cmd_rules(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    rules = agent.list_rules(cfg)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, "rules": [rule.to_dict() for rule in rules]})
+    else:
+        sys.stdout.write(agent.rules_text(rules))
+    return EXIT_OK
+
+
+# bondstone: REQ-AGT-002
+def cmd_explain(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **agent.explain(cfg, args.rule)})
+    else:
+        sys.stdout.write(agent.explain_text(cfg, args.rule))
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", default=argparse.SUPPRESS,
@@ -122,6 +152,15 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
     baseline.set_defaults(func=cmd_baseline)
 
+    rules = commands.add_parser("rules", parents=[common, output],
+                                help="list the active rules with their effective severity")
+    rules.set_defaults(func=cmd_rules)
+
+    explain = commands.add_parser("explain", parents=[common, output],
+                                  help="explain one rule: what it asks, why, and how to satisfy it")
+    explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
+    explain.set_defaults(func=cmd_explain)
+
     profile = commands.add_parser("profile", help="profile commands")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True, metavar="COMMAND")
     profile_check = profile_commands.add_parser("check", parents=[common, output],
@@ -135,6 +174,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
+    except Refused as exc:
+        print(f"bondstone: {exc}", file=sys.stderr)
+        return EXIT_VIOLATIONS
     except EnvironmentProblem as exc:
         print(f"bondstone: {exc}", file=sys.stderr)
         return EXIT_ENVIRONMENT
