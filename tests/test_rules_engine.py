@@ -178,7 +178,18 @@ def test_supersede_status_multiple_orphan_and_cycle(project):
     ]
     status = by_rule(project, "bondstone/supersede-status")[0]
     assert status.message == "ADR-002 supersedes ADR-001, but ADR-001 has status 'accepted'"
-    assert status.hint == "Set `status: superseded` in docs/adr/ADR-001-a.md."
+    assert status.hint == "Run `bondstone status ADR-001 superseded`."
+    assert status.fix == {"command": ["bondstone", "status", "ADR-001", "superseded"]}
+
+
+def test_supersede_status_has_no_fix_command_when_the_lifecycle_forbids_the_step(project):
+    standard(project)
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001", "proposed"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", extra="supersedes: ADR-001\n"))
+    status = by_rule(project, "bondstone/supersede-status")[0]
+    assert status.fix is None
+    assert status.hint == ("Set `status: superseded` in docs/adr/ADR-001-a.md; "
+                           "its lifecycle does not allow that step from 'proposed'.")
 
 
 def test_valid_supersession(project):

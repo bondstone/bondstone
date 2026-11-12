@@ -52,6 +52,12 @@
 | [REQ-RUL-007](../capabilities/rules.md#req-rul-007-keep-supersession-consistent) | Keep supersession consistent | CAP-rules |
 | [REQ-RUL-008](../capabilities/rules.md#req-rul-008-report-leftover-placeholders) | Report leftover placeholders | CAP-rules |
 | [REQ-RUL-009](../capabilities/rules.md#req-rul-009-make-every-diagnostic-actionable) | Make every diagnostic actionable | CAP-rules |
+| [REQ-SCF-001](../capabilities/scaffolding.md#req-scf-001-scaffold-a-document-at-the-right-id-and-path) | Scaffold a document at the right id and path | CAP-scaffolding |
+| [REQ-SCF-002](../capabilities/scaffolding.md#req-scf-002-write-a-document-that-passes-the-check) | Write a document that passes the check | CAP-scaffolding |
+| [REQ-SCF-003](../capabilities/scaffolding.md#req-scf-003-change-a-status-within-the-lifecycle) | Change a status within the lifecycle | CAP-scaffolding |
+| [REQ-SCF-004](../capabilities/scaffolding.md#req-scf-004-supersede-a-document) | Supersede a document | CAP-scaffolding |
+| [REQ-SCF-005](../capabilities/scaffolding.md#req-scf-005-edit-only-the-lines-that-change) | Edit only the lines that change | CAP-scaffolding |
+| [REQ-SCF-006](../capabilities/scaffolding.md#req-scf-006-regenerate-views-after-an-edit) | Regenerate views after an edit | CAP-scaffolding |
 | [REQ-TRC-001](../capabilities/code-traceability.md#req-trc-001-find-tags-in-code) | Find tags in code | CAP-code-traceability |
 | [REQ-TRC-002](../capabilities/code-traceability.md#req-trc-002-know-the-region-of-code-a-tag-annotates) | Know the region of code a tag annotates | CAP-code-traceability |
 | [REQ-TRC-003](../capabilities/code-traceability.md#req-trc-003-reject-tags-that-point-nowhere) | Reject tags that point nowhere | CAP-code-traceability |

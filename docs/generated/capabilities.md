@@ -10,4 +10,5 @@
 | [CAP-graph](../capabilities/graph.md) | Documents, items and links | active | dworek |
 | [CAP-profiles](../capabilities/profiles.md) | Profiles, packs and bridges | active | dworek |
 | [CAP-rules](../capabilities/rules.md) | Rules and traits | active | dworek |
+| [CAP-scaffolding](../capabilities/scaffolding.md) | Scaffolding and edits | draft | dworek |
 | [CAP-views](../capabilities/views.md) | Generated views | active | dworek |

@@ -9,8 +9,11 @@ import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
-from . import __version__, agent
+import yaml
+
+from . import __version__, agent, edit
 from .baseline import record_baseline
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
@@ -91,6 +94,66 @@ def cmd_profile_check(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _sets(items: list[str] | None) -> dict[str, Any]:
+    """`--set KEY=VALUE` options as a mapping; a value is read as YAML, so `a=[X, Y]` is a list."""
+    sets: dict[str, Any] = {}
+    for item in items or []:
+        key, separator, value = item.partition("=")
+        if not separator or not key.strip():
+            raise Refused(f"--set expects KEY=VALUE, got '{item}'")
+        try:
+            sets[key.strip()] = yaml.safe_load(value) if value.strip() else ""
+        except yaml.YAMLError:
+            sets[key.strip()] = value  # not YAML, such as text with a colon: keep it as written
+    return sets
+
+
+# bondstone: REQ-SCF-006
+def _after_edit(args: argparse.Namespace, lines: list[str], payload: dict[str, Any]) -> int:
+    """Regenerate the views an edit made stale, then report what the command did."""
+    cfg = load_config(_root(args))
+    views = generate(cfg, build_graph(cfg)) if not cfg.errors else []
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **payload, "views": views})
+    else:
+        for line in [*lines, *(f"wrote {path}" for path in views)]:
+            print(line)
+    return EXIT_OK
+
+
+# bondstone: REQ-SCF-001
+def cmd_new(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    created = edit.new_document(cfg, build_graph(cfg), args.type, args.title, _sets(args.set))
+    return _after_edit(args, [f"created {created.path} ({created.id})"], {"id": created.id, "path": created.path})
+
+
+# bondstone: REQ-SCF-003
+def cmd_status(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    change = edit.change_status(cfg, build_graph(cfg), args.id, args.status)
+    line = (f"{change.id}: {change.old} -> {change.new} ({change.path})" if change.changed
+            else f"{change.id} is already {change.new}")
+    return _after_edit(args, [line], {"id": change.id, "path": change.path, "old": change.old, "new": change.new,
+                                      "changed": change.changed})
+
+
+# bondstone: REQ-SCF-004
+def cmd_supersede(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    result = edit.supersede(cfg, build_graph(cfg), args.id, args.title, _sets(args.set))
+    lines = [f"created {result.created.path} ({result.created.id})",
+             *(f"updated {line}" for line in result.updated), *(f"skipped {line}" for line in result.skipped)]
+    return _after_edit(args, lines, {"id": result.created.id, "path": result.created.path,
+                                     "updated": result.updated, "skipped": result.skipped})
+
+
 def _print_json(payload: object) -> None:
     sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
@@ -151,6 +214,27 @@ def build_parser() -> argparse.ArgumentParser:
                                    help="record the commit whose documents count as already adopted")
     baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
     baseline.set_defaults(func=cmd_baseline)
+
+    setting = argparse.ArgumentParser(add_help=False)
+    setting.add_argument("--title", required=True, help="title of the new document")
+    setting.add_argument("--set", action="append", metavar="KEY=VALUE",
+                         help="a frontmatter field or link of the new document; may be repeated")
+
+    new = commands.add_parser("new", parents=[common, output, setting],
+                              help="scaffold a document with the next id at its type's path")
+    new.add_argument("type", metavar="TYPE", help="a document type such as adr:Decision")
+    new.set_defaults(func=cmd_new)
+
+    status = commands.add_parser("status", parents=[common, output],
+                                 help="change the status of a document or an item, if its lifecycle allows it")
+    status.add_argument("id", metavar="ID")
+    status.add_argument("status", metavar="STATUS")
+    status.set_defaults(func=cmd_status)
+
+    supersede = commands.add_parser("supersede", parents=[common, output, setting],
+                                    help="replace a document: successor, `superseded` status, links moved")
+    supersede.add_argument("id", metavar="ID", help="the document to replace")
+    supersede.set_defaults(func=cmd_supersede)
 
     rules = commands.add_parser("rules", parents=[common, output],
                                 help="list the active rules with their effective severity")

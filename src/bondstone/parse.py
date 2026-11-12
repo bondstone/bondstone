@@ -13,7 +13,7 @@ from .model import Heading
 
 HEADING_RE = re.compile(r"^ {0,3}(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$")
 FENCE_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
-KEY_RE = re.compile(r"^([^\s#:\-\[{][^:]*?)\s*:(?:\s|$)")
+KEY_RE = re.compile(r"^([^\s#:\-\[{].*?)\s*:(?:\s|$)")  # a key may contain a colon: `adr:supersedes`
 STATUS_RE = re.compile(r"^Status:[ \t]*(.*?)[ \t]*$")
 INLINE_CODE_RE = re.compile(r"(`+)(?!`).+?(?<!`)\1(?!`)")
 BOM = "﻿"
