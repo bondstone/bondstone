@@ -3,7 +3,7 @@ id: ADR-013
 type: adr:Decision
 title: Integrate other tools through adapters, Spec Kit first
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

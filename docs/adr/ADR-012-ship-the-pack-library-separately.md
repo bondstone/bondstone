@@ -3,7 +3,7 @@ id: ADR-012
 type: adr:Decision
 title: Ship the pack library as a separate optional package
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

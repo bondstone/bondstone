@@ -1,6 +1,6 @@
 .bondstone/profile.yaml: warn profile/code-change-updates-living-spec: Changes to app code come with an update to the living specs they implement. (changed app/lib/habits.dart; needs 1 changed document(s) matching role=living-spec)
 app/lib/habits.dart:10: error bondstone/code-ref-unknown: code references unknown id 'REQ-HAB-009'
-docs/adr/ADR-002-store-habits-locally-with-sqlite.md:1: error bondstone/immutable: ADR-002 was 'accepted' and may not be edited (only status may change)
+docs/adr/ADR-002-store-habits-locally-with-sqlite.md:1: error bondstone/immutable: ADR-002 was 'accepted' and may not be edited (only owner, status may change)
     hint: Create a new document that supersedes it instead.
 docs/discovery/solutions/SOL-2-streak-freeze.md:6: error bondstone/link-broken: addresses -> 'OPP-9': no such document
 docs/generated/opportunity-solution-tree.md: error bondstone/view-stale: generated view ost/tree is out of date

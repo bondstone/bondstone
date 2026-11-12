@@ -3,7 +3,7 @@ id: CAP-rules
 type: capability:Capability
 title: Rules and traits
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: RUL
 constrained_by: [ADR-003]
 depends_on: [CAP-graph, CAP-profiles]
@@ -92,7 +92,9 @@ has the `lifecycle` trait, and an `owner` on every document whose type has the `
 
 For a type with the `supersedable` trait, bondstone SHALL report a superseded document whose
 status is not `superseded`, a document superseded by more than one document, a cycle of
-supersede links, and a document with the status `superseded` that nothing supersedes.
+supersede links, and a document with the status `superseded` that nothing supersedes. When
+the lifecycle allows the step, `bondstone/supersede-status` MUST carry the fix command
+`bondstone status ID superseded`.
 
 #### Scenario: Superseded but still accepted
 

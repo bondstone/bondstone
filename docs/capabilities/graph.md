@@ -3,7 +3,7 @@ id: CAP-graph
 type: capability:Capability
 title: Documents, items and links
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: GRA
 constrained_by: [ADR-008, ADR-015]
 depends_on: [CAP-profiles]

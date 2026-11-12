@@ -3,7 +3,7 @@ id: CAP-diff-checks
 type: capability:Capability
 title: Checks against a base commit
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: DIF
 constrained_by: [ADR-005]
 depends_on: [CAP-graph, CAP-rules, CAP-code-traceability]
@@ -127,7 +127,8 @@ contains a changed line, in the current file for added and changed lines and in 
 the merge base for removed lines, and require the document of every such tag that matches the
 selector to have changed. A tag on an item counts for the item's document. A change to a tag
 line itself MUST NOT count. A new or a deleted file traces every tag in it. When nothing is
-traced, the clause holds unless it also has `min`.
+traced, the clause holds unless it also has `min`. `bondstone context --base` uses the same
+tracing to say which documents a change affects.
 
 #### Scenario: One function of two
 

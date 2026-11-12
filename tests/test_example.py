@@ -110,7 +110,7 @@ def test_broken_example_against_its_base_reports_the_four_failures_of_the_poc_re
         "profile/code-change-updates-living-spec", "bondstone/code-ref-unknown", "bondstone/immutable",
         "bondstone/link-broken"]
     assert ("docs/adr/ADR-002-store-habits-locally-with-sqlite.md:1: error bondstone/immutable: "
-            "ADR-002 was 'accepted' and may not be edited (only status may change)\n"
+            "ADR-002 was 'accepted' and may not be edited (only owner, status may change)\n"
             "    hint: Create a new document that supersedes it instead.\n") in text
     # the appended line is only a tag, so no spec is traced and the rule's `min: 1` asks for any living spec
     assert (".bondstone/profile.yaml: warn profile/code-change-updates-living-spec: "

@@ -3,7 +3,7 @@ id: ADR-005
 type: adr:Decision
 title: Exempt a change from a diff rule with a commit trailer
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

@@ -5,17 +5,21 @@ Exit codes: 0 no violations, 1 violations found, 2 configuration error, 3 enviro
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
-from . import __version__
+import yaml
+
+from . import __version__, agent, context, edit, export
 from .baseline import record_baseline
 from .config import Config, load_config
-from .format import FORMATS, render
+from .format import FORMATS, JSON_VERSION, render
 from .git import GitRepository
 from .graph import build_graph
-from .model import ERROR, IGNORE, WARN, EnvironmentProblem
+from .model import ERROR, IGNORE, WARN, EnvironmentProblem, Refused
 from .resolve import find_root
 from .rules import fails, run_check
 from .views import generate
@@ -90,6 +94,138 @@ def cmd_profile_check(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _sets(items: list[str] | None) -> dict[str, Any]:
+    """`--set KEY=VALUE` options as a mapping; a value is read as YAML, so `a=[X, Y]` is a list."""
+    sets: dict[str, Any] = {}
+    for item in items or []:
+        key, separator, value = item.partition("=")
+        if not separator or not key.strip():
+            raise Refused(f"--set expects KEY=VALUE, got '{item}'")
+        try:
+            sets[key.strip()] = yaml.safe_load(value) if value.strip() else ""
+        except yaml.YAMLError:
+            sets[key.strip()] = value  # not YAML, such as text with a colon: keep it as written
+    return sets
+
+
+# bondstone: REQ-SCF-006
+def _after_edit(args: argparse.Namespace, lines: list[str], payload: dict[str, Any]) -> int:
+    """Regenerate the views an edit made stale, then report what the command did."""
+    cfg = load_config(_root(args))
+    views = generate(cfg, build_graph(cfg)) if not cfg.errors else []
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **payload, "views": views})
+    else:
+        for line in [*lines, *(f"wrote {path}" for path in views)]:
+            print(line)
+    return EXIT_OK
+
+
+# bondstone: REQ-SCF-001
+def cmd_new(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    created = edit.new_document(cfg, build_graph(cfg), args.type, args.title, _sets(args.set))
+    return _after_edit(args, [f"created {created.path} ({created.id})"], {"id": created.id, "path": created.path})
+
+
+# bondstone: REQ-SCF-003
+def cmd_status(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    change = edit.change_status(cfg, build_graph(cfg), args.id, args.status)
+    line = (f"{change.id}: {change.old} -> {change.new} ({change.path})" if change.changed
+            else f"{change.id} is already {change.new}")
+    return _after_edit(args, [line], {"id": change.id, "path": change.path, "old": change.old, "new": change.new,
+                                      "changed": change.changed})
+
+
+# bondstone: REQ-SCF-004
+def cmd_supersede(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    result = edit.supersede(cfg, build_graph(cfg), args.id, args.title, _sets(args.set))
+    lines = [f"created {result.created.path} ({result.created.id})",
+             *(f"updated {line}" for line in result.updated), *(f"skipped {line}" for line in result.skipped)]
+    return _after_edit(args, lines, {"id": result.created.id, "path": result.created.path,
+                                     "updated": result.updated, "skipped": result.skipped})
+
+
+# bondstone: REQ-AGT-003
+def cmd_context(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    graph = build_graph(cfg)
+    if args.base:
+        found = context.context_since(cfg, graph, GitRepository(cfg.root), args.base)
+    else:
+        found = context.context_for(cfg, graph, [context.normalize(cfg, path) for path in args.paths])
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **found.to_dict()})
+    else:
+        sys.stdout.write(context.to_text(found))
+    return EXIT_OK
+
+
+# bondstone: REQ-AGT-005
+def cmd_agent(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    if cfg is None:
+        return EXIT_CONFIG
+    if args.output == "-":
+        sys.stdout.write(agent.skill(cfg) if args.format == "skill" else agent.instructions(cfg))
+        return EXIT_OK
+    path, changed = agent.write(cfg, args.format, args.output)
+    print(f"wrote {path}" if changed else f"{path} is up to date")
+    return EXIT_OK
+
+
+# bondstone: REQ-AGT-007
+def cmd_graph(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    if cfg is None:
+        return EXIT_CONFIG
+    graph = build_graph(cfg)
+    if args.format == "mermaid":
+        sys.stdout.write(export.graph_mermaid(cfg, graph, args.type))
+    else:
+        sys.stdout.write(export.to_json(export.graph_json(cfg, graph, args.type)))
+    return EXIT_OK
+
+
+def _print_json(payload: object) -> None:
+    sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
+
+
+# bondstone: REQ-AGT-001
+def cmd_rules(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    rules = agent.list_rules(cfg)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, "rules": [rule.to_dict() for rule in rules]})
+    else:
+        sys.stdout.write(agent.rules_text(rules))
+    return EXIT_OK
+
+
+# bondstone: REQ-AGT-002
+def cmd_explain(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **agent.explain(cfg, args.rule)})
+    else:
+        sys.stdout.write(agent.explain_text(cfg, args.rule))
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", default=argparse.SUPPRESS,
@@ -122,6 +258,59 @@ def build_parser() -> argparse.ArgumentParser:
     baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
     baseline.set_defaults(func=cmd_baseline)
 
+    setting = argparse.ArgumentParser(add_help=False)
+    setting.add_argument("--title", required=True, help="title of the new document")
+    setting.add_argument("--set", action="append", metavar="KEY=VALUE",
+                         help="a frontmatter field or link of the new document; may be repeated")
+
+    new = commands.add_parser("new", parents=[common, output, setting],
+                              help="scaffold a document with the next id at its type's path")
+    new.add_argument("type", metavar="TYPE", help="a document type such as adr:Decision")
+    new.set_defaults(func=cmd_new)
+
+    status = commands.add_parser("status", parents=[common, output],
+                                 help="change the status of a document or an item, if its lifecycle allows it")
+    status.add_argument("id", metavar="ID")
+    status.add_argument("status", metavar="STATUS")
+    status.set_defaults(func=cmd_status)
+
+    supersede = commands.add_parser("supersede", parents=[common, output, setting],
+                                    help="replace a document: successor, `superseded` status, links moved")
+    supersede.add_argument("id", metavar="ID", help="the document to replace")
+    supersede.set_defaults(func=cmd_supersede)
+
+    ctx = commands.add_parser("context", parents=[common, output],
+                              help="list what to read before editing: traced documents and the rules that will fire")
+    what = ctx.add_mutually_exclusive_group(required=True)
+    what.add_argument("--for", dest="paths", nargs="+", metavar="PATH", help="files or folders about to be edited")
+    what.add_argument("--base", metavar="REF", help="the files changed since REF")
+    ctx.set_defaults(func=cmd_context)
+
+    instructions = commands.add_parser("agent", parents=[common],
+                                       help="write the instructions for coding agents from the active profile")
+    instructions.add_argument("--format", choices=["md", "skill"], default="md",
+                              help="Markdown (default) or a Claude Code skill")
+    instructions.add_argument("--output", metavar="FILE",
+                              help=f"where to write (default: {agent.MARKDOWN_PATH}, or {agent.SKILL_PATH} "
+                                   "for a skill); `-` prints instead")
+    instructions.set_defaults(func=cmd_agent)
+
+    graph = commands.add_parser("graph", parents=[common], help="export the graph of documents, links and code tags")
+    graph.add_argument("--format", choices=["json", "mermaid"], default="json",
+                       help="JSON (default) or a Mermaid diagram")
+    graph.add_argument("--type", action="append", metavar="TYPE",
+                       help="only nodes of this type; may be repeated (a diagram shows documents only by default)")
+    graph.set_defaults(func=cmd_graph)
+
+    rules = commands.add_parser("rules", parents=[common, output],
+                                help="list the active rules with their effective severity")
+    rules.set_defaults(func=cmd_rules)
+
+    explain = commands.add_parser("explain", parents=[common, output],
+                                  help="explain one rule: what it asks, why, and how to satisfy it")
+    explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
+    explain.set_defaults(func=cmd_explain)
+
     profile = commands.add_parser("profile", help="profile commands")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True, metavar="COMMAND")
     profile_check = profile_commands.add_parser("check", parents=[common, output],
@@ -135,6 +324,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
+    except Refused as exc:
+        print(f"bondstone: {exc}", file=sys.stderr)
+        return EXIT_VIOLATIONS
     except EnvironmentProblem as exc:
         print(f"bondstone: {exc}", file=sys.stderr)
         return EXIT_ENVIRONMENT

@@ -3,7 +3,7 @@ id: ADR-001
 type: adr:Decision
 title: Implement bondstone in Python
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

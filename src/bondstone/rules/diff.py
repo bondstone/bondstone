@@ -335,35 +335,44 @@ def _tags_touching(text: str, lines: frozenset[int] | None) -> set[str]:
 
 
 # bondstone: REQ-DIF-009
+def traced_ids(cfg: Config, repo: Repository, changes: ChangeSet, change: Change) -> set[str]:
+    """Ids of the tags whose code region one change touched.
+
+    Regions come from the current file for added and changed lines, and from the file at the
+    base for removed lines. A new or a deleted file touches every tag in it."""
+    old_text = None if change.kind == ADDED else repo.file_at(changes.base, change.old_path or change.path)
+    new_text = None
+    if change.kind != DELETED:
+        try:
+            new_text = (cfg.root / change.path).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            new_text = None
+    if old_text is None or new_text is None:
+        return _tags_touching(new_text or old_text or "", None)
+    lines = repo.changed_lines(changes.base, change)
+    return _tags_touching(new_text, lines.new) | _tags_touching(old_text, lines.old)
+
+
+def document_of(graph: Graph, node_id: str) -> Node | None:
+    """The document a node belongs to: itself, or the document of an item."""
+    node = graph.by_id.get(node_id)
+    while node is not None and node.parent is not None:
+        node = graph.by_id.get(node.parent)
+    return node
+
+
+# bondstone: REQ-DIF-009
 def _traced_documents(cfg: Config, graph: Graph, repo: Repository, changes: ChangeSet,
                       triggering: list[Change]) -> dict[str, set[str]]:
     """Documents tagged in the changed regions of the triggering files -> those files.
 
-    Regions come from the current file for added and changed lines, and from the file at the
-    base for removed lines. A tag on an item counts for the item's document."""
+    A tag on an item counts for the item's document."""
     traced: dict[str, set[str]] = {}
     for change in triggering:
-        refs: set[str] = set()
-        old_text = None if change.kind == ADDED else repo.file_at(changes.base, change.old_path or change.path)
-        new_text = None
-        if change.kind != DELETED:
-            try:
-                new_text = (cfg.root / change.path).read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                new_text = None
-        if old_text is None or new_text is None:
-            # a new or a deleted file: everything in it changed
-            refs |= _tags_touching(new_text or old_text or "", None)
-        else:
-            lines = repo.changed_lines(changes.base, change)
-            refs |= _tags_touching(new_text, lines.new)
-            refs |= _tags_touching(old_text, lines.old)
-        for ref in refs:
-            node = graph.by_id.get(ref)
-            while node is not None and node.parent is not None:
-                node = graph.by_id.get(node.parent)
-            if node is not None and node.id:
-                traced.setdefault(node.id, set()).add(change.path)
+        for ref in traced_ids(cfg, repo, changes, change):
+            document = document_of(graph, ref)
+            if document is not None and document.id:
+                traced.setdefault(document.id, set()).add(change.path)
     return traced
 
 

@@ -72,6 +72,13 @@ GIT_ENV = {
 }
 
 
+@pytest.fixture(autouse=True)
+def no_git_user_from_this_machine(monkeypatch):
+    """Tests see no git configuration of the machine they run on: `bondstone new` reads `user.name`."""
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+
+
 @pytest.fixture
 def project(tmp_path: Path) -> Project:
     return Project(tmp_path)

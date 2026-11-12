@@ -24,8 +24,10 @@ jobs:
       - name: bondstone check against the pull request's base
         if: github.event_name == 'pull_request'
         run: uv run bondstone check --fail-on warn --base origin/${{ github.base_ref }}
-      - name: gen leaves every view unchanged
+      - name: generated views and agent instructions are up to date
         run: |
           uv run bondstone --root examples/habit-tracker gen
+          uv run bondstone --root examples/habit-tracker agent
           uv run bondstone gen
+          uv run bondstone agent
           git diff --exit-code

@@ -3,7 +3,7 @@ id: CAP-code-traceability
 type: capability:Capability
 title: Code traceability
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: TRC
 constrained_by: [ADR-009]
 depends_on: [CAP-graph]

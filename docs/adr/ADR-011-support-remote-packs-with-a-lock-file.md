@@ -3,7 +3,7 @@ id: ADR-011
 type: adr:Decision
 title: Support remote packs with a lock file in v1
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

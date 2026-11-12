@@ -3,7 +3,7 @@ id: CAP-views
 type: capability:Capability
 title: Generated views
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: VIE
 depends_on: [CAP-graph, CAP-rules]
 ---

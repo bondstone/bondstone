@@ -3,7 +3,7 @@ id: ADR-015
 type: adr:Decision
 title: Require a type in every document's frontmatter
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

@@ -191,11 +191,17 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 superseded_by.setdefault(ref.target, []).append(node)
                 target = graph.by_id.get(ref.target)
                 if target is not None and tracks_status and target.status != SUPERSEDED:
+                    transitions = (tdef.traits.get("lifecycle") or {}).get("transitions")
+                    allowed = transitions is None or SUPERSEDED in as_list(transitions.get(target.status))
                     out.append(diagnostic(
                         "bondstone/supersede-status",
                         f"{node.id} supersedes {target.id}, but {target.id} has status '{target.status}'",
                         target.path, target.field_lines.get("status", 1), target.id,
-                        hint=f"Set `status: {SUPERSEDED}` in {target.path}."))
+                        hint=f"Run `bondstone status {target.id} {SUPERSEDED}`." if allowed
+                        else f"Set `status: {SUPERSEDED}` in {target.path}; "
+                             f"its lifecycle does not allow that step from '{target.status}'.",
+                        # one command resolves it when the lifecycle allows the step
+                        fix={"command": ["bondstone", "status", target.id, SUPERSEDED]} if allowed else None))
         for target_id, sources in superseded_by.items():
             if len(sources) > 1:
                 target = graph.by_id.get(target_id)

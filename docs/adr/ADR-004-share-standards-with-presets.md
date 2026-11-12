@@ -3,7 +3,7 @@ id: ADR-004
 type: adr:Decision
 title: Share standards across repositories with presets
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

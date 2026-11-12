@@ -3,7 +3,7 @@ id: ADR-006
 type: adr:Decision
 title: Adopt with known violations that may only shrink
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

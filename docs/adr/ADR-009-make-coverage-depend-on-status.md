@@ -3,7 +3,7 @@ id: ADR-009
 type: adr:Decision
 title: Make code coverage depend on status
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

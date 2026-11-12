@@ -3,6 +3,13 @@
 
 | Id | Title | Parent |
 |---|---|---|
+| [REQ-AGT-001](../capabilities/agent-guidance.md#req-agt-001-list-the-active-rules-with-their-effective-severity) | List the active rules with their effective severity | CAP-agent-guidance |
+| [REQ-AGT-002](../capabilities/agent-guidance.md#req-agt-002-explain-one-rule) | Explain one rule | CAP-agent-guidance |
+| [REQ-AGT-003](../capabilities/agent-guidance.md#req-agt-003-say-what-to-read-before-editing) | Say what to read before editing | CAP-agent-guidance |
+| [REQ-AGT-004](../capabilities/agent-guidance.md#req-agt-004-say-which-diff-rules-will-fire) | Say which diff rules will fire | CAP-agent-guidance |
+| [REQ-AGT-005](../capabilities/agent-guidance.md#req-agt-005-generate-the-instructions-for-agents) | Generate the instructions for agents | CAP-agent-guidance |
+| [REQ-AGT-006](../capabilities/agent-guidance.md#req-agt-006-offer-the-instructions-as-a-skill) | Offer the instructions as a skill | CAP-agent-guidance |
+| [REQ-AGT-007](../capabilities/agent-guidance.md#req-agt-007-export-the-graph) | Export the graph | CAP-agent-guidance |
 | [REQ-CLI-001](../capabilities/cli.md#req-cli-001-check-a-repository) | Check a repository | CAP-cli |
 | [REQ-CLI-002](../capabilities/cli.md#req-cli-002-regenerate-views) | Regenerate views | CAP-cli |
 | [REQ-CLI-003](../capabilities/cli.md#req-cli-003-check-the-configuration-alone) | Check the configuration alone | CAP-cli |
@@ -50,6 +57,12 @@
 | [REQ-RUL-007](../capabilities/rules.md#req-rul-007-keep-supersession-consistent) | Keep supersession consistent | CAP-rules |
 | [REQ-RUL-008](../capabilities/rules.md#req-rul-008-report-leftover-placeholders) | Report leftover placeholders | CAP-rules |
 | [REQ-RUL-009](../capabilities/rules.md#req-rul-009-make-every-diagnostic-actionable) | Make every diagnostic actionable | CAP-rules |
+| [REQ-SCF-001](../capabilities/scaffolding.md#req-scf-001-scaffold-a-document-at-the-right-id-and-path) | Scaffold a document at the right id and path | CAP-scaffolding |
+| [REQ-SCF-002](../capabilities/scaffolding.md#req-scf-002-write-a-document-that-passes-the-check) | Write a document that passes the check | CAP-scaffolding |
+| [REQ-SCF-003](../capabilities/scaffolding.md#req-scf-003-change-a-status-within-the-lifecycle) | Change a status within the lifecycle | CAP-scaffolding |
+| [REQ-SCF-004](../capabilities/scaffolding.md#req-scf-004-supersede-a-document) | Supersede a document | CAP-scaffolding |
+| [REQ-SCF-005](../capabilities/scaffolding.md#req-scf-005-edit-only-the-lines-that-change) | Edit only the lines that change | CAP-scaffolding |
+| [REQ-SCF-006](../capabilities/scaffolding.md#req-scf-006-regenerate-views-after-an-edit) | Regenerate views after an edit | CAP-scaffolding |
 | [REQ-TRC-001](../capabilities/code-traceability.md#req-trc-001-find-tags-in-code) | Find tags in code | CAP-code-traceability |
 | [REQ-TRC-002](../capabilities/code-traceability.md#req-trc-002-know-the-region-of-code-a-tag-annotates) | Know the region of code a tag annotates | CAP-code-traceability |
 | [REQ-TRC-003](../capabilities/code-traceability.md#req-trc-003-reject-tags-that-point-nowhere) | Reject tags that point nowhere | CAP-code-traceability |
