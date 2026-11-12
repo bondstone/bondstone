@@ -171,3 +171,125 @@ def test_check_reports_stale_views_with_a_fix(project):
     generate(*world(project))
     project.write("docs/generated/solutions.md", project.read("docs/generated/solutions.md") + "edited by hand\n")
     assert stale_paths(project) == ["docs/generated/solutions.md"]
+
+
+# ----------------------------------------------------------------------- link columns and matrices
+
+HEADER = "<!-- bondstone:generated view=profile/{id}; do not edit, run `bondstone gen` -->\n# {title}\n\n"
+
+
+def linked(project, **profile):
+    """Three decisions and three capabilities; CAP-a is constrained by two decisions, CAP-c by none."""
+    standard(project, **profile)
+    project.write("docs/adr/ADR-001-a.md", adr("ADR-001"))
+    project.write("docs/adr/ADR-002-b.md", adr("ADR-002", extra="supersedes: ADR-001\n"))
+    project.write("docs/adr/ADR-010-j.md", adr("ADR-010", "proposed"))
+    project.write("docs/capabilities/a.md", capability("CAP-a", "AA", extra="constrained_by: [ADR-010, ADR-002]\n"))
+    project.write("docs/capabilities/b.md", capability("CAP-b", "BB", extra="constrained_by: [ADR-002]\ndepends_on: [CAP-a]\n"))
+    project.write("docs/capabilities/c.md", capability("CAP-c", "CC", extra="depends_on: [CAP-b]\n"))
+    return project
+
+
+def test_table_columns_show_outgoing_and_incoming_links_as_linked_ids(project):
+    view = {"id": "usage", "title": "Decisions", "output": "docs/generated/usage.md",
+            "select": {"type": "adr:Decision"}, "columns": ["id", "status", "<-constrained_by", "supersedes"]}
+    linked(project, views=[view])
+    assert rendered(project, "profile/usage") == HEADER.format(id="usage", title="Decisions") + (
+        "| Id | Status | ← Constrained by | Supersedes |\n"
+        "|---|---|---|---|\n"
+        "| [ADR-001](../adr/ADR-001-a.md) | accepted |  |  |\n"
+        "| [ADR-002](../adr/ADR-002-b.md) | accepted | [CAP-a](../capabilities/a.md), [CAP-b](../capabilities/b.md) "
+        "| [ADR-001](../adr/ADR-001-a.md) |\n"
+        "| [ADR-010](../adr/ADR-010-j.md) | proposed | [CAP-a](../capabilities/a.md) |  |\n"
+    )
+
+
+def test_an_outgoing_link_column_keeps_the_written_order_and_shows_broken_targets_as_text(project):
+    view = {"id": "caps", "title": "Capabilities", "output": "caps.md", "select": {"type": "capability:Capability"},
+            "columns": ["id", "adr-capability:constrained_by", "<-capability:depends_on"]}
+    linked(project, views=[view])
+    project.edit("docs/capabilities/b.md", "constrained_by: [ADR-002]", "constrained_by: [ADR-002, ADR-404, ADR-002]")
+    assert rendered(project, "profile/caps") == HEADER.format(id="caps", title="Capabilities") + (
+        "| Id | Constrained by | ← Depends on |\n"
+        "|---|---|---|\n"
+        "| [CAP-a](docs/capabilities/a.md) | [ADR-010](docs/adr/ADR-010-j.md), [ADR-002](docs/adr/ADR-002-b.md) "
+        "| [CAP-b](docs/capabilities/b.md) |\n"
+        "| [CAP-b](docs/capabilities/b.md) | [ADR-002](docs/adr/ADR-002-b.md), ADR-404 | [CAP-c](docs/capabilities/c.md) |\n"
+        "| [CAP-c](docs/capabilities/c.md) |  |  |\n"
+    )
+
+
+def test_a_link_column_of_a_type_that_cannot_have_the_link_is_empty(project):
+    view = {"id": "all", "title": "All", "output": "all.md", "select": {"type": ["adr:Decision", "capability:Capability"]},
+            "columns": ["id", "depends_on"], "sort": "type"}
+    linked(project, views=[view])
+    lines = rendered(project, "profile/all").splitlines()
+    assert lines[3] == "| Id | Depends on |"
+    assert lines[5] == "| [ADR-001](docs/adr/ADR-001-a.md) |  |"
+    assert lines[-1] == "| [CAP-c](docs/capabilities/c.md) | [CAP-b](docs/capabilities/b.md) |"
+
+
+MATRIX = {"id": "applied", "title": "Applied", "output": "docs/generated/applied.md", "render": "matrix",
+          "rows": {"type": "capability:Capability"}, "cols": {"type": "adr:Decision"}, "via": ["constrained_by"]}
+
+
+def test_matrix_marks_where_a_link_connects_a_row_and_a_column(project):
+    linked(project, views=[MATRIX])
+    assert rendered(project, "profile/applied") == HEADER.format(id="applied", title="Applied") + (
+        "| | [ADR-001](../adr/ADR-001-a.md) | [ADR-002](../adr/ADR-002-b.md) | [ADR-010](../adr/ADR-010-j.md) |\n"
+        "|---|:---:|:---:|:---:|\n"
+        "| [CAP-a](../capabilities/a.md) Capability CAP-a |  | ✓ | ✓ |\n"
+        "| [CAP-b](../capabilities/b.md) Capability CAP-b |  | ✓ |  |\n"
+        "| [CAP-c](../capabilities/c.md) Capability CAP-c |  |  |  |\n"
+    )
+
+
+def test_matrix_follows_a_path_of_links_forwards_and_backwards(project):
+    """Decisions against the capabilities that depend on a capability they constrain."""
+    path = {**MATRIX, "rows": {"type": "adr:Decision", "status": "accepted"}, "cols": {"type": "capability:Capability"},
+            "via": ["<-constrained_by", "<-depends_on"]}
+    linked(project, views=[path])
+    assert rendered(project, "profile/applied").splitlines()[3:] == [
+        "| | [CAP-a](../capabilities/a.md) | [CAP-b](../capabilities/b.md) | [CAP-c](../capabilities/c.md) |",
+        "|---|:---:|:---:|:---:|",
+        "| [ADR-001](../adr/ADR-001-a.md) Decision ADR-001 |  |  |  |",
+        "| [ADR-002](../adr/ADR-002-b.md) Decision ADR-002 |  | ✓ | ✓ |",  # CAP-a -> CAP-b, CAP-b -> CAP-c
+    ]
+    back = {**MATRIX, "rows": {"type": "adr:Decision"}, "cols": {"type": "adr:Decision"}, "via": ["supersedes"]}
+    linked(project, views=[back])
+    assert rendered(project, "profile/applied").splitlines()[6] == (
+        "| [ADR-002](../adr/ADR-002-b.md) Decision ADR-002 | ✓ |  |  |")
+
+
+def test_matrix_without_rows_or_columns(project):
+    linked(project, views=[{**MATRIX, "cols": {"type": "adr:Decision", "status": "rejected"}}])
+    assert rendered(project, "profile/applied") == HEADER.format(id="applied", title="Applied") + "_No entries._\n"
+
+
+def test_a_matrix_is_generated_and_goes_stale_like_any_view(project):
+    linked(project, views=[MATRIX], overrides={"bondstone/view-stale": "error"})
+    cfg, graph = world(project)
+    assert "docs/generated/applied.md" in generate(cfg, graph)
+    assert [d.rule for d in check(project) if d.rule == "bondstone/view-stale"] == []
+    project.edit("docs/capabilities/c.md", "depends_on: [CAP-b]", "depends_on: [CAP-b]\nconstrained_by: [ADR-001]")
+    assert [(d.rule, d.path) for d in check(project) if d.rule == "bondstone/view-stale"] == [
+        ("bondstone/view-stale", "docs/generated/applied.md")]
+
+
+def test_matrix_and_link_columns_are_validated(project):
+    def messages(view):
+        standard(project, views=[view])
+        return [d.message for d in load_config(project.root).errors]
+
+    assert messages({**MATRIX, "via": ["nope", "<-missing"], "rows": {"type": "adr:Nope"}}) == [
+        "profile/applied: unknown type 'adr:Nope'",
+        "profile/applied: unknown link 'nope'", "profile/applied: unknown link 'missing'"]
+    assert messages({key: value for key, value in MATRIX.items() if key not in ("cols", "via")}) == [
+        "profile/applied: a matrix needs `rows`, `cols` and `via`"]
+    assert messages({**MATRIX, "render": "table"}) == [
+        "profile/applied: `rows`, `cols`, `via` only apply to `render: matrix`"]
+    assert messages({"id": "t", "output": "t.md", "via": ["supersedes"]}) == [
+        "profile/t: `via` only applies to `render: matrix`"]
+    assert messages({"id": "t", "output": "t.md", "columns": ["id", "<-nope", "anything"]}) == [
+        "profile/t: unknown link 'nope'"]
+    assert messages({**MATRIX, "via": []}) == ["views[0].via: [] should be non-empty"]

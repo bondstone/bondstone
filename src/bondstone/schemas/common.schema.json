@@ -150,8 +150,16 @@
         "title": {"type": "string"},
         "description": {"type": "string"},
         "output": {"type": "string"},
-        "render": {"enum": ["table", "tree"], "x-error": "expected one of table, tree"},
+        "render": {"enum": ["table", "tree", "matrix"], "x-error": "expected one of table, tree, matrix"},
         "select": {"$ref": "#/$defs/selector"},
+        "rows": {"description": "Matrix: the nodes shown as rows.", "$ref": "#/$defs/selector"},
+        "cols": {"description": "Matrix: the nodes shown as columns.", "$ref": "#/$defs/selector"},
+        "via": {
+          "description": "Matrix: the links that lead from a row to a column, step by step; `<-name` follows a link backwards.",
+          "type": "array",
+          "items": {"type": "string"},
+          "minItems": 1
+        },
         "columns": {"type": "array", "items": {"type": "string"}, "minItems": 1},
         "sort": {"$ref": "#/$defs/stringOrList"},
         "levels": {

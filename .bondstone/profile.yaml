@@ -10,11 +10,24 @@ defaults:
 code:
   include: ["src/bondstone/**/*.py"]
 
+views:
+  - id: decisions-applied
+    title: Capabilities and the decisions that constrain them
+    output: docs/generated/decisions-applied.md
+    render: matrix
+    rows: {type: "capability:Capability"}
+    cols: {type: "adr:Decision"}
+    via: [constrained_by]
+  - id: decision-usage
+    title: Decisions and where they apply
+    output: docs/generated/decision-usage.md
+    select: {type: "adr:Decision"}
+    columns: [id, title, status, "<-constrained_by"]
+
 waivers:
   # Accepted decisions that no capability applies yet, because the phase that builds them has not started.
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-006, reason: "Known violations arrive in phase 5.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-007, reason: "The speckit pack and its delivers links arrive in phase 4.", expires: 2027-06-30}
-  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-010, reason: "Matrix views and link columns arrive in phase 4.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-011, reason: "Git sources and the lock file arrive in phase 5.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-013, reason: "The Spec Kit adapter arrives in phase 4.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-014, reason: "Portfolio links come after v1.", expires: 2027-06-30}

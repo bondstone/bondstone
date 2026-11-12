@@ -65,6 +65,30 @@ $ bondstone --root examples/habit-tracker check
 JSON output has a `version`, a `summary` and one entry per diagnostic with `rule`, `severity`,
 `path`, `line`, `node`, `message`, `hint` and, when one command resolves it, `fix.command`.
 
+## Views
+
+A view is a generated Markdown file, declared by a pack, a bridge or the profile. `bondstone
+gen` writes it, and `check` fails when a committed view no longer matches the documents.
+
+```yaml
+views:
+  - id: decision-usage               # a table: one row per selected node
+    output: docs/generated/decision-usage.md
+    select: {type: "adr:Decision"}
+    columns: [id, title, status, "<-constrained_by"]   # a link column lists linked ids
+  - id: decisions-applied            # a matrix: a mark where the links connect row and column
+    output: docs/generated/decisions-applied.md
+    render: matrix
+    rows: {type: "capability:Capability"}
+    cols: {type: "adr:Decision"}
+    via: [constrained_by]            # a path of links; `<-name` follows a link backwards
+  - id: tree                         # a tree: the selected nodes, then what the links lead to
+    output: docs/generated/tree.md
+    render: tree
+    select: {type: "ost:Outcome"}
+    levels: [{incoming: serves}, {incoming: addresses}]
+```
+
 ## Presets
 
 A preset is a partial profile in a `preset.yaml`, found in the same places as packs. A profile
