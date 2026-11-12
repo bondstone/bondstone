@@ -33,9 +33,9 @@ refused.
 
 ### REQ-SCF-002: Write a document that passes the check
 
-A scaffolded document SHALL have `id`, `type`, `title`, the lifecycle's `initial` status, an
-owner from the profile's `defaults.owner` or the git user name, today's date in required date
-fields, the fields and links given with `--set KEY=VALUE`, and the type's template as its
+A scaffolded document SHALL have `id`, `type`, `title`, the lifecycle's `initial` status, the
+git user name as owner, or the profile's `defaults.owner` when git has none, today's date in
+required date fields, the fields and links given with `--set KEY=VALUE`, and the type's template as its
 body, or else its required sections. Bondstone MUST refuse, naming the `--set` to add, when a
 required field or a required link is missing, when a key is neither a field nor a link of the
 type, and when a link names a node that does not exist. `check` on the result reports only
@@ -50,8 +50,8 @@ leftover placeholders.
 ### REQ-SCF-003: Change a status within the lifecycle
 
 `bondstone status ID STATUS` SHALL set the status of a document in its frontmatter, and the
-status of an item in the `Status:` line under its heading, which it removes when the new
-status is the lifecycle's `default`. It MUST refuse a status the lifecycle does not have, a
+status of an item in the `Status:` line under its heading, which it adds when the item has
+none. It MUST write the line for the lifecycle's `default` status too. It MUST refuse a status the lifecycle does not have, a
 step the lifecycle's `transitions` do not allow, and a document that is immutable in its
 current status without `status` among the fields that may change.
 

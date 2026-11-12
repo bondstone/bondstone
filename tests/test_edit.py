@@ -104,12 +104,11 @@ def test_replace_target_only_touches_the_whole_id_in_that_key():
 ITEM = "## Requirements\n\n### REQ-AA-001: Thing\n\nThe system SHALL.\n"
 
 
-def test_set_item_status_adds_changes_and_removes_the_line():
+def test_set_item_status_adds_the_line_or_changes_the_one_that_is_there():
     added = set_item_status(ITEM, 3, None, "planned")
     assert added == "## Requirements\n\n### REQ-AA-001: Thing\n\nStatus: planned\n\nThe system SHALL.\n"
     assert set_item_status(added, 3, 5, "removed") == added.replace("planned", "removed")
-    assert set_item_status(added, 3, 5, None) == ITEM
-    assert set_item_status(ITEM, 3, None, None) == ITEM
+    assert set_item_status(ITEM.replace("\nThe system", "The system"), 3, None, "planned") == added
 
 
 def test_set_item_status_refuses_a_line_that_moved():
@@ -192,16 +191,17 @@ def test_new_needs_an_owner_and_required_links(project):
     pack = project.read(".bondstone/packs/adr/pack.yaml").replace("max: 1}", "max: 1, min: 1}")
     project.pack("adr", pack)
     project.git("config", "user.name", "")
-    with pytest.raises(Refused, match="needs an owner; pass --set owner="):
+    with pytest.raises(Refused, match="needs an owner; pass --set owner=..., set `user.name` in git"):
         new(project, "Decision", "T")
     with pytest.raises(Refused, match="needs at least 1 'supersedes' link"):
         new(project, "Decision", "T", owner="ann")
 
 
-def test_new_takes_the_owner_from_git_when_the_profile_has_no_default(project):
-    standard(project.init())
-    project.git("config", "user.name", "Git User")
-    assert "owner: Git User\n" in project.read(new(project, "Decision", "T").path)
+def test_the_owner_is_the_git_user_and_the_profile_default_is_the_fallback(repo):
+    assert "owner: ann\n" in repo.read(new(repo, "Decision", "No git user here").path)  # `defaults.owner`
+    repo.init().git("config", "user.name", "Git User")
+    assert "owner: Git User\n" in repo.read(new(repo, "Decision", "With a git user").path)
+    assert "owner: bob\n" in repo.read(new(repo, "Decision", "Set by hand", owner="bob").path)
 
 
 # --------------------------------------------------------------------------- status
@@ -256,8 +256,9 @@ def test_status_of_an_item_is_a_line_under_its_heading(repo):
     assert repo.read(path) == before.replace("### REQ-AA-001: Thing\n", "### REQ-AA-001: Thing\n\nStatus: planned\n")
     status(repo, "REQ-AA-001", "removed")
     assert "Status: removed\n" in repo.read(path)
-    status(repo, "REQ-AA-001", "active")  # the default status has no line
-    assert repo.read(path) == before
+    status(repo, "REQ-AA-001", "active")  # the default status is written out too
+    assert repo.read(path) == before.replace("### REQ-AA-001: Thing\n", "### REQ-AA-001: Thing\n\nStatus: active\n")
+    assert status(repo, "REQ-AA-001", "active").changed is False
 
 
 def test_status_of_an_item_follows_its_transitions(repo):

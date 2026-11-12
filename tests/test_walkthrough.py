@@ -112,7 +112,7 @@ def test_an_agent_adds_a_feature_and_check_passes_without_hand_edits(agent):
     # 5. The requirement is implemented now: move it along its lifecycle with the command.
     code, change = agent.run("status", "REQ-REM-003", "active")
     assert (code, change["old"], change["new"], change["changed"]) == (0, "planned", "active", True)
-    assert "Status: planned" not in project.read(spec)
+    assert "Status: planned" not in project.read(spec) and "Status: active" in project.read(spec)
 
     # 6. A last wording change to the decision's title makes the decision log stale.
     project.edit(decision, "title: Snooze with a second local notification", "title: Snooze with one more local notification")

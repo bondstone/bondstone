@@ -115,20 +115,15 @@ def replace_target(text: str, key: str, old: str, new: str) -> tuple[str, bool]:
 
 
 # bondstone: REQ-SCF-005
-def set_item_status(text: str, heading_line: int, status_line: int | None, status: str | None) -> str:
-    """Set, add or (with None) remove the `Status:` line under an item's heading."""
+def set_item_status(text: str, heading_line: int, status_line: int | None, status: str) -> str:
+    """Write the `Status:` line under an item's heading: change the one that is there, or add one."""
     lines = text.split("\n")
     if status_line is not None:
         index = status_line - 1
         if not STATUS_RE.match(lines[index]):
             raise Refused(f"line {status_line} is not a `Status:` line; was the file changed meanwhile?")
-        if status is not None:
-            lines[index] = f"Status: {status}"
-        else:
-            del lines[index]
-            if index < len(lines) and not lines[index].strip() and not lines[index - 1].strip():
-                del lines[index]  # do not leave two blank lines behind
-    elif status is not None:
+        lines[index] = f"Status: {status}"
+    else:
         lines[heading_line:heading_line] = ["", f"Status: {status}"]
         after = heading_line + 2
         if after < len(lines) and lines[after].strip():
@@ -229,9 +224,11 @@ def new_document(cfg: Config, graph: Graph, type_name: str, title: str, sets: di
     if lifecycle:
         fields["status"] = sets.pop("status", None) or lifecycle.get("initial") or as_list(lifecycle.get("statuses"))[0]
     if "owned" in traits:
-        owner = sets.pop("owner", None) or (cfg.profile.get("defaults") or {}).get("owner") or _git_user(cfg.root)
+        # the person who creates a document owns it; the profile's default covers a machine without a git user
+        owner = sets.pop("owner", None) or _git_user(cfg.root) or (cfg.profile.get("defaults") or {}).get("owner")
         if not owner:
-            raise Refused(f"{tdef.qname} needs an owner; pass --set owner=..., or set `defaults.owner` in the profile")
+            raise Refused(f"{tdef.qname} needs an owner; pass --set owner=..., set `user.name` in git, "
+                          "or set `defaults.owner` in the profile")
         fields["owner"] = owner
     slug = str(sets.pop("slug", None) or slugify(title))
     explicit_id = sets.pop("id", None)
@@ -334,9 +331,8 @@ def change_status(cfg: Config, graph: Graph, node_id: str, new: str) -> StatusCh
     path = cfg.root / node.path
     text = path.read_text(encoding="utf-8")
     if node.is_item:
-        default = lifecycle.get("default")
-        text = set_item_status(text, node.line, node.field_lines.get("status"),
-                               None if default is not None and new == str(default) else new)
+        # always written out, also for the lifecycle's default: the line then says what was decided
+        text = set_item_status(text, node.line, node.field_lines.get("status"), new)
     else:
         text = set_field(text, "status", new)
     path.write_text(text, encoding="utf-8", newline="\n")
