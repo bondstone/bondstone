@@ -29,6 +29,7 @@ def check_engine(cfg: Config, graph: Graph) -> list[Diagnostic]:
 # --------------------------------------------------------------------------- nodes
 
 
+# bondstone: REQ-GRA-008, REQ-RUL-006, REQ-RUL-008
 def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """Ids, frontmatter fields, leftover placeholders and required sections."""
     out: list[Diagnostic] = []
@@ -73,6 +74,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
     return out
 
 
+# bondstone: REQ-GRA-007
 def _check_id(cfg: Config, node: Node, document: Node | None, seen: dict[str, Node]) -> list[Diagnostic]:
     tdef = cfg.types[node.type]
     if node.is_item:
@@ -108,6 +110,7 @@ def _check_id(cfg: Config, node: Node, document: Node | None, seen: dict[str, No
     return out
 
 
+# bondstone: REQ-GRA-008
 def _schema_diagnostic(cfg: Config, node: Node, error: Any) -> Diagnostic:
     if error.validator == "required":
         found = re.match(r"'(.+)' is a required property", error.message)
@@ -130,6 +133,7 @@ def _schema_diagnostic(cfg: Config, node: Node, error: Any) -> Diagnostic:
 # --------------------------------------------------------------------------- links
 
 
+# bondstone: REQ-GRA-009
 def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """Every link points at an existing node of an allowed type, within its min and max."""
     out: list[Diagnostic] = []
@@ -169,6 +173,7 @@ def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
 # --------------------------------------------------------------------------- supersedable
 
 
+# bondstone: REQ-RUL-007
 def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """Supersession forms single chains, and a superseded node says so in its status."""
     out: list[Diagnostic] = []
@@ -221,6 +226,7 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
 # --------------------------------------------------------------------------- code tags
 
 
+# bondstone: REQ-TRC-003, REQ-TRC-004, REQ-TRC-005
 def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
     """Tags point at code-traceable nodes, and nodes that need code are tagged (D9)."""
     if not cfg.code_include:

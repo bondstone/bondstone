@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "summary": {
+    "errors": 4,
+    "warnings": 0,
+    "info": 1,
+    "nodes": 7
+  },
+  "diagnostics": [
+    {
+      "rule": "bondstone/immutable",
+      "severity": "error",
+      "path": "docs/adr/ADR-001-a.md",
+      "line": 1,
+      "node": "ADR-001",
+      "message": "ADR-001 was 'accepted' and may not be edited (only status may change)",
+      "hint": "Create a new document that supersedes it instead."
+    },
+    {
+      "rule": "bondstone/status-transition",
+      "severity": "error",
+      "path": "docs/adr/ADR-002-b.md",
+      "line": 5,
+      "node": "ADR-002",
+      "message": "status change proposed -> deprecated is not allowed (allowed: accepted, rejected)"
+    },
+    {
+      "rule": "bondstone/status-initial",
+      "severity": "error",
+      "path": "docs/adr/ADR-003-c.md",
+      "line": 5,
+      "node": "ADR-003",
+      "message": "new adr:Decision starts as 'rejected'; it must start as 'proposed'",
+      "hint": "Create it in the initial status and change the status in a later change. For documents that existed before bondstone, record them with `bondstone baseline`."
+    },
+    {
+      "rule": "bondstone/exemption-used",
+      "severity": "info",
+      "path": "docs/capabilities/a.md",
+      "line": 1,
+      "node": "CAP-a",
+      "message": "profile/code-updates-spec on CAP-a exempted by commit <commit> (Spec-Impact: no behaviour change): Code changes update the living spec they implement. (src/a.py implements CAP-a, which was not updated)",
+      "exempted_by": {
+        "commit": "<commit>",
+        "trailer": "Spec-Impact",
+        "reason": "no behaviour change"
+      }
+    },
+    {
+      "rule": "profile/code-updates-spec",
+      "severity": "error",
+      "path": "docs/capabilities/b.md",
+      "line": 1,
+      "node": "CAP-b",
+      "message": "Code changes update the living spec they implement. (src/b.py implements CAP-b, which was not updated)",
+      "hint": "Update the spec, or add the trailer \"Spec-Impact: none (<reason>)\"."
+    }
+  ]
+}

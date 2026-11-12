@@ -10,8 +10,10 @@ from dataclasses import replace
 from pathlib import Path
 
 from . import __version__
+from .baseline import record_baseline
 from .config import Config, load_config
 from .format import FORMATS, render
+from .git import GitRepository
 from .graph import build_graph
 from .model import ERROR, IGNORE, WARN, EnvironmentProblem
 from .resolve import find_root
@@ -21,6 +23,7 @@ from .views import generate
 EXIT_OK, EXIT_VIOLATIONS, EXIT_CONFIG, EXIT_ENVIRONMENT = 0, 1, 2, 3
 
 
+# bondstone: REQ-PRF-003
 def _root(args: argparse.Namespace) -> Path:
     if args.root is None:
         return find_root(Path.cwd())
@@ -30,6 +33,7 @@ def _root(args: argparse.Namespace) -> Path:
     return root.resolve()
 
 
+# bondstone: REQ-PRF-010, REQ-CLI-007
 def _config(args: argparse.Namespace, fmt: str = "text") -> Config | None:
     """The configuration, or None after reporting configuration errors (exit code 2)."""
     cfg = load_config(_root(args))
@@ -40,16 +44,19 @@ def _config(args: argparse.Namespace, fmt: str = "text") -> Config | None:
     return cfg
 
 
+# bondstone: REQ-CLI-001
 def cmd_check(args: argparse.Namespace) -> int:
     cfg = _config(args, args.format)
     if cfg is None:
         return EXIT_CONFIG
+    repo = GitRepository(cfg.root) if args.base else None
     graph = build_graph(cfg)
-    diagnostics = run_check(cfg, graph)
+    diagnostics = run_check(cfg, graph, repo=repo, base=args.base, exemptions=not args.no_exemptions)
     sys.stdout.write(render(args.format, diagnostics, nodes=len(graph.nodes)))
     return EXIT_VIOLATIONS if fails(diagnostics, args.fail_on) else EXIT_OK
 
 
+# bondstone: REQ-CLI-002
 def cmd_gen(args: argparse.Namespace) -> int:
     cfg = _config(args)
     if cfg is None:
@@ -62,6 +69,17 @@ def cmd_gen(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# bondstone: REQ-CLI-004
+def cmd_baseline(args: argparse.Namespace) -> int:
+    cfg = _config(args)
+    if cfg is None:
+        return EXIT_CONFIG
+    commit = record_baseline(cfg.root, GitRepository(cfg.root), args.ref)
+    print(f"baseline: {commit}")
+    return EXIT_OK
+
+
+# bondstone: REQ-CLI-003
 def cmd_profile_check(args: argparse.Namespace) -> int:
     cfg = load_config(_root(args))
     if cfg.errors:
@@ -90,10 +108,19 @@ def build_parser() -> argparse.ArgumentParser:
                                 help="validate documents, links, rules, code tags and views")
     check.add_argument("--fail-on", choices=[ERROR, WARN], default=ERROR,
                        help="lowest severity that fails the run (default: error)")
+    check.add_argument("--base", metavar="REF",
+                       help="also check the changes since REF: lifecycles, immutability and diff rules")
+    check.add_argument("--no-exemptions", action="store_true",
+                       help="with --base, ignore the commit trailers that exempt a change from a diff rule")
     check.set_defaults(func=cmd_check)
 
     gen = commands.add_parser("gen", parents=[common], help="regenerate views")
     gen.set_defaults(func=cmd_gen)
+
+    baseline = commands.add_parser("baseline", parents=[common],
+                                   help="record the commit whose documents count as already adopted")
+    baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
+    baseline.set_defaults(func=cmd_baseline)
 
     profile = commands.add_parser("profile", help="profile commands")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True, metavar="COMMAND")
@@ -103,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# bondstone: REQ-CLI-007
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:

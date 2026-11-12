@@ -6,17 +6,19 @@ import datetime as dt
 from dataclasses import replace
 from typing import Any
 
-from ..catalogue import diagnostic, engine_rule
+from ..catalogue import default_severity, diagnostic, engine_rule
 from ..config import Config
 from ..model import CONFIG_RULE, IGNORE, PROFILE_PATH, Diagnostic
 
 
+# bondstone: REQ-PRF-007, REQ-PRF-008
 def apply_policy(cfg: Config, diagnostics: list[Diagnostic], today: dt.date | None = None) -> list[Diagnostic]:
     """Effective severities, then waivers; what remains is sorted by location.
 
     A rule overridden to `ignore` reports nothing. A waiver removes the diagnostics of one
     rule (for one node, when it names one) until it expires. Waivers that are incomplete,
-    expired or unused are reported themselves."""
+    expired or unused are reported themselves. A violation that a commit trailer exempts is
+    kept, as `bondstone/exemption-used`."""
     today = today or dt.date.today()
     waivers, about_waivers = _active_waivers(cfg, today)
     kept: list[Diagnostic] = []
@@ -28,8 +30,13 @@ def apply_policy(cfg: Config, diagnostics: list[Diagnostic], today: dt.date | No
         for waiver in waivers:
             if waiver["rule"] == diag.rule and waiver.get("node") in (None, diag.node):
                 waiver["used"] = waived = True
-        if not waived:
-            kept.append(diag)
+        if waived:
+            continue
+        if diag.exempted_by:
+            diag = _exempted(cfg, diag)
+            if diag is None:
+                continue
+        kept.append(diag)
     for waiver in waivers:
         if not waiver["used"]:
             about_waivers.append(diagnostic(
@@ -42,10 +49,25 @@ def apply_policy(cfg: Config, diagnostics: list[Diagnostic], today: dt.date | No
     return kept
 
 
+# bondstone: REQ-DIF-011
+def _exempted(cfg: Config, diag: Diagnostic) -> Diagnostic | None:
+    """An exempted violation, reported as `bondstone/exemption-used` so that nothing is hidden."""
+    rule = "bondstone/exemption-used"
+    severity = cfg.severity(rule, default_severity(rule))
+    if severity == IGNORE:
+        return None
+    by = diag.exempted_by or {}
+    subject = f"{diag.rule} on {diag.node}" if diag.node else diag.rule
+    message = (f"{subject} exempted by commit {by.get('commit', '')[:7]} "
+               f"({by.get('trailer')}: {by.get('reason')}): {diag.message}")
+    return replace(diag, rule=rule, severity=severity, message=message, hint=None, fix=None)
+
+
 def _subject(waiver: dict[str, Any]) -> str:
     return f"{waiver['rule']} ({waiver.get('node') or 'all nodes'})"
 
 
+# bondstone: REQ-PRF-008
 def _active_waivers(cfg: Config, today: dt.date) -> tuple[list[dict[str, Any]], list[Diagnostic]]:
     active: list[dict[str, Any]] = []
     problems: list[Diagnostic] = []

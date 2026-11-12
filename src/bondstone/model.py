@@ -41,6 +41,7 @@ class EnvironmentProblem(BondstoneError):
 # --------------------------------------------------------------------------- diagnostics
 
 
+# bondstone: REQ-CLI-006
 @dataclass
 class Diagnostic:
     rule: str
@@ -51,6 +52,7 @@ class Diagnostic:
     node: str | None = None
     hint: str | None = None
     fix: dict[str, Any] | None = None
+    exempted_by: dict[str, str] | None = None  # the commit trailer that exempts a diff-rule violation
 
     def to_dict(self) -> dict[str, Any]:
         """JSON form: stable key order, absent values left out."""
@@ -63,6 +65,7 @@ class Diagnostic:
             "message": self.message,
             "hint": self.hint,
             "fix": self.fix,
+            "exempted_by": self.exempted_by,
         }
         return {key: value for key, value in ordered.items() if value is not None}
 

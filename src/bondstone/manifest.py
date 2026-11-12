@@ -64,6 +64,7 @@ def schema(kind: str) -> dict[str, Any]:
     return _schema(kind)
 
 
+# bondstone: REQ-PRF-001
 def validate(kind: str, data: Any) -> list[str]:
     """Schema problems of a manifest, one readable message each; empty when valid."""
     if not isinstance(data, dict):
@@ -82,6 +83,7 @@ def _location(error: ValidationError) -> str:
     return ".".join(parts)
 
 
+# bondstone: REQ-PRF-001, REQ-PRF-002
 def _describe(error: ValidationError) -> str:
     location = _location(error)
     custom = error.schema.get("x-error") if isinstance(error.schema, dict) else None
@@ -106,6 +108,7 @@ def _describe(error: ValidationError) -> str:
     return f"{location}: {message}" if location else message
 
 
+# bondstone: REQ-PRF-001
 def load_manifest(kind: str, path: Path, shown: str) -> tuple[dict[str, Any] | None, list[Diagnostic]]:
     """Read and validate one manifest.
 

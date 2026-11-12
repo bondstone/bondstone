@@ -1,10 +1,10 @@
 """The exit criterion of phase 1: examples/habit-tracker gives the results the POC gave.
 
 The POC reported `0 error(s), 0 warning(s), 15 nodes` and up-to-date views for the example,
-and the failures in its README when the example is broken on purpose. Two of those four
-failures (bondstone/immutable and the diff rule) compare with a base commit and arrive with
-the git layer; the other two are pinned here. The dates are pinned too, because the example
-profile has a waiver that expires."""
+and four failures in its README when the example is broken on purpose. Two of them need no
+history; the other two (bondstone/immutable and the diff rule) compare with a base commit and
+are checked on a throwaway git repository. The dates are pinned, because the example profile
+has a waiver that expires."""
 
 import datetime as dt
 import json
@@ -12,11 +12,12 @@ import shutil
 from pathlib import Path
 
 import pytest
-from conftest import EXAMPLE
+from conftest import EXAMPLE, Project
 from test_cli import assert_golden
 
 from bondstone.config import load_config
 from bondstone.format import to_json, to_text
+from bondstone.git import GitRepository
 from bondstone.graph import build_graph
 from bondstone.rules import fails, run_check
 from bondstone.views import generate, stale_views
@@ -24,11 +25,12 @@ from bondstone.views import generate, stale_views
 TODAY = dt.date(2026, 11, 10)
 
 
-def check(root: Path):
+def check(root: Path, base: str | None = None):
     cfg = load_config(root)
     assert cfg.problems == []
     graph = build_graph(cfg)
-    return run_check(cfg, graph, today=TODAY), len(graph.nodes)
+    history = {"repo": GitRepository(root), "base": base} if base else {}
+    return run_check(cfg, graph, today=TODAY, **history), len(graph.nodes)
 
 
 def test_example_is_clean_with_fifteen_nodes():
@@ -66,9 +68,10 @@ def test_the_waiver_and_the_override_of_the_example_are_in_use():
 
 @pytest.fixture
 def broken(tmp_path):
-    """The example, broken as in the POC README."""
+    """The example, committed to a git repository of its own and then broken as in the POC README."""
     root = tmp_path / "habit-tracker"
     shutil.copytree(EXAMPLE, root)
+    Project(root).init().commit("the example")
 
     def edit(path: str, old: str, new: str) -> None:
         text = (root / path).read_text(encoding="utf-8")
@@ -78,7 +81,7 @@ def broken(tmp_path):
     with (root / "app/lib/habits.dart").open("a", encoding="utf-8") as code:
         code.write("// bondstone: REQ-HAB-009\n")
     edit("docs/discovery/solutions/SOL-2-streak-freeze.md", "addresses: [OPP-2]", "addresses: [OPP-9]")
-    # editing an accepted decision is `bondstone/immutable` once checks compare with a base commit
+    # editing an accepted decision is `bondstone/immutable` when the check compares with a base commit
     edit("docs/adr/ADR-002-store-habits-locally-with-sqlite.md", "on-device SQLite database", "SQLite database")
     return root
 
@@ -97,6 +100,45 @@ def test_broken_example_text_output(broken):
 def test_broken_example_json_output(broken):
     diagnostics, nodes = check(broken)
     assert_golden("example-broken.json", to_json(diagnostics, nodes))
+
+
+def test_broken_example_against_its_base_reports_the_four_failures_of_the_poc_readme(broken):
+    diagnostics, nodes = check(broken, base="HEAD")
+    text = to_text(diagnostics, nodes)
+    assert_golden("example-broken-base.txt", text)
+    assert [d.rule for d in diagnostics if d.rule != "bondstone/view-stale"] == [
+        "profile/code-change-updates-living-spec", "bondstone/code-ref-unknown", "bondstone/immutable",
+        "bondstone/link-broken"]
+    assert ("docs/adr/ADR-002-store-habits-locally-with-sqlite.md:1: error bondstone/immutable: "
+            "ADR-002 was 'accepted' and may not be edited (only status may change)\n"
+            "    hint: Create a new document that supersedes it instead.\n") in text
+    # the appended line is only a tag, so no spec is traced and the rule's `min: 1` asks for any living spec
+    assert (".bondstone/profile.yaml: warn profile/code-change-updates-living-spec: "
+            "Changes to app code come with an update to the living specs they implement. "
+            "(changed app/lib/habits.dart; needs 1 changed document(s) matching role=living-spec)\n") in text
+
+
+def test_updating_the_traced_spec_satisfies_the_diff_rule_of_the_example(tmp_path):
+    root = tmp_path / "habit-tracker"
+    shutil.copytree(EXAMPLE, root)
+    project = Project(root).init()
+    project.commit("the example")
+    code = project.read("app/lib/habits.dart").splitlines(keepends=True)
+    code[2] = code[2].rstrip("\n") + "  // changed\n"  # inside the region of REQ-HAB-001
+    (root / "app/lib/habits.dart").write_text("".join(code), encoding="utf-8")
+    diagnostics, _ = check(root, base="HEAD")
+    assert [(d.rule, d.node, d.severity) for d in diagnostics] == [
+        ("profile/code-change-updates-living-spec", "CAP-habits", "warn")]
+    spec = next(root.glob("docs/capabilities/habits.md"))
+    spec.write_text(spec.read_text(encoding="utf-8") + "\nA clarification.\n", encoding="utf-8")
+    assert check(root, base="HEAD")[0] == []
+
+
+def test_the_committed_example_passes_against_its_own_head(tmp_path):
+    root = tmp_path / "habit-tracker"
+    shutil.copytree(EXAMPLE, root)
+    Project(root).init().commit("the example")
+    assert check(root, base="HEAD") == ([], 15)
 
 
 def test_gen_is_idempotent(broken):

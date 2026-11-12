@@ -22,6 +22,7 @@ def summarize(diagnostics: list[Diagnostic], nodes: int | None = None) -> dict[s
     return summary
 
 
+# bondstone: REQ-CLI-005
 def to_text(diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
     """One line per diagnostic, `path:line: severity rule: message`, then an indented hint."""
     lines = []
@@ -42,6 +43,7 @@ def to_text(diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
+# bondstone: REQ-CLI-006
 def to_json(diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
     payload: dict[str, Any] = {
         "version": JSON_VERSION,

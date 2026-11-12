@@ -10,6 +10,7 @@ from .graph import Graph
 from .model import PART_OF, LinkDef, Node
 
 
+# bondstone: REQ-RUL-001, REQ-TRC-007
 def matches(cfg: Config, node: Node, selector: dict[str, Any] | None, context: str | None) -> bool:
     """Whether a node matches a selector.
 

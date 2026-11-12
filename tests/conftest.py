@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -35,6 +37,39 @@ class Project:
 
     def read(self, path: str) -> str:
         return (self.root / path).read_text(encoding="utf-8")
+
+    def edit(self, path: str, old: str, new: str) -> "Project":
+        text = self.read(path)
+        assert old in text, f"{old!r} is not in {path}"
+        (self.root / path).write_text(text.replace(old, new), encoding="utf-8")
+        return self
+
+    # ----------------------------------------------------------------------- git
+
+    def git(self, *args: str) -> str:
+        """Run git in the project, isolated from the user's configuration."""
+        result = subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True,
+                                encoding="utf-8", env={**os.environ, **GIT_ENV})
+        assert result.returncode == 0, f"git {' '.join(args)}: {result.stderr}"
+        return result.stdout.strip()
+
+    def init(self) -> "Project":
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.git("init", "--quiet", "--initial-branch", "main")
+        return self
+
+    def commit(self, message: str = "change") -> str:
+        """Commit everything in the working tree; returns the commit id."""
+        self.git("add", "--all")
+        self.git("commit", "--quiet", "--allow-empty", "--message", message)
+        return self.git("rev-parse", "HEAD")
+
+
+GIT_ENV = {
+    "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+    "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
+    "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.invalid",
+}
 
 
 @pytest.fixture
@@ -183,15 +218,19 @@ def standard(project: Project, **profile) -> Project:
     return project.profile(**profile)
 
 
-def check(project: Project, today=None):
-    """Run a full check; fails the test on a configuration error."""
+def check(project: Project, today=None, base: str | None = None, exemptions: bool = True):
+    """Run a full check; fails the test on a configuration error.
+
+    With `base`, the project is a git repository and the changes since that ref are checked too."""
     from bondstone.config import load_config
+    from bondstone.git import GitRepository
     from bondstone.graph import build_graph
     from bondstone.rules import run_check
 
     cfg = load_config(project.root)
     assert cfg.errors == [], [d.message for d in cfg.errors]
-    return run_check(cfg, build_graph(cfg), today=today)
+    history = {"repo": GitRepository(project.root), "base": base, "exemptions": exemptions} if base else {}
+    return run_check(cfg, build_graph(cfg), today=today, **history)
 
 
 def rule_ids(project: Project, severity: str | None = None, today=None) -> list[str]:

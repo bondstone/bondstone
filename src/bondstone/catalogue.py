@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .model import ERROR, WARN, Diagnostic
+from .model import ERROR, INFO, WARN, Diagnostic
 
 
 @dataclass(frozen=True)
@@ -27,6 +27,7 @@ def _rule(name: str, severity: str, fires: str, why: str, fix: str, **extra) -> 
     return EngineRule(f"bondstone/{name}", severity, fires, why, fix, **extra)
 
 
+# bondstone: REQ-RUL-005
 ENGINE_RULES: tuple[EngineRule, ...] = (
     _rule("profile", ERROR,
           "The profile, a pack or a bridge is invalid: a manifest that breaks its schema, a pack "
@@ -148,7 +149,7 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A cycle has no current document.",
           "Break the cycle."),
     _rule("code-ref-unknown", ERROR,
-          "A code tag `bondstone: ID` refers to an id that does not exist.",
+          "A code tag `bondstone: <id>` refers to an id that does not exist.",
           "A tag for something the documentation does not contain is stale traceability.",
           "Fix or remove the tag."),
     _rule("code-ref-not-traceable", ERROR,
@@ -159,7 +160,7 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A code-traceable node is not tagged anywhere in code. With `when`, only nodes in the "
           "listed statuses are checked.",
           "An untagged requirement may be unimplemented, or its code cannot be found.",
-          "Add a `bondstone: ID` comment above the implementing code.",
+          "Add a `bondstone: <id>` comment above the implementing code.",
           note="The severity comes from the trait's `coverage` setting."),
     _rule("tag-retired", WARN,
           "A code tag refers to a node whose status is listed in its type's `code-traceable.retired`.",
@@ -169,6 +170,37 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "A generated view is missing or differs from what `bondstone gen` would write.",
           "Committed views must match the documents they are generated from.",
           "Run `bondstone gen` and commit the result."),
+    _rule("status-initial", ERROR,
+          "With `--base`, a new document or item starts in a status other than its lifecycle's `initial`.",
+          "Skipping the first status skips the review that status stands for.",
+          "Create it in the initial status and change the status in a later change. For documents "
+          "that existed before bondstone, record them with `bondstone baseline`.",
+          note="Only checked for lifecycles that declare `initial`."),
+    _rule("status-transition", ERROR,
+          "With `--base`, a document's or an item's status changed in a way its lifecycle's "
+          "`transitions` do not allow.",
+          "A lifecycle is only worth something when its steps cannot be skipped or undone.",
+          "Use one of the allowed statuses named in the message.",
+          note="Only checked for lifecycles that declare `transitions`."),
+    _rule("immutable", ERROR,
+          "With `--base`, a document that was in an immutable status was edited beyond the fields "
+          "its type allows.",
+          "A decided document is a record: readers must be able to trust it says what was decided.",
+          "Undo the edit and create a new document that supersedes it."),
+    _rule("baseline-missing", ERROR,
+          "With `--base`, the profile's `baseline` commit is not available in the clone.",
+          "Without it, documents adopted at the baseline look new and lifecycle checks misfire.",
+          "Fetch the full history (`git fetch --unshallow`), or record a new commit with `bondstone baseline`."),
+    _rule("exemption-used", INFO,
+          "A commit trailer exempted a diff-rule violation; the message names the commit, the rule "
+          "and the reason.",
+          "An exemption is allowed, but it is never silent.",
+          "Nothing to fix. `check --no-exemptions` ignores trailers when a run must be strict."),
+    _rule("exemption-invalid", ERROR,
+          "A commit in the checked range carries an exemption trailer whose value is not "
+          "`none (<reason>)` or `none [ID, ...] (<reason>)`.",
+          "A typo must neither exempt a change silently nor fail to exempt it silently.",
+          "Amend the commit message, or add a commit with a valid trailer."),
     _rule("waiver-invalid", ERROR,
           "A waiver has no `rule`, `reason` or `expires`, names a rule that does not exist, or "
           "names a locked rule.",
@@ -195,6 +227,7 @@ def default_severity(rule_id: str) -> str:
     return BY_ID[rule_id].severity
 
 
+# bondstone: REQ-RUL-005
 def diagnostic(rule_id: str, message: str, path: str | None = None, line: int | None = None,
                node: str | None = None, hint: str | None = None, severity: str | None = None,
                fix: dict[str, Any] | None = None) -> Diagnostic:
