@@ -12,14 +12,16 @@ and CI run it as a gate.
 
 A profile (`.bondstone/profile.yaml`) names the packs and bridges a repository uses. Packs
 define document types, links, rules and views; bridges connect packs. Bondstone reads the
-documents and the code tags into one graph and checks the rules against it.
+documents and the code tags into one graph and checks the rules against it. A profile can also
+extend presets, which bring packs, bridges and rules shared by several repositories.
 
 The engine ships no packs. A profile finds its packs and bridges in two places, in this order:
 
 1. the folders it lists under `sources` (default `.bondstone/packs`), for packs that live in
    the repository;
 2. installed packages that register a folder of packs, such as
-   [`bondstone-library`](library/README.md) (`adr`, `capability` and their bridge so far).
+   [`bondstone-library`](library/README.md) (`adr`, `capability`, their bridge and the
+   `starter` preset so far).
 
 [`examples/habit-tracker`](examples/habit-tracker) is a complete setup with three local packs
 (`adr`, `capability`, `ost`) and two bridges. Bondstone's own documentation runs on the
@@ -41,9 +43,9 @@ library package.
 | `bondstone rules`, `bondstone explain RULE` | List the active rules with their effective severity; explain one. |
 | `bondstone agent [--format md\|skill] [--output F]` | Write the instructions for coding agents. |
 | `bondstone graph [--format json\|mermaid] [--type T]` | Export the graph of documents, links and code tags. |
-| `bondstone init` | Create an empty profile in the current folder. |
-| `bondstone packs [--format text\|json]` | List the packs and bridges available to the repository, and which ones its profile uses. |
-| `bondstone pack test DIR... [--format text\|json]` | Run the fixtures of packs and bridges. |
+| `bondstone init [--preset NAME]` | Create a profile in the current folder, empty or extending a preset. |
+| `bondstone packs [--format text\|json]` | List the packs, bridges and presets available to the repository, and which ones its profile uses. |
+| `bondstone pack test DIR... [--format text\|json]` | Run the fixtures of packs, bridges and presets. |
 
 Every command takes `--root DIR`; without it, bondstone uses the nearest folder that has a
 `.bondstone/profile.yaml`.
@@ -62,6 +64,46 @@ $ bondstone --root examples/habit-tracker check
 
 JSON output has a `version`, a `summary` and one entry per diagnostic with `rule`, `severity`,
 `path`, `line`, `node`, `message`, `hint` and, when one command resolves it, `fix.command`.
+
+## Presets
+
+A preset is a partial profile in a `preset.yaml`, found in the same places as packs. A profile
+names the presets it builds on under `extends`:
+
+```yaml
+# .bondstone/profile.yaml
+bondstone: 1
+extends: [starter@1]
+code:
+  include: ["src/**/*.py"]
+```
+
+```yaml
+# preset.yaml of an organisation
+id: acme
+version: 1.0.0
+extends: [starter@1]                 # applied before this preset
+packs: [runbooks@1]                  # added to the packs of `starter` and of the profile
+overrides:
+  adr/alternatives-considered: error
+lock: [adr/alternatives-considered, bondstone/immutable]
+rules:
+  - id: code-change-has-decision     # reported as acme/code-change-has-decision
+    description: New source files come with a decision.
+    on_change: {code: true, kinds: [added]}
+    require: [{changed: {type: "adr:Decision"}, min: 1}]
+```
+
+- Severities apply in layers: a rule's default, then each preset in the order it is applied,
+  then the profile. `bondstone rules` says which layer set a severity.
+- A rule under `lock` keeps at least the severity it has after that preset. A later preset or
+  the profile can raise it; lowering it or waiving it is a configuration error.
+- `on_change: {code: true}` fires on the files the profile lists under `code`, so a preset
+  can ship a diff rule without knowing a repository's paths.
+
+`bondstone init --preset starter` creates a profile that extends the library's `starter`
+preset: decisions, living capability specs, and the rule that a change to tagged code updates
+the capability it implements.
 
 ## Testing a pack
 
