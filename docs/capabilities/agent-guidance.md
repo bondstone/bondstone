@@ -2,7 +2,7 @@
 id: CAP-agent-guidance
 type: capability:Capability
 title: Guidance for agents
-status: draft
+status: active
 owner: Adam Dworzyński
 code: AGT
 depends_on: [CAP-profiles, CAP-rules, CAP-graph]
