@@ -41,3 +41,33 @@ closest known ids.
 - Given the engine rule `bondstone/immutable`
 - When `bondstone explain bondstone/immutabel` runs
 - Then it exits with 1 and suggests `bondstone/immutable`
+
+### REQ-AGT-003: Say what to read before editing
+
+`bondstone context --for PATH...` SHALL list the nodes an edit of those files concerns: a
+document among the paths, every node tagged in a file, the document of a tagged item, and the
+nodes one link away from those documents in either direction. Each entry MUST say why it is
+listed, and a document that is immutable in its current status MUST say so. A folder stands
+for the files in it. `bondstone context --base REF` SHALL answer for the files changed since
+REF instead, counts only the tags whose code region changed, and says for each node whether
+its file changed.
+
+#### Scenario: Code tagged for a requirement
+
+- Given `reminders.dart` tagged with `REQ-REM-001`, whose capability is constrained by ADR-003
+- When `bondstone context --for app/lib/reminders.dart` runs
+- Then it lists the requirement, its capability and ADR-003, and marks ADR-003 as immutable
+
+### REQ-AGT-004: Say which diff rules will fire
+
+`bondstone context` SHALL list every diff rule that the given or changed files trigger, with
+its effective severity, what each clause asks for, its hint, and for a traced clause the
+documents that must change. A file that does not exist yet counts as added. A rule overridden
+to `ignore` MUST be left out. When a rule can be exempted, the output names the trailer and
+says to add one only when the user asks for it.
+
+#### Scenario: Traced rule
+
+- Given a rule that asks for an update of the living specs tagged in changed code
+- When `bondstone context --for src/code.py` runs and that file is tagged for CAP-a
+- Then the rule is listed with `must change: CAP-a`

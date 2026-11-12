@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from . import __version__, agent, edit
+from . import __version__, agent, context, edit
 from .baseline import record_baseline
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
@@ -154,6 +154,23 @@ def cmd_supersede(args: argparse.Namespace) -> int:
                                      "updated": result.updated, "skipped": result.skipped})
 
 
+# bondstone: REQ-AGT-003
+def cmd_context(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    graph = build_graph(cfg)
+    if args.base:
+        found = context.context_since(cfg, graph, GitRepository(cfg.root), args.base)
+    else:
+        found = context.context_for(cfg, graph, [context.normalize(cfg, path) for path in args.paths])
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **found.to_dict()})
+    else:
+        sys.stdout.write(context.to_text(found))
+    return EXIT_OK
+
+
 def _print_json(payload: object) -> None:
     sys.stdout.write(json.dumps(payload, indent=2, ensure_ascii=False) + "\n")
 
@@ -235,6 +252,13 @@ def build_parser() -> argparse.ArgumentParser:
                                     help="replace a document: successor, `superseded` status, links moved")
     supersede.add_argument("id", metavar="ID", help="the document to replace")
     supersede.set_defaults(func=cmd_supersede)
+
+    ctx = commands.add_parser("context", parents=[common, output],
+                              help="list what to read before editing: traced documents and the rules that will fire")
+    what = ctx.add_mutually_exclusive_group(required=True)
+    what.add_argument("--for", dest="paths", nargs="+", metavar="PATH", help="files or folders about to be edited")
+    what.add_argument("--base", metavar="REF", help="the files changed since REF")
+    ctx.set_defaults(func=cmd_context)
 
     rules = commands.add_parser("rules", parents=[common, output],
                                 help="list the active rules with their effective severity")
