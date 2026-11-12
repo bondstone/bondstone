@@ -176,7 +176,7 @@ def _rules(cfg: Config, graph: Graph, changes: list[Change], traced: dict[str, s
         asks: list[str] = []
         must_change: list[str] = []
         for clause in rule.spec.get("require") or []:
-            asks.append(_ask(clause))
+            asks.append(describe_clause(clause))
             if clause.get("traced"):
                 for change in triggering:
                     for ref in sorted(traced.get(change.path, ())):
@@ -190,9 +190,10 @@ def _rules(cfg: Config, graph: Graph, changes: list[Change], traced: dict[str, s
     return notes
 
 
-def _ask(clause: dict[str, Any]) -> str:
+def describe_clause(clause: dict[str, Any]) -> str:
+    """What one clause of a diff rule asks for, in words."""
     if "any" in clause:
-        return "one of: " + "; or ".join(_ask(alternative) for alternative in clause["any"])
+        return "one of: " + "; or ".join(describe_clause(alternative) for alternative in clause["any"])
     if "exists" in clause:
         return f"{int(clause.get('min', 1))} document(s){describe(clause['exists'], 'matching')} exist"
     selector = describe(clause.get("changed"), "matching")

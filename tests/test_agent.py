@@ -89,6 +89,19 @@ def test_explain_a_declared_rule(cfg):
                            'Hint: Add a "## Alternatives considered" section.\n\nwhen:\n')
 
 
+def test_explain_says_in_words_what_a_diff_rule_asks(project):
+    rule = {"id": "code-updates-spec", "description": "Code changes update a living spec.",
+            "on_change": {"paths": ["src/**", "lib/**"]},
+            "require": [{"changed": {"role": "living-spec"}, "traced": True}]}
+    standard(project, rules=[rule])
+    cfg = load_config(project.root)
+    sentence = ("When files matching src/**, lib/** change, it asks that every document matching role=living-spec "
+                "that is tagged in the changed code changes too.")
+    assert explain(cfg, "profile/code-updates-spec")["asks"] == [sentence]
+    assert f"Code changes update a living spec.\n{sentence}\n\non_change:" in explain_text(cfg, "profile/code-updates-spec")
+    assert "asks" not in explain(cfg, "adr/alternatives-considered")
+
+
 def test_explain_an_engine_rule(cfg):
     data = explain(cfg, "bondstone/code-coverage")
     assert data["kind"] == "engine" and data["severity"] == "ignore"

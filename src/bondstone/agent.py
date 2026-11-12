@@ -13,7 +13,8 @@ from typing import Any
 import yaml
 
 from .catalogue import ENGINE_RULES, EngineRule
-from .config import Config
+from .config import PLACEHOLDER, Config
+from .context import describe_clause
 from .model import IGNORE, Refused, Rule
 
 
@@ -90,6 +91,10 @@ def explain(cfg: Config, rule_id: str) -> dict[str, Any]:
     info = _info(cfg, rule)
     out = info.to_dict()
     if isinstance(rule, Rule):
+        if rule.kind == "diff":
+            paths = ", ".join(str(path) for path in rule.spec["on_change"].get("paths") or [])
+            out["asks"] = [f"When files matching {paths} change, it asks that {describe_clause(clause)}."
+                           for clause in rule.spec.get("require") or []]
         out["spec"] = {key: value for key, value in rule.spec.items()
                        if key not in ("id", "description", "severity", "locked", "hint")}
     else:
@@ -115,6 +120,7 @@ def explain_text(cfg: Config, rule_id: str) -> str:
              _severity_line(info) + ("; locked: it can be raised but not lowered or waived" if info.locked else "")]
     if info.description:
         lines += ["", info.description]
+    lines += data.get("asks", [])
     if info.hint:
         lines.append(f"Hint: {info.hint}")
     lines += ["", yaml.safe_dump(data["spec"], sort_keys=False, allow_unicode=True, width=100).rstrip()]
@@ -132,11 +138,14 @@ def _workflow(cfg: Config) -> list[str]:
     traceable = any("code-traceable" in tdef.traits for tdef in cfg.types.values())
     trailers = sorted({str(rule.spec["exempt"]["trailer"]) for rule in cfg.rules
                        if rule.spec.get("exempt") and cfg.severity(rule.qid, rule.severity) != IGNORE})
+    items = any(tdef.embedded for tdef in cfg.types.values())
     steps = [
         "Before you edit code or documents, run `bondstone context --for <paths>`. It lists the documents "
         "to read first and the rules that will fire.",
         "Create a document with `bondstone new <Type> --title \"...\"`, never by hand. It picks the id, the "
-        "path and the frontmatter.",
+        "path and the frontmatter."
+        + (" Some types are items: headings inside a document, which you add by hand. The type's entry below "
+           "gives the heading and the id to use." if items else ""),
         "Change a status with `bondstone status <ID> <STATUS>`. Replace a document that may no longer be "
         "edited with `bondstone supersede <ID> --title \"...\"`.",
         "Write links as ids in frontmatter, never as paths.",
@@ -145,9 +154,11 @@ def _workflow(cfg: Config) -> list[str]:
         steps.append("Put a comment `bondstone: <ID>` above the code that implements a node, and update that "
                      "node's document when you change the code.")
     steps += [
-        "Never edit a generated file: the views listed below and this file. Run `bondstone gen` instead.",
+        "After you edit documents by hand, run `bondstone gen`. It rewrites the generated files listed below. "
+        "Never edit those files or this one yourself.",
         "Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. "
-        "When a diagnostic has `fix.command`, run that command. `bondstone explain <rule>` says what a rule wants.",
+        "It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, "
+        "run that command. `bondstone explain <rule>` says what a rule wants.",
         "Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.",
     ]
     if trailers:
@@ -164,9 +175,16 @@ def _type_facts(cfg: Config, tdef: Any) -> list[str]:
         for parent in parents:
             items = parent.items
             where = f" under `## {items.section}`" if items.section else ""
-            ids = f", with ids like `{items.id_template}`" if items.id_template else ""
-            facts.append(f"written inside a `{parent.qname}` document as a heading "
-                         f"`{items.heading_template}`{where}{ids}")
+            facts.append(f"add one by hand inside a `{parent.qname}` document, as a heading "
+                         f"`{items.heading_template}`{where}")
+            if items.id_template:
+                parts = []
+                for name, _ in PLACEHOLDER.findall(items.id_template):
+                    if name == "n":
+                        parts.append("`{n}` is the next free number in that document")
+                    elif name != "slug":
+                        parts.append(f"`{{{name}}}` is that document's `{name}` field")
+                facts.append(f"id: `{items.id_template}`" + (f" ({'; '.join(parts)})" if parts else ""))
     else:
         facts.append(f"location: `{tdef.path_template}`")
         facts.append(f"id: `{tdef.id_template}`")
@@ -203,8 +221,10 @@ def _type_facts(cfg: Config, tdef: Any) -> list[str]:
     if "code-traceable" in traits:
         trait = traits["code-traceable"]
         text = "tag the code that implements it with a comment `bondstone: <ID>`"
-        if trait.get("when"):
-            text += f"; required in status {', '.join(str(s) for s in trait['when'])}"
+        coverage = cfg.severity("bondstone/code-coverage", str(trait.get("coverage", "warn")))
+        if coverage != IGNORE:
+            when = f" in status {', '.join(str(s) for s in trait['when'])}" if trait.get("when") else ""
+            text += f"; one without a tag{when} is reported ({coverage})"
         if trait.get("retired"):
             text += f"; remove the tag in status {', '.join(str(s) for s in trait['retired'])}"
         facts.append(text)

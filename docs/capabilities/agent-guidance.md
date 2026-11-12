@@ -33,8 +33,9 @@ the rule's default.
 ### REQ-AGT-002: Explain one rule
 
 `bondstone explain RULE` SHALL print what one rule asks and how to satisfy it: for a declared
-rule its description, hint, selector and clauses and the manifest that declares it; for an
-engine rule when it fires, why, and the fix. An unknown rule id MUST be refused with the
+rule its description, hint, selector and clauses and the manifest that declares it, and for a
+diff rule one sentence per clause that says in words what it asks; for an engine rule when it
+fires, why, and the fix. An unknown rule id MUST be refused with the
 closest known ids.
 
 #### Scenario: Misspelt rule id
@@ -78,8 +79,10 @@ says to add one only when the user asks for it.
 `bondstone agent` SHALL write `AGENTS.bondstone.md` from the active profile: the workflow in
 commands, every type with its location, id template, the command that creates it, fields,
 required sections, statuses, allowed status changes and links, every role, every declared rule
-with the severity `check` applies, the generated files, and each component's own guidance. A
-rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
+with the severity `check` applies, the generated files, and each component's own guidance. For
+an item type they say that it is added by hand, with which heading, and what each part of its
+id stands for. The workflow says to run `gen` after editing documents and that `check --base`
+includes uncommitted changes. A rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
 weaken the profile to make a check pass and, when a rule can be exempted, not to add an
 exemption trailer unless the user asked for one. Writing the file again without a change of
 the configuration changes nothing; `--output -` prints it instead.

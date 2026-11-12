@@ -6,12 +6,12 @@
 ## Workflow
 
 1. Before you edit code or documents, run `bondstone context --for <paths>`. It lists the documents to read first and the rules that will fire.
-2. Create a document with `bondstone new <Type> --title "..."`, never by hand. It picks the id, the path and the frontmatter.
+2. Create a document with `bondstone new <Type> --title "..."`, never by hand. It picks the id, the path and the frontmatter. Some types are items: headings inside a document, which you add by hand. The type's entry below gives the heading and the id to use.
 3. Change a status with `bondstone status <ID> <STATUS>`. Replace a document that may no longer be edited with `bondstone supersede <ID> --title "..."`.
 4. Write links as ids in frontmatter, never as paths.
 5. Put a comment `bondstone: <ID>` above the code that implements a node, and update that node's document when you change the code.
-6. Never edit a generated file: the views listed below and this file. Run `bondstone gen` instead.
-7. Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. When a diagnostic has `fix.command`, run that command. `bondstone explain <rule>` says what a rule wants.
+6. After you edit documents by hand, run `bondstone gen`. It rewrites the generated files listed below. Never edit those files or this one yourself.
+7. Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, run that command. `bondstone explain <rule>` says what a rule wants.
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
 9. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
 
@@ -52,10 +52,11 @@ The living specification of one capability. It describes current behaviour and i
 
 One requirement inside a capability, written as a level-3 heading `### REQ-<CODE>-001: <title>` under `## Requirements`, with SHALL/MUST wording and at least one `#### Scenario:`. A line `Status: planned` or `Status: removed` under the heading sets its status; without it the requirement is active.
 
-- written inside a `capability:Capability` document as a heading `### {id}: {title}` under `## Requirements`, with ids like `REQ-{code}-{n:03d}`
+- add one by hand inside a `capability:Capability` document, as a heading `### {id}: {title}` under `## Requirements`
+- id: `REQ-{code}-{n:03d}` (`{code}` is that document's `code` field; `{n}` is the next free number in that document)
 - status: planned | active | removed (`active` without a `Status:` line under the heading)
 - allowed status changes: planned → active, removed; active → removed
-- tag the code that implements it with a comment `bondstone: <ID>`; required in status active; remove the tag in status removed
+- tag the code that implements it with a comment `bondstone: <ID>`; one without a tag in status active is reported (warn); remove the tag in status removed
 
 ## Roles
 
@@ -101,6 +102,9 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 - Add requirements as `### REQ-<CODE>-NNN: title` under `## Requirements`, never renumber
   existing ones, and remove requirements that no longer hold.
 - Mark the code that implements a requirement with a comment `bondstone: REQ-<CODE>-NNN`.
+- A requirement whose code arrives in the same change is active: write no `Status:` line.
+  Write `Status: planned` under the heading only when the requirement has no code yet, and
+  `Status: removed` when it no longer holds but its code is still there.
 
 ## Guidance from `adr-capability`
 

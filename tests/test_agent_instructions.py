@@ -49,11 +49,22 @@ def test_every_type_is_described_with_what_an_author_needs(project):
 
 def test_item_types_say_where_they_are_written_and_how_they_are_traced(project):
     requirement = text_for(project).split("### `capability:Requirement`")[1].split("## Roles")[0]
-    assert ("- written inside a `capability:Capability` document as a heading `### {id}: {title}` under "
-            "`## Requirements`, with ids like `REQ-{code}-{n:03d}`\n") in requirement
+    assert ("- add one by hand inside a `capability:Capability` document, as a heading `### {id}: {title}` under "
+            "`## Requirements`\n") in requirement
+    assert ("- id: `REQ-{code}-{n:03d}` (`{code}` is that document's `code` field; "
+            "`{n}` is the next free number in that document)\n") in requirement
     assert "- status: planned | active | removed (`active` without a `Status:` line under the heading)\n" in requirement
-    assert ("- tag the code that implements it with a comment `bondstone: <ID>`; required in status active; "
-            "remove the tag in status removed\n") in requirement
+    assert ("- tag the code that implements it with a comment `bondstone: <ID>`; one without a tag in status active "
+            "is reported (warn); remove the tag in status removed\n") in requirement
+
+
+def test_the_workflow_covers_what_a_first_time_agent_had_to_guess(project):
+    text = text_for(project)
+    assert "Some types are items: headings inside a document, which you add by hand." in text
+    assert "After you edit documents by hand, run `bondstone gen`." in text
+    assert "It compares your working tree, committed or not, with that branch." in text
+    silent = text_for(project, overrides={"bondstone/code-coverage": "ignore"})
+    assert "is reported (" not in silent.split("### `capability:Requirement`")[1].split("## Roles")[0]
 
 
 def test_rules_carry_the_effective_severity_and_ignored_rules_are_left_out(project):
