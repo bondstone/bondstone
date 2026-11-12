@@ -156,3 +156,15 @@ registered source that cannot be loaded MUST be a configuration error that names
 - Given a pack `adr` in `.bondstone/packs` and another in an installed package
 - When the configuration is loaded
 - Then the local pack is used
+
+### REQ-PRF-012: Create a profile
+
+`bondstone init` SHALL create `.bondstone/profile.yaml` in the folder given with `--root`, or
+in the current folder, as a valid profile without packs. It MUST refuse to overwrite an
+existing profile.
+
+#### Scenario: A profile exists already
+
+- Given a folder with `.bondstone/profile.yaml`
+- When `bondstone init` runs there
+- Then the command fails with exit code 1 and the file is unchanged

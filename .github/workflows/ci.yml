@@ -17,6 +17,13 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
       - run: uv run pytest -q
+      - name: fixtures of the library's and the example's packs
+        run: >-
+          uv run bondstone pack test
+          library/src/bondstone_library/packs/*
+          examples/habit-tracker/.bondstone/packs/*
+      - name: both packages build
+        run: uv build --all-packages --out-dir "$RUNNER_TEMP/dist"
       - name: bondstone check on the example
         run: uv run bondstone --root examples/habit-tracker check
       - name: bondstone check on bondstone's own documentation
