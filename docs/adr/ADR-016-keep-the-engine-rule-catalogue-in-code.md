@@ -2,7 +2,7 @@
 id: ADR-016
 type: adr:Decision
 title: Keep the engine rule catalogue in code
-status: proposed
+status: accepted
 owner: Adam Dworzyński
 date: 2026-11-12
 ---

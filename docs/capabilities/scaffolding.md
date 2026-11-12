@@ -2,7 +2,7 @@
 id: CAP-scaffolding
 type: capability:Capability
 title: Scaffolding and edits
-status: draft
+status: active
 owner: Adam Dworzyński
 code: SCF
 depends_on: [CAP-graph, CAP-rules, CAP-views]
