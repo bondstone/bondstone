@@ -1,0 +1,55 @@
+id: speckit-capability
+version: 1.0.0
+bondstone: ">=1.0"
+description: Folds Spec Kit features into living capability specs and their requirements.
+
+requires:
+  speckit: "^1"
+  capability: "^1"
+
+# bondstone: REQ-SKT-003
+links:
+  modifies:
+    from: speckit:Feature
+    to: capability:Capability
+    description: Capabilities whose behaviour this feature changes.
+  delivers:
+    from: speckit:Feature
+    to: capability:Requirement
+    description: Requirements this feature implements.
+
+roles:
+  change: [speckit:Feature]
+  living-spec: [capability:Capability]
+
+rules:
+  - id: implemented-feature-delivers-covered-requirements
+    description: An implemented feature delivers only requirements that are active and tagged in code.
+    when: {type: speckit:Feature, status: implemented}
+    require:
+      - link: delivers
+        all: true
+        to: {type: capability:Requirement, status: active, covered: true}
+    hint: >-
+      Tag the code with `bondstone: REQ-...`, and remove `Status: planned` from the requirement
+      with `bondstone status REQ-... active`.
+
+  - id: implemented-feature-is-folded-in
+    description: An implemented feature names the capabilities it modifies or the requirements it delivers.
+    severity: warn
+    when: {type: speckit:Feature, status: implemented}
+    require:
+      - any:
+          - {link: modifies, min: 1}
+          - {link: delivers, min: 1}
+    hint: List the capabilities under `modifies` or the requirements under `delivers` in the frontmatter of spec.md.
+
+views:
+  - id: delivery
+    title: Requirements and the features that deliver them
+    output: docs/generated/delivery.md
+    render: table
+    select: {type: capability:Requirement}
+    columns: [id, title, status, parent, "<-delivers"]
+
+instructions: instructions.md

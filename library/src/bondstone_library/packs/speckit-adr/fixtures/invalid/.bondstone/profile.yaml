@@ -1,0 +1,5 @@
+bondstone: 1
+packs: [speckit@1, adr@1]
+bridges: [speckit-adr@1]
+overrides:
+  bondstone/view-stale: ignore

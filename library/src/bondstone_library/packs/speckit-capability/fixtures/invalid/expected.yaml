@@ -1,0 +1,4 @@
+errors:
+- speckit-capability/implemented-feature-delivers-covered-requirements
+warnings:
+- speckit-capability/implemented-feature-is-folded-in

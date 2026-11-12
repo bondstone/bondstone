@@ -1,0 +1,7 @@
+bondstone: 1
+packs: [speckit@1, capability@1]
+bridges: [speckit-capability@1]
+code:
+  include: ["src/**/*.py"]
+overrides:
+  bondstone/view-stale: ignore

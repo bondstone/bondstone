@@ -1,0 +1,42 @@
+id: speckit-adr
+version: 1.0.0
+bondstone: ">=1.0"
+description: Ties Spec Kit features to the decisions they rest on.
+
+requires:
+  speckit: "^1"
+  adr: "^1"
+
+# bondstone: REQ-SKT-004
+links:
+  decided_by:
+    from: speckit:Feature
+    to: adr:Decision
+    description: Decisions this feature rests on.
+
+roles:
+  change: [speckit:Feature]
+  decision: [adr:Decision]
+
+rules:
+  - id: implemented-feature-rests-on-accepted-decisions
+    description: An implemented feature rests only on accepted decisions.
+    when: {type: speckit:Feature, status: implemented}
+    require:
+      - link: decided_by
+        all: true
+        to: {type: adr:Decision, status: accepted}
+    hint: >-
+      Accept the decision with `bondstone status ADR-... accepted` before the last task is
+      ticked, or point to the decision that replaced it.
+
+views:
+  - id: decisions-by-feature
+    title: Features and the decisions they rest on
+    output: docs/generated/feature-decisions.md
+    render: matrix
+    rows: {type: speckit:Feature}
+    cols: {type: adr:Decision}
+    via: [decided_by]
+
+instructions: instructions.md

@@ -1,0 +1,33 @@
+id: speckit
+version: 1.0.0
+bondstone: ">=1.0"
+description: Spec Kit features - one folder per change under specs/ - with a status taken from their files.
+
+# bondstone: REQ-SKT-001
+types:
+  Feature:
+    description: >-
+      One change planned with Spec Kit: the folder `specs/NNN-name/` with `spec.md`, `plan.md`
+      and `tasks.md`. `spec.md` starts with a frontmatter block that names the feature; Spec
+      Kit's commands write everything else.
+    id: "{n:03d}-{slug}"
+    path: "specs/{id}/spec.md"
+    fields:
+      title: {type: string, minLength: 3}
+    required: [title]
+    traits:
+      derived-status:
+        implemented: {all_checked: tasks.md}
+        planned: {exists: plan.md}
+        specified: {exists: spec.md}
+      indexed: {}
+
+views:
+  - id: features
+    title: Features
+    output: docs/generated/features.md
+    render: table
+    select: {type: Feature}
+    columns: [id, title, status]
+
+instructions: instructions.md

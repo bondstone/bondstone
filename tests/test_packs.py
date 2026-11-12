@@ -28,7 +28,7 @@ def no_installed_packages(monkeypatch):
 def test_available_lists_local_and_installed_components_and_marks_the_ones_in_use(project):
     standard(project, packs=["adr@1"], bridges=[])
     cfg = load_config(project.root)
-    found = available(project.root, cfg.profile, cfg.components)
+    found = [a for a in available(project.root, cfg.profile, cfg.components) if "speckit" not in a.id]
     assert [(a.kind, a.id, a.source, a.in_use) for a in found] == [
         ("pack", "adr", ".bondstone/packs", True),
         ("pack", "adr", "bondstone-library", False),
@@ -67,8 +67,10 @@ def test_packs_json_output(project, capsys):
         "description": "Architecture Decision Records with a lifecycle, supersession and immutability.",
         "in_use": True,
     }
-    assert [(c["kind"], c["id"]) for c in payload["components"]] == [
-        ("pack", "adr"), ("pack", "capability"), ("bridge", "adr-capability"), ("preset", "starter")]
+    listed = [(c["kind"], c["id"]) for c in payload["components"]]
+    assert listed[:2] == [("pack", "adr"), ("pack", "capability")]
+    assert ("bridge", "adr-capability") in listed and listed.index(("preset", "starter")) > listed.index(
+        ("bridge", "adr-capability"))  # packs, then bridges, then presets
 
 
 def test_packs_without_a_profile_lists_what_a_new_profile_could_use(tmp_path, capsys, monkeypatch):
@@ -76,7 +78,7 @@ def test_packs_without_a_profile_lists_what_a_new_profile_could_use(tmp_path, ca
     monkeypatch.chdir(tmp_path)
     code, out, _ = run(capsys, "packs")
     assert code == 0
-    assert "        pack    mine@0.2.0            .bondstone/packs   My own pack." in out.splitlines()
+    assert ["pack", "mine@0.2.0", ".bondstone/packs", "My", "own", "pack."] in [line.split() for line in out.splitlines()]
     assert "in use" not in out and "bondstone-library" in out
 
 
@@ -153,7 +155,7 @@ def test_pack_test_on_something_else_is_an_environment_error(tmp_path, capsys):
 
 def test_pack_test_runs_the_fixtures_of_the_library(capsys):
     code, out, _ = run(capsys, "pack", "test", *sorted(p for p in LIBRARY_PACKS.iterdir() if p.is_dir()))
-    assert code == 0 and out.endswith("✓ 7 fixture(s) passed\n")
+    assert code == 0 and out.endswith("✓ 14 fixture(s) passed\n")
 
 
 def test_pack_test_runs_the_fixtures_of_a_preset(tmp_path, capsys):
