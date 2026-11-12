@@ -5,7 +5,7 @@ title: Profiles, packs and bridges
 status: active
 owner: Adam Dworzyński
 code: PRF
-constrained_by: [ADR-002, ADR-003, ADR-012]
+constrained_by: [ADR-002, ADR-003, ADR-004, ADR-012]
 ---
 
 ## Purpose
@@ -97,9 +97,9 @@ a malformed id or path template.
 
 ### REQ-PRF-007: Apply overrides and respect locked rules
 
-Bondstone SHALL give every rule the severity the profile's `overrides` set for its qualified
-id, and its default otherwise. A rule overridden to `ignore` reports nothing. An override for
-an unknown rule id, and an override that lowers the severity of a `locked` rule, MUST be
+Bondstone SHALL give every rule the severity that `overrides` set for its qualified id, and
+its default otherwise. A rule overridden to `ignore` reports nothing. An override for an
+unknown rule id, and an override that lowers the severity of a `locked` rule, MUST be
 configuration errors.
 
 #### Scenario: Loosening a locked rule
@@ -112,7 +112,8 @@ configuration errors.
 
 Bondstone SHALL drop the diagnostics of a rule that a waiver names, for the waiver's node or
 for every node when it names none, up to and including its `expires` date. A waiver without
-`rule`, `reason` or `expires`, for an unknown rule or for a locked rule MUST be reported as
+`rule`, `reason` or `expires`, for an unknown rule or for a locked rule (locked where it is
+declared, or by a preset) MUST be reported as
 `bondstone/waiver-invalid`, an expired one as `bondstone/waiver-expired`, and one that matches
 nothing as `bondstone/waiver-unused`.
 
@@ -167,11 +168,66 @@ registered source that cannot be loaded MUST be a configuration error that names
 ### REQ-PRF-012: Create a profile
 
 `bondstone init` SHALL create `.bondstone/profile.yaml` in the folder given with `--root`, or
-in the current folder, as a valid profile without packs. It MUST refuse to overwrite an
-existing profile.
+in the current folder, as a valid profile without packs. With `--preset NAME` the profile
+extends that preset, in the major version that is available; a preset that is not available
+MUST be refused. It MUST refuse to overwrite an existing profile.
 
 #### Scenario: A profile exists already
 
 - Given a folder with `.bondstone/profile.yaml`
 - When `bondstone init` runs there
 - Then the command fails with exit code 1 and the file is unchanged
+
+#### Scenario: Start from a preset
+
+- Given bondstone-library is installed
+- When `bondstone init --preset starter` runs in an empty folder
+- Then the new profile has `extends: [starter@1]` and passes `bondstone profile check`
+
+### REQ-PRF-013: Extend presets
+
+Bondstone SHALL load every preset a profile names under `extends`, found in the same sources
+as packs, as a `preset.yaml` validated against its schema. A preset may extend other presets;
+those are applied before it, and a preset reached more than once is applied once. The packs
+and bridges of the presets are used together with the profile's own, and a component named
+more than once MUST satisfy every range asked for. The rules a preset defines are qualified
+with its id. A preset that is missing, that extends itself, or whose version does not satisfy
+a range MUST be a configuration error.
+
+#### Scenario: A profile that only extends
+
+- Given a preset `starter` with the packs `adr` and `capability` and their bridge
+- When a profile has `extends: [starter@1]` and no packs of its own
+- Then the two packs and the bridge are active, and the preset's rule is `starter/<rule id>`
+
+#### Scenario: A preset built on another
+
+- Given a preset `team` with `extends: [starter@1]`
+- When a profile extends `team`
+- Then `starter` is applied first, then `team`, then the profile
+
+### REQ-PRF-014: Apply severities in layers
+
+Bondstone SHALL apply `overrides` in this order: the rule's default, then each preset in the
+order it is applied, then the profile, so that a later layer wins. `bondstone rules` and
+`bondstone explain` MUST say which layer set the effective severity.
+
+#### Scenario: The profile is stricter than its preset
+
+- Given a preset that sets `adr/alternatives-considered: info` and a profile that sets it to `error`
+- When the configuration is loaded
+- Then the rule is an error, set by the profile
+
+### REQ-PRF-015: Let a preset lock rules
+
+Bondstone SHALL treat every rule a preset lists under `lock` as locked at the severity in
+force after that preset, whether a pack, a bridge, a preset or the engine defines the rule. A
+later preset or the profile may raise the severity of a locked rule; lowering it or waiving it
+MUST be a configuration error or an invalid waiver. A `lock` entry for an unknown rule MUST be
+a configuration error.
+
+#### Scenario: An organisation's rule
+
+- Given a preset with `overrides: {bondstone/immutable: error}` and `lock: [bondstone/immutable]`
+- When a profile that extends it sets `bondstone/immutable: warn`
+- Then a `bondstone/profile` error says the rule is locked by that preset

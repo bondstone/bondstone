@@ -633,3 +633,58 @@ def test_glob_to_regex(pattern, path, expected):
 
 def test_adr_body_helper_is_what_the_edits_assume():
     assert "## Decision\n\nd" in ADR_BODY
+
+
+# --------------------------------------------------------------------------- the repository's code as a trigger
+
+CODE_RULE = {**DIFF_RULE, "on_change": {"code": True}}
+
+
+def test_a_rule_on_code_fires_for_the_files_the_profile_selects(repo):
+    standard(repo, code={"include": ["src/**/*.py", "tools/*.sh"], "exclude": ["src/generated/**"]}, rules=[CODE_RULE])
+    repo.write("src/generated/api.py", "x = 1\n").write("tools/build.sh", "true\n").write("notes.txt", "n\n")
+    repo.commit("add the rule and some files")
+
+    repo.edit("src/generated/api.py", "x = 1", "x = 2")
+    repo.edit("notes.txt", "n", "m")
+    assert history(repo) == []
+    repo.edit("tools/build.sh", "true", "false")
+    assert one(repo, "profile/code-updates-spec").message == (
+        "Code changes update a living spec. "
+        "(changed tools/build.sh; needs 1 changed document(s) matching role=living-spec)")
+    repo.edit("src/code.py", "return 1", "return 10")
+    assert "changed src/code.py, tools/build.sh;" in one(repo, "profile/code-updates-spec").message
+
+
+def test_a_rule_on_code_respects_kinds_and_renames(repo):
+    with_rule(repo, {**CODE_RULE, "on_change": {"code": True, "kinds": ["added"]}})
+    repo.edit("src/code.py", "return 1", "return 10")
+    assert history(repo) == []
+    repo.write("src/new.py", "x = 1\n")
+    assert history(repo) == [("profile/code-updates-spec", None)]
+
+    with_rule(repo, CODE_RULE)
+    repo.git("mv", "src/code.py", "code.py")  # out of the code globs: the old path still counts
+    assert history(repo) == [("profile/code-updates-spec", None)]
+
+
+def test_a_rule_on_code_never_fires_without_code_globs(repo):
+    standard(repo, rules=[CODE_RULE])
+    repo.commit("a profile without code globs")
+    repo.edit("src/code.py", "return 1", "return 10")
+    assert history(repo) == []
+
+
+@pytest.mark.parametrize("trigger", [{}, {"kinds": ["added"]}, {"paths": ["src/**"], "code": True}])
+def test_a_trigger_names_paths_or_code_but_not_both(project, trigger):
+    from bondstone.config import load_config
+    standard(project, rules=[{**DIFF_RULE, "on_change": trigger}])
+    assert [d.message for d in load_config(project.root).errors] == [
+        "profile/code-updates-spec: `on_change` needs exactly one of `paths` and `code: true`"]
+
+
+def test_code_must_be_true(project):
+    from bondstone.config import load_config
+    standard(project, rules=[{**DIFF_RULE, "on_change": {"code": False}}])
+    assert [d.message for d in load_config(project.root).errors] == [
+        "rules[0].on_change.code: expected true, got false"]

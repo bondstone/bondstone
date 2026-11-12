@@ -29,6 +29,7 @@
 | [REQ-DIF-010](../capabilities/diff-checks.md#req-dif-010-compare-with-the-baseline-when-a-document-is-new-at-the-base) | Compare with the baseline when a document is new at the base | CAP-diff-checks |
 | [REQ-DIF-011](../capabilities/diff-checks.md#req-dif-011-let-a-commit-trailer-exempt-a-change) | Let a commit trailer exempt a change | CAP-diff-checks |
 | [REQ-DIF-012](../capabilities/diff-checks.md#req-dif-012-reject-malformed-exemptions-and-allow-strict-runs) | Reject malformed exemptions and allow strict runs | CAP-diff-checks |
+| [REQ-DIF-013](../capabilities/diff-checks.md#req-dif-013-trigger-diff-rules-on-the-repositorys-code) | Trigger diff rules on the repository's code | CAP-diff-checks |
 | [REQ-GRA-001](../capabilities/graph.md#req-gra-001-read-markdown-with-yaml-frontmatter) | Read Markdown with YAML frontmatter | CAP-graph |
 | [REQ-GRA-002](../capabilities/graph.md#req-gra-002-derive-the-id-pattern-and-the-path-glob-from-templates) | Derive the id pattern and the path glob from templates | CAP-graph |
 | [REQ-GRA-003](../capabilities/graph.md#req-gra-003-require-every-document-to-state-its-type) | Require every document to state its type | CAP-graph |
@@ -53,6 +54,9 @@
 | [REQ-PRF-010](../capabilities/profiles.md#req-prf-010-stop-on-a-configuration-error) | Stop on a configuration error | CAP-profiles |
 | [REQ-PRF-011](../capabilities/profiles.md#req-prf-011-resolve-packs-and-bridges-from-installed-packages) | Resolve packs and bridges from installed packages | CAP-profiles |
 | [REQ-PRF-012](../capabilities/profiles.md#req-prf-012-create-a-profile) | Create a profile | CAP-profiles |
+| [REQ-PRF-013](../capabilities/profiles.md#req-prf-013-extend-presets) | Extend presets | CAP-profiles |
+| [REQ-PRF-014](../capabilities/profiles.md#req-prf-014-apply-severities-in-layers) | Apply severities in layers | CAP-profiles |
+| [REQ-PRF-015](../capabilities/profiles.md#req-prf-015-let-a-preset-lock-rules) | Let a preset lock rules | CAP-profiles |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes-with-selectors) | Select nodes with selectors | CAP-rules |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-node-rules) | Evaluate node rules | CAP-rules |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-evaluate-existence-rules) | Evaluate existence rules | CAP-rules |

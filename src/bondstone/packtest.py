@@ -1,4 +1,4 @@
-"""Run the fixtures of a pack or a bridge: `bondstone pack test`.
+"""Run the fixtures of a pack, a bridge or a preset: `bondstone pack test`.
 
 A fixture is a small repository in `fixtures/<case>/` of the component, with a profile and an
 `expected.yaml` that lists the rule of every error and warning the check must report there."""
@@ -24,7 +24,7 @@ LEVELS = {"errors": ERROR, "warnings": WARN}  # key of expected.yaml -> severity
 @dataclass
 class CaseResult:
     component: str
-    kind: str  # "pack" | "bridge"
+    kind: str  # "pack" | "bridge" | "preset"
     case: str | None  # the fixture's folder name; None when the component has no fixtures
     path: str
     problems: list[str] = field(default_factory=list)
@@ -43,7 +43,7 @@ class CaseResult:
 
 
 def component_of(directory: Path) -> tuple[str, str]:
-    """Kind and id of the pack or bridge in a folder."""
+    """Kind and id of the pack, bridge or preset in a folder."""
     if not directory.is_dir():
         raise EnvironmentProblem(f"'{directory}' is not a directory")
     for kind, filename in MANIFEST_NAMES.items():
@@ -55,8 +55,8 @@ def component_of(directory: Path) -> tuple[str, str]:
                 raise EnvironmentProblem(f"{manifest}: {exc}") from exc
             cid = data.get("id") if isinstance(data, dict) else None
             return kind, cid if isinstance(cid, str) else directory.name
-    names = " or ".join(MANIFEST_NAMES.values())
-    raise EnvironmentProblem(f"'{directory}' is not a pack or a bridge: it has no {names}")
+    names = ", ".join(MANIFEST_NAMES.values())
+    raise EnvironmentProblem(f"'{directory}' is not a pack, a bridge or a preset: it has none of {names}")
 
 
 def _location(diag: Diagnostic) -> str:

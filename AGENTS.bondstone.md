@@ -15,7 +15,7 @@
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
 9. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
 
-Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), adr-capability@1.0.0 (bridge)
+Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), adr-capability@1.0.0 (bridge), starter@1.0.0 (preset)
 
 ## Document types
 
@@ -75,7 +75,7 @@ Severities are the effective ones, after this repository's overrides.
 - **`capability/active-capability-has-requirements`** (error): An active capability lists at least one requirement.
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
-- **`profile/source-change-updates-traced-spec`** (error): A change to bondstone's source updates the capability specs the changed code implements. _Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed._
+- **`starter/code-change-updates-living-spec`** (error): A change to code updates the living specs that code implements. _Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed._
 
 The engine's own rules (`bondstone/...`) check structure: ids, fields, sections, links, code tags and stale views. `bondstone rules` lists them all.
 
@@ -110,3 +110,11 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 
 - When a capability's behaviour depends on a decision, list it in `constrained_by`.
 - When an ADR is superseded, move every `constrained_by` reference to the new ADR.
+
+## Guidance from `starter`
+
+- Code is traced to requirements by `bondstone: REQ-...` comments. When you change code under
+  such a comment, update the capability that holds the requirement in the same change.
+  `bondstone context --for <paths>` lists the capabilities a file is traced to.
+- A change that alters no behaviour, such as a rename or a reformat, may carry the commit
+  trailer `Spec-Impact: none (<reason>)` instead. Add it only when the user asks for it.

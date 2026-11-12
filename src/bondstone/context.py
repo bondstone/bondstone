@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from .config import Config, as_list
-from .git import ADDED, DELETED, KINDS, MODIFIED, Change, Repository
+from .git import ADDED, DELETED, MODIFIED, Change, Repository
 from .graph import Graph, code_files, scan_tags
 from .model import IGNORE, PART_OF, Node, Refused
-from .rules.diff import ChangeSet, document_of, glob_to_regex, traced_ids
+from .rules.diff import ChangeSet, document_of, fired_by, traced_ids
 from .select import describe, matches
 
 
@@ -166,11 +166,7 @@ def _rules(cfg: Config, graph: Graph, changes: list[Change], traced: dict[str, s
         severity = cfg.severity(rule.qid, rule.severity)
         if rule.kind != "diff" or severity == IGNORE:
             continue
-        trigger = rule.spec["on_change"]
-        kinds = set(trigger.get("kinds") or KINDS)
-        patterns = [glob_to_regex(pattern) for pattern in as_list(trigger.get("paths"))]
-        triggering = [change for change in changes if change.kind in kinds and any(
-            pattern.match(path) for pattern in patterns for path in (change.path, change.old_path) if path)]
+        triggering = fired_by(cfg, rule, changes)
         if not triggering:
             continue
         asks: list[str] = []

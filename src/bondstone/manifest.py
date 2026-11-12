@@ -1,4 +1,4 @@
-"""Parse and schema-validate pack, bridge and profile manifests."""
+"""Parse and schema-validate pack, bridge, preset and profile manifests."""
 
 from __future__ import annotations
 
@@ -16,8 +16,8 @@ from referencing import Registry, Resource
 from .model import CONFIG_RULE, ERROR, Diagnostic
 
 SCHEMA_DIR = Path(__file__).parent / "schemas"
-KINDS = ("pack", "bridge", "profile")
-MANIFEST_NAMES = {"pack": "pack.yaml", "bridge": "bridge.yaml"}
+KINDS = ("pack", "bridge", "preset", "profile")
+MANIFEST_NAMES = {"pack": "pack.yaml", "bridge": "bridge.yaml", "preset": "preset.yaml"}
 
 
 class ManifestError(Exception):

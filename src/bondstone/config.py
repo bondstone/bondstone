@@ -156,6 +156,14 @@ def _literal(text: str) -> str:
 
 
 @dataclass
+class Lock:
+    """A rule whose severity may be raised but not lowered, and that cannot be waived."""
+
+    severity: str  # the lowest severity the rule may have
+    by: str  # the pack, bridge or preset that locks it
+
+
+@dataclass
 class Config:
     root: Path
     profile: dict[str, Any] = field(default_factory=dict)
@@ -166,6 +174,8 @@ class Config:
     rules: list[Rule] = field(default_factory=list)
     views: list[View] = field(default_factory=list)
     overrides: dict[str, str] = field(default_factory=dict)
+    override_sources: dict[str, str] = field(default_factory=dict)  # rule id -> "profile" | "preset <id>"
+    locks: dict[str, Lock] = field(default_factory=dict)
     waivers: list[dict[str, Any]] = field(default_factory=list)
     problems: list[Diagnostic] = field(default_factory=list)
 
@@ -197,7 +207,7 @@ class Config:
 
     # bondstone: REQ-PRF-007
     def severity(self, qid: str, default: str) -> str:
-        """A rule's effective severity: its default unless the profile overrides it."""
+        """A rule's effective severity: its default unless a preset or the profile overrides it."""
         return self.overrides.get(qid, default)
 
     def links_from(self, type_qname: str) -> list[LinkDef]:
@@ -509,6 +519,8 @@ class _Builder:
                     continue
                 seen.add(spec["id"])
                 cfg.rules.append(rule)
+                if rule.locked:
+                    cfg.locks[rule.qid] = Lock(rule.severity, owner)
                 self._check_rule(rule)
             seen = set()
             for spec in data.get("views") or []:
@@ -551,6 +563,8 @@ class _Builder:
             return
         if "exempt" in spec and "on_change" not in spec:
             bad("`exempt` only applies to diff rules (`on_change`)")
+        if "on_change" in spec and ("paths" in spec["on_change"]) == ("code" in spec["on_change"]):
+            bad("`on_change` needs exactly one of `paths` and `code: true`")
         if "for_each" in spec:
             if "require" in spec:
                 bad("an existence rule (`for_each`) takes no `require`")
@@ -625,28 +639,51 @@ class _Builder:
 
     # ----------------------------------------------------------------------- overrides
 
-    # bondstone: REQ-PRF-007
+    # bondstone: REQ-PRF-007, REQ-PRF-014, REQ-PRF-015
     def overrides(self) -> None:
+        """Severities and locks, layer by layer: presets in the order they apply, then the profile."""
         cfg = self.cfg
-        for qid, severity in (cfg.profile.get("overrides") or {}).items():
-            where = f"overrides.{qid}"
-            if qid.startswith("bondstone/"):
-                engine = engine_rule(qid)
-                if engine is None:
-                    self.bad(f"{where}: unknown engine rule")
+        layers = [(c.manifest, c.id, c.data) for c in cfg.components if c.kind == "preset"]
+        layers.append((PROFILE_PATH, None, cfg.profile))
+        for path, preset, data in layers:
+            for qid, severity in (data.get("overrides") or {}).items():
+                where = f"overrides.{qid}"
+                if self._default_severity(qid, where, path) is None:
                     continue
-                if not engine.overridable:
-                    self.bad(f"{where}: configuration errors cannot be overridden")
+                lock = cfg.locks.get(qid)
+                if lock is not None and rank(severity) < rank(lock.severity):
+                    rule = cfg.rule(qid)
+                    by = "" if rule is not None and rule.owner == lock.by else f" by preset '{lock.by}'"
+                    self.bad(f"{where}: the rule is locked{by}; its severity ({lock.severity}) "
+                             "can be raised but not lowered", path)
                     continue
-            else:
+                cfg.overrides[qid] = severity
+                cfg.override_sources[qid] = f"preset {preset}" if preset else "profile"
+            for qid in data.get("lock") or []:
+                default = self._default_severity(qid, f"lock: {qid}", path)
+                if default is None or qid in cfg.locks:
+                    continue  # the first lock sets the floor
+                cfg.locks[qid] = Lock(cfg.severity(qid, default), preset or "profile")
                 rule = cfg.rule(qid)
-                if rule is None:
-                    self.bad(f"{where}: unknown rule")
-                    continue
-                if rule.locked and rank(severity) < rank(rule.severity):
-                    self.bad(f"{where}: the rule is locked; its severity ({rule.severity}) can be raised but not lowered")
-                    continue
-            cfg.overrides[qid] = severity
+                if rule is not None:
+                    rule.locked = True
+
+    def _default_severity(self, qid: str, where: str, path: str) -> str | None:
+        """The default severity of a rule that may be overridden; None, after reporting, when it may not."""
+        if qid.startswith("bondstone/"):
+            engine = engine_rule(qid)
+            if engine is None:
+                self.bad(f"{where}: unknown engine rule", path)
+                return None
+            if not engine.overridable:
+                self.bad(f"{where}: configuration errors cannot be overridden", path)
+                return None
+            return engine.severity
+        rule = self.cfg.rule(qid)
+        if rule is None:
+            self.bad(f"{where}: unknown rule", path)
+            return None
+        return rule.severity
 
     # ----------------------------------------------------------------------- bridges
 

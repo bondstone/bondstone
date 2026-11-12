@@ -36,6 +36,7 @@ def test_available_lists_local_and_installed_components_and_marks_the_ones_in_us
         ("pack", "capability", "bondstone-library", False),
         ("bridge", "adr-capability", ".bondstone/packs", False),
         ("bridge", "adr-capability", "bondstone-library", False),
+        ("preset", "starter", "bondstone-library", False),
     ]
     assert found[0].path == ".bondstone/packs/adr" and found[0].version == "1.0.0"
     assert found[1].path == (LIBRARY_PACKS / "adr").as_posix()
@@ -66,7 +67,8 @@ def test_packs_json_output(project, capsys):
         "description": "Architecture Decision Records with a lifecycle, supersession and immutability.",
         "in_use": True,
     }
-    assert [c["id"] for c in payload["components"]] == ["adr", "capability", "adr-capability"]
+    assert [(c["kind"], c["id"]) for c in payload["components"]] == [
+        ("pack", "adr"), ("pack", "capability"), ("bridge", "adr-capability"), ("preset", "starter")]
 
 
 def test_packs_without_a_profile_lists_what_a_new_profile_could_use(tmp_path, capsys, monkeypatch):
@@ -80,8 +82,8 @@ def test_packs_without_a_profile_lists_what_a_new_profile_could_use(tmp_path, ca
 
 def test_packs_with_nothing_to_list(tmp_path, capsys, no_installed_packages):
     code, out, _ = run(capsys, "--root", tmp_path, "packs")
-    assert (code, out) == (0, "no packs or bridges found\n")
-    assert to_text([]) == "no packs or bridges found\n"
+    assert (code, out) == (0, "no packs, bridges or presets found\n")
+    assert to_text([]) == "no packs, bridges or presets found\n"
 
 
 def test_packs_with_an_unreadable_profile_is_a_configuration_error(project, capsys):
@@ -94,6 +96,22 @@ def test_packs_still_lists_when_the_profile_names_a_missing_pack(project, capsys
     standard(project, packs=["adr@1", "nope@1"], bridges=[])
     code, out, _ = run(capsys, "--root", project.root, "packs")
     assert code == 0 and out.startswith("in use  pack    adr@1.0.0")
+
+
+def test_packs_lists_presets_after_bridges_and_marks_the_ones_extended(project, capsys, no_installed_packages):
+    standard(project, packs=[], bridges=[], extends=["base@1"])
+    project.write(".bondstone/packs/base/preset.yaml",
+                  "id: base\nversion: 1.1.0\ndescription: The team's base.\npacks: [adr@1]\n")
+    project.write(".bondstone/packs/other/preset.yaml", "id: other\nversion: 0.1.0\n")
+    code, out, _ = run(capsys, "--root", project.root, "packs")
+    assert code == 0
+    assert out.splitlines() == [
+        "in use  pack    adr@1.0.0             .bondstone/packs",
+        "        pack    capability@1.0.0      .bondstone/packs",
+        "        bridge  adr-capability@1.0.0  .bondstone/packs",
+        "in use  preset  base@1.1.0            .bondstone/packs  The team's base.",
+        "        preset  other@0.1.0           .bondstone/packs",
+    ]
 
 
 # ----------------------------------------------------------------------- pack test
@@ -130,12 +148,24 @@ def test_pack_test_fails_with_exit_code_1(pack_with_fixtures, capsys):
 
 def test_pack_test_on_something_else_is_an_environment_error(tmp_path, capsys):
     code, out, err = run(capsys, "pack", "test", tmp_path)
-    assert code == 3 and out == "" and "is not a pack or a bridge" in err
+    assert code == 3 and out == "" and "is not a pack, a bridge or a preset" in err
 
 
 def test_pack_test_runs_the_fixtures_of_the_library(capsys):
     code, out, _ = run(capsys, "pack", "test", *sorted(p for p in LIBRARY_PACKS.iterdir() if p.is_dir()))
-    assert code == 0 and out.endswith("✓ 6 fixture(s) passed\n")
+    assert code == 0 and out.endswith("✓ 7 fixture(s) passed\n")
+
+
+def test_pack_test_runs_the_fixtures_of_a_preset(tmp_path, capsys):
+    packs = Project(tmp_path / "packs").pack("adr", ADR_PACK, folder=".")
+    packs.write("base/preset.yaml", "id: base\nversion: 1.0.0\npacks: [adr@1]\n"
+                                    "overrides: {bondstone/view-stale: ignore}\n")
+    packs.write("base/fixtures/valid/.bondstone/profile.yaml", "bondstone: 1\nextends: [base@1]\n")
+    packs.write("base/fixtures/valid/expected.yaml", "errors: []\n")
+    code, out, _ = run(capsys, "pack", "test", packs.root / "base", "--format", "json")
+    payload = json.loads(out)
+    assert code == 0 and [(f["component"], f["kind"], f["passed"]) for f in payload["fixtures"]] == [
+        ("base", "preset", True)]
 
 
 # ----------------------------------------------------------------------- init
@@ -169,3 +199,38 @@ def test_init_does_not_look_for_a_profile_in_parent_folders(project, tmp_path, c
     monkeypatch.chdir(nested)
     assert run(capsys, "init")[0] == 0
     assert (nested / ".bondstone/profile.yaml").is_file()
+
+
+def test_init_from_a_preset_of_the_library(tmp_path, capsys, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    code, out, _ = run(capsys, "init", "--preset", "starter")
+    assert code == 0 and out.splitlines() == [
+        "created .bondstone/profile.yaml",
+        "next: list this repository's source files under `code.include`, then run `bondstone agent`"]
+    text = (tmp_path / ".bondstone/profile.yaml").read_text(encoding="utf-8")
+    assert "extends: [starter@1]\ncode:\n  include: []" in text
+    cfg = load_config(tmp_path)
+    assert cfg.problems == []
+    assert [(c.kind, c.id) for c in cfg.components] == [
+        ("pack", "adr"), ("pack", "capability"), ("bridge", "adr-capability"), ("preset", "starter")]
+    assert run(capsys, "profile", "check")[0] == 0
+
+
+def test_init_uses_the_major_version_that_is_available_or_the_range_given(project, tmp_path, capsys,
+                                                                         no_installed_packages):
+    project.write(".bondstone/packs/base/preset.yaml", "id: base\nversion: 2.3.1\n")
+    assert run(capsys, "--root", tmp_path, "init", "--preset", "base")[0] == 0
+    assert "extends: [base@2]\n" in project.read(".bondstone/profile.yaml")
+    (tmp_path / ".bondstone/profile.yaml").unlink()
+    assert run(capsys, "--root", tmp_path, "init", "--preset", "base@>=2.3")[0] == 0
+    assert "extends: [base@>=2.3]\n" in project.read(".bondstone/profile.yaml")
+
+
+def test_init_refuses_a_preset_that_is_not_available(project, tmp_path, capsys, no_installed_packages):
+    code, out, err = run(capsys, "--root", tmp_path, "init", "--preset", "starter")
+    assert code == 1 and out == "" and "preset 'starter' not found (no presets are available here)" in err
+    assert not (tmp_path / ".bondstone/profile.yaml").exists()
+    project.write(".bondstone/packs/base/preset.yaml", "id: base\nversion: 1.0.0\n")
+    project.pack("adr", ADR_PACK)
+    code, _, err = run(capsys, "--root", tmp_path, "init", "--preset", "adr")
+    assert code == 1 and "preset 'adr' not found (available: base)" in err

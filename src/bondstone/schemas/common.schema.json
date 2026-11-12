@@ -106,12 +106,16 @@
           "type": "object",
           "properties": {
             "paths": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "code": {
+              "description": "The files the profile selects under `code`; for rules that cannot know a repository's paths.",
+              "const": true,
+              "x-error": "expected true"
+            },
             "kinds": {
               "type": "array",
               "items": {"enum": ["added", "modified", "deleted"]}
             }
           },
-          "required": ["paths"],
           "additionalProperties": false
         },
         "exempt": {

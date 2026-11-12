@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "preset.schema.json",
+  "title": "bondstone preset.yaml",
+  "description": "A partial profile that profiles extend: packs, bridges, rules, overrides and locked rules shared across repositories.",
+  "type": "object",
+  "properties": {
+    "id": {"$ref": "common.schema.json#/$defs/componentId"},
+    "version": {"$ref": "common.schema.json#/$defs/version"},
+    "bondstone": {
+      "description": "Engine versions this preset works with, such as \">=1.0\".",
+      "type": "string"
+    },
+    "description": {"type": "string"},
+    "extends": {
+      "description": "Presets this one builds on; they are applied before it.",
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "bridges": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "rules": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/rule"}},
+    "overrides": {
+      "description": "Severity per qualified rule id, applied before the profile's own overrides.",
+      "type": "object",
+      "additionalProperties": {"$ref": "common.schema.json#/$defs/severity"}
+    },
+    "lock": {
+      "description": "Qualified ids of rules that later presets and the profile may raise but not lower or waive.",
+      "type": "array",
+      "items": {"type": "string"},
+      "uniqueItems": true
+    },
+    "instructions": {"type": "string"}
+  },
+  "required": ["id", "version"],
+  "additionalProperties": false
+}

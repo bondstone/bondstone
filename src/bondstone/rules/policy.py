@@ -93,7 +93,7 @@ def _active_waivers(cfg: Config, today: dt.date) -> tuple[list[dict[str, Any]], 
             invalid(f"waiver names an unknown rule '{rule_id}'")
         elif rule_id == CONFIG_RULE:
             invalid("configuration errors cannot be waived")
-        elif declared is not None and declared.locked:
+        elif rule_id in cfg.locks:
             invalid(f"waiver for {_subject(waiver)}: the rule is locked and cannot be waived")
         elif expires < today:
             problems.append(diagnostic(

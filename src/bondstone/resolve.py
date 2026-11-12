@@ -1,7 +1,8 @@
 """Find the profile and the packs and bridges it names.
 
 The profile's `sources` folders are searched first, then the folders that installed packages
-such as bondstone-library register. Git sources, presets and the lock file come later."""
+such as bondstone-library register. Presets named under `extends` add their packs and bridges
+to the profile's. Git sources and the lock file come later."""
 
 from __future__ import annotations
 
@@ -172,7 +173,7 @@ def find_sources(root: Path, profile: dict[str, Any] | None,
 
 
 def index_sources(sources: list[Source]) -> dict[tuple[str, str], list[Candidate]]:
-    """Packs and bridges found directly under the source folders, in priority order."""
+    """Packs, bridges and presets found directly under the source folders, in priority order."""
     found: dict[tuple[str, str], list[Candidate]] = {}
     for source in sources:
         if not source.dir.is_dir():
@@ -209,12 +210,13 @@ def _problem(message: str, path: str = PROFILE_PATH) -> Diagnostic:
     return Diagnostic(CONFIG_RULE, ERROR, message, path=path)
 
 
-# bondstone: REQ-PRF-004
+# bondstone: REQ-PRF-004, REQ-PRF-013
 def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
-    """Load the profile and every pack and bridge it names.
+    """Load the profile and every preset, pack and bridge it needs.
 
-    `extra_sources` are searched before the profile's own; fixtures use them to find the
-    component under test."""
+    The components come back as packs, bridges and then presets, each in the order in which
+    they are first named: presets in `extends` order, then the profile. `extra_sources` are
+    searched before the profile's own; fixtures use them to find the component under test."""
     result = Resolution(root)
     profile_file = root / PROFILE_PATH
     if not profile_file.is_file():
@@ -225,54 +227,108 @@ def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
         return result
     result.profile = profile
 
-    if profile.get("extends"):
-        result.problems.append(_problem(
-            "extends: presets are not supported yet; list the packs and bridges in the profile"))
-
     sources, errors = find_sources(root, profile, extra_sources)
     result.problems += [_problem(message) for message in errors]
     index = index_sources(sources)
 
-    seen: set[tuple[str, str]] = set()
-    for kind, key in (("pack", "packs"), ("bridge", "bridges")):
-        for ref in profile.get(key, []):
-            cid, spec = parse_ref(ref)
-            if (kind, cid) in seen:
-                result.problems.append(_problem(f"{key}: {kind} '{cid}' is listed more than once"))
-                continue
-            seen.add((kind, cid))
-            component = _choose(result, index, kind, cid, spec)
-            if component is not None:
-                result.components.append(component)
+    presets = _presets(result, index, profile)
+    requested: dict[tuple[str, str], list[tuple[str | None, str]]] = {}  # ranges and where each is written
+    for where, data in [*((preset.manifest, preset.data) for preset in presets), (PROFILE_PATH, profile)]:
+        for kind, key in (("pack", "packs"), ("bridge", "bridges")):
+            here: set[str] = set()
+            for ref in data.get(key, []):
+                cid, spec = parse_ref(ref)
+                if cid in here:
+                    result.problems.append(_problem(f"{key}: {kind} '{cid}' is listed more than once", where))
+                    continue
+                here.add(cid)
+                requested.setdefault((kind, cid), []).append((spec, where))
+    for kind in ("pack", "bridge"):
+        for (wanted, cid), specs in requested.items():
+            if wanted == kind:
+                component = _choose(result, index, kind, cid, specs)
+                if component is not None:
+                    result.components.append(component)
+    result.components += presets
 
-    _check_requirements(result)
+    _check_requirements(result, {cid for kind, cid in requested if kind == "pack"})
     return result
+
+
+# bondstone: REQ-PRF-013
+def _presets(result: Resolution, index: dict[tuple[str, str], list[Candidate]],
+             profile: dict[str, Any]) -> list[Component]:
+    """The presets a profile extends, each after the presets it extends itself.
+
+    A preset reached more than once is applied once, where it is first needed."""
+    ordered: list[Component] = []
+    visited: dict[str, Component | None] = {}
+
+    def visit(ref: str, chain: list[str], where: str) -> None:
+        cid, spec = parse_ref(ref)
+        if cid in chain:
+            loop = " -> ".join([*chain[chain.index(cid):], cid])
+            result.problems.append(_problem(f"extends: preset '{cid}' extends itself ({loop})", where))
+            return
+        if cid in visited:
+            known = visited[cid]
+            if known is not None and spec is not None and range_is_valid(spec) \
+                    and not version_matches(known.version, spec):
+                result.problems.append(_problem(
+                    f"extends: preset '{cid}' is needed as '{spec}', but {known.version} is already in use", where))
+            return
+        visited[cid] = None  # also stops a second report when it cannot be loaded
+        preset = _choose(result, index, "preset", cid, [(spec, where)])
+        visited[cid] = preset
+        if preset is None:
+            return
+        for parent in preset.data.get("extends", []):
+            visit(parent, [*chain, cid], preset.manifest)
+        ordered.append(preset)
+
+    for ref in profile.get("extends", []):
+        visit(ref, [], PROFILE_PATH)
+    return ordered
+
+
+_LISTS = {"pack": "packs", "bridge": "bridges", "preset": "extends"}
 
 
 # bondstone: REQ-PRF-004
 def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], kind: str,
-            cid: str, spec: str | None) -> Component | None:
-    if spec is not None and not range_is_valid(spec):
-        result.problems.append(_problem(f"{kind} '{cid}': invalid version range '{spec}'"))
-        return None
+            cid: str, specs: list[tuple[str | None, str]]) -> Component | None:
+    """The first copy of a component, in the order of the sources, that fits every range asked for.
+
+    `specs` pairs each range with the file that asks for it; problems are reported there."""
+    where = specs[0][1]
+    for spec, asked_in in specs:
+        if spec is not None and not range_is_valid(spec):
+            result.problems.append(_problem(f"{kind} '{cid}': invalid version range '{spec}'", asked_in))
+            return None
     candidates = index.get((kind, cid), [])
     if not candidates:
-        other = "bridge" if kind == "pack" else "pack"
-        if index.get((other, cid)):
+        other = next((k for k in _LISTS if k != kind and index.get((k, cid))), None)
+        if other is not None:
             result.problems.append(_problem(
-                f"{kind} '{cid}' not found: '{cid}' is a {other}; list it under `{other}s`"))
+                f"{kind} '{cid}' not found: '{cid}' is a {other}; list it under `{_LISTS[other]}`", where))
         else:
-            result.problems.append(_problem(f"{kind} '{cid}' not found in the profile's sources or in an installed package"))
+            result.problems.append(_problem(
+                f"{kind} '{cid}' not found in the profile's sources or in an installed package", where))
         return None
     broken = next((c for c in candidates if c.error), None)
     if broken is not None:
         result.problems.append(_problem(broken.error, shown_path(result.root, broken.manifest)))
         return None
-    chosen = next((c for c in candidates if version_matches(c.version, spec)), None)
+    chosen = next((c for c in candidates if all(version_matches(c.version, spec) for spec, _ in specs)), None)
     if chosen is None:
         versions = ", ".join(dict.fromkeys(c.version or "?" for c in candidates))
+        ranges = list(dict.fromkeys(spec for spec, _ in specs if spec is not None))
+        if len(ranges) == 1:
+            wanted = f"'{ranges[0]}'"
+        else:
+            wanted = "all of " + ", ".join(f"'{spec}' ({asked_in})" for spec, asked_in in specs if spec is not None)
         result.problems.append(_problem(
-            f"{kind} '{cid}': no version matches '{spec}' (available: {versions})"))
+            f"{kind} '{cid}': no version matches {wanted} (available: {versions})", where))
         return None
     shown = shown_path(result.root, chosen.manifest)
     data, problems = load_manifest(kind, chosen.manifest, shown)
@@ -292,10 +348,9 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
 
 
 # bondstone: REQ-PRF-005
-def _check_requirements(result: Resolution) -> None:
-    """Every bridge's required packs are in the profile, in a version the bridge accepts."""
+def _check_requirements(result: Resolution, listed: set[str]) -> None:
+    """Every bridge's required packs are named by the profile or a preset, in a version the bridge accepts."""
     packs = {c.id: c for c in result.components if c.kind == "pack"}
-    listed = {parse_ref(ref)[0] for ref in (result.profile or {}).get("packs", [])}
     for bridge in (c for c in result.components if c.kind == "bridge"):
         for pack_id, spec in bridge.data["requires"].items():
             if not range_is_valid(spec):
