@@ -1,0 +1,4 @@
+errors:
+- adr-capability/constrained-by-live-decision
+warnings:
+- adr-capability/accepted-decision-is-applied

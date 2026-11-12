@@ -1,0 +1,6 @@
+bondstone: 1
+packs: [capability@1]
+code:
+  include: ["src/*.py"]
+overrides:
+  bondstone/view-stale: ignore

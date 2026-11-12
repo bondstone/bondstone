@@ -1,13 +1,14 @@
 """Find the profile and the packs and bridges it names.
 
-Only local `sources` folders are searched for now; git sources, installed library packages,
-presets and the lock file come in later phases."""
+The profile's `sources` folders are searched first, then the folders that installed packages
+such as bondstone-library register. Git sources, presets and the lock file come later."""
 
 from __future__ import annotations
 
 import os
 import re
 from dataclasses import dataclass, field
+from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from .manifest import MANIFEST_NAMES, ManifestError, load_manifest, load_yaml
 from .model import CONFIG_RULE, ERROR, PROFILE_PATH, Component, Diagnostic, EnvironmentProblem
 
 DEFAULT_SOURCES = [".bondstone/packs"]
+ENTRY_POINT_GROUP = "bondstone.sources"  # installed packages register a folder of packs here
 
 # --------------------------------------------------------------------------- versions
 
@@ -95,11 +97,25 @@ def find_root(start: Path) -> Path:
 
 
 def shown_path(root: Path, path: Path) -> str:
-    """A path as diagnostics show it: relative to the repository root, with forward slashes."""
-    return Path(os.path.relpath(path, root)).as_posix()
+    """A path as diagnostics show it: relative to the repository root, with forward slashes.
+
+    A file outside the repository, such as a pack of an installed package, keeps its full path."""
+    root, path = root.resolve(), path.resolve()
+    if path.is_relative_to(root):
+        return path.relative_to(root).as_posix()
+    return path.as_posix()
 
 
 # --------------------------------------------------------------------------- sources
+
+
+@dataclass
+class Source:
+    """A folder that holds packs and bridges, one per subfolder."""
+
+    dir: Path
+    label: str  # how listings name it: the folder as the profile writes it, or the package
+    installed: bool = False
 
 
 @dataclass
@@ -110,16 +126,59 @@ class Candidate:
     dir: Path
     manifest: Path
     error: str | None = None  # the manifest could not be read as YAML
+    source: Source | None = None
+    description: str = ""
 
 
-def index_sources(dirs: list[Path]) -> dict[tuple[str, str], list[Candidate]]:
+# bondstone: REQ-PRF-011
+def installed_sources() -> tuple[list[Source], list[str]]:
+    """The folders installed packages register, by entry point name, and what failed to load.
+
+    An entry point of the group `bondstone.sources` names a function that returns the folder."""
+    sources: list[Source] = []
+    errors: list[str] = []
+    for entry in sorted(entry_points(group=ENTRY_POINT_GROUP), key=lambda e: e.name):
+        package = entry.dist.name if entry.dist is not None else entry.name
+        try:
+            target = entry.load()
+            folder = Path(target() if callable(target) else target)
+        except Exception as exc:  # a broken plugin must not take the checker down with a traceback
+            errors.append(f"installed package '{package}': its pack source '{entry.name}' "
+                          f"could not be loaded ({type(exc).__name__}: {exc})")
+            continue
+        if not folder.is_dir():
+            errors.append(f"installed package '{package}': its pack source '{folder}' is not a folder")
+            continue
+        sources.append(Source(folder, package, installed=True))
+    return sources, errors
+
+
+# bondstone: REQ-PRF-004, REQ-PRF-011
+def find_sources(root: Path, profile: dict[str, Any] | None,
+                 extra_sources: list[Path] | None = None) -> tuple[list[Source], list[str]]:
+    """Every folder to search, in priority order: the profile's `sources`, then installed packages.
+
+    `extra_sources` come first; fixtures use them to find the component under test."""
+    profile = profile or {}
+    sources = [Source(path, shown_path(root, path)) for path in extra_sources or []]
+    errors: list[str] = []
+    for name in profile.get("sources", DEFAULT_SOURCES):
+        directory = root / name
+        if "sources" in profile and not directory.is_dir():
+            errors.append(f"sources: folder '{name}' does not exist")
+        sources.append(Source(directory, name))
+    installed, problems = installed_sources()
+    return sources + installed, errors + problems
+
+
+def index_sources(sources: list[Source]) -> dict[tuple[str, str], list[Candidate]]:
     """Packs and bridges found directly under the source folders, in priority order."""
     found: dict[tuple[str, str], list[Candidate]] = {}
-    for base in dirs:
-        if not base.is_dir():
+    for source in sources:
+        if not source.dir.is_dir():
             continue
         for kind, filename in MANIFEST_NAMES.items():
-            for manifest in sorted(base.glob(f"*/{filename}")):
+            for manifest in sorted(source.dir.glob(f"*/{filename}")):
                 folder = manifest.parent
                 try:
                     data = load_yaml(manifest)
@@ -128,7 +187,9 @@ def index_sources(dirs: list[Path]) -> dict[tuple[str, str], list[Candidate]]:
                     data, error = None, str(exc)
                 data = data if isinstance(data, dict) else {}
                 cid = data.get("id") if isinstance(data.get("id"), str) else folder.name
-                candidate = Candidate(kind, cid, str(data.get("version", "")), folder, manifest, error)
+                description = data.get("description") if isinstance(data.get("description"), str) else ""
+                candidate = Candidate(kind, cid, str(data.get("version", "")), folder, manifest, error,
+                                      source, " ".join(description.split()))
                 found.setdefault((kind, cid), []).append(candidate)
     return found
 
@@ -150,7 +211,7 @@ def _problem(message: str, path: str = PROFILE_PATH) -> Diagnostic:
 
 # bondstone: REQ-PRF-004
 def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
-    """Load the profile and every pack and bridge it names from the local sources.
+    """Load the profile and every pack and bridge it names.
 
     `extra_sources` are searched before the profile's own; fixtures use them to find the
     component under test."""
@@ -168,13 +229,9 @@ def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
         result.problems.append(_problem(
             "extends: presets are not supported yet; list the packs and bridges in the profile"))
 
-    source_dirs = list(extra_sources or [])
-    for source in profile.get("sources", DEFAULT_SOURCES):
-        directory = root / source
-        if "sources" in profile and not directory.is_dir():
-            result.problems.append(_problem(f"sources: folder '{source}' does not exist"))
-        source_dirs.append(directory)
-    index = index_sources(source_dirs)
+    sources, errors = find_sources(root, profile, extra_sources)
+    result.problems += [_problem(message) for message in errors]
+    index = index_sources(sources)
 
     seen: set[tuple[str, str]] = set()
     for kind, key in (("pack", "packs"), ("bridge", "bridges")):
@@ -205,7 +262,7 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
             result.problems.append(_problem(
                 f"{kind} '{cid}' not found: '{cid}' is a {other}; list it under `{other}s`"))
         else:
-            result.problems.append(_problem(f"{kind} '{cid}' not found in the profile's sources"))
+            result.problems.append(_problem(f"{kind} '{cid}' not found in the profile's sources or in an installed package"))
         return None
     broken = next((c for c in candidates if c.error), None)
     if broken is not None:
@@ -213,7 +270,7 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
         return None
     chosen = next((c for c in candidates if version_matches(c.version, spec)), None)
     if chosen is None:
-        versions = ", ".join(c.version or "?" for c in candidates)
+        versions = ", ".join(dict.fromkeys(c.version or "?" for c in candidates))
         result.problems.append(_problem(
             f"{kind} '{cid}': no version matches '{spec}' (available: {versions})"))
         return None

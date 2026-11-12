@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bondstone-library"
+version = "0.1.0"
+description = "Packs, bridges and presets for bondstone: the set bondstone documents itself with."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["bondstone>=1.0.0a1"]
+
+# Bondstone searches every folder registered in this group, after the profile's own sources.
+[project.entry-points."bondstone.sources"]
+library = "bondstone_library:source"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bondstone_library"]
+
+[tool.uv.sources]
+bondstone = { workspace = true }

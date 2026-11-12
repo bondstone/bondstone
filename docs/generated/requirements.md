@@ -48,6 +48,7 @@
 | [REQ-PRF-008](../capabilities/profiles.md#req-prf-008-apply-waivers-that-have-a-reason-and-an-expiry-date) | Apply waivers that have a reason and an expiry date | CAP-profiles |
 | [REQ-PRF-009](../capabilities/profiles.md#req-prf-009-warn-about-packs-that-no-bridge-connects) | Warn about packs that no bridge connects | CAP-profiles |
 | [REQ-PRF-010](../capabilities/profiles.md#req-prf-010-stop-on-a-configuration-error) | Stop on a configuration error | CAP-profiles |
+| [REQ-PRF-011](../capabilities/profiles.md#req-prf-011-resolve-packs-and-bridges-from-installed-packages) | Resolve packs and bridges from installed packages | CAP-profiles |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes-with-selectors) | Select nodes with selectors | CAP-rules |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-node-rules) | Evaluate node rules | CAP-rules |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-evaluate-existence-rules) | Evaluate existence rules | CAP-rules |

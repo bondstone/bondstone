@@ -136,3 +136,23 @@ errors as `bondstone/profile` diagnostics, which no override or waiver can silen
 - Given a profile that names a pack that does not exist
 - When `bondstone check` runs
 - Then only configuration errors are printed and the exit code is 2
+
+### REQ-PRF-011: Resolve packs and bridges from installed packages
+
+Bondstone SHALL search, after the profile's `sources`, every folder that an installed Python
+package registers under the entry point group `bondstone.sources`, such as bondstone-library.
+A component in the profile's own sources MUST win over one with the same id in an installed
+package, and nothing from an installed package is loaded unless the profile names it. A
+registered source that cannot be loaded MUST be a configuration error that names the package.
+
+#### Scenario: A pack from the library
+
+- Given bondstone-library is installed and a profile names `adr@1` without having it locally
+- When the configuration is loaded
+- Then the pack `adr` is read from the library's folder
+
+#### Scenario: A local pack with the same id
+
+- Given a pack `adr` in `.bondstone/packs` and another in an installed package
+- When the configuration is loaded
+- Then the local pack is used
