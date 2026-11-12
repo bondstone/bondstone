@@ -5,7 +5,8 @@ that live in the same repository. Coding agents run it to validate their own wor
 and CI run it as a gate.
 
 > Status: v1 under construction. The design is [docs/design.md](docs/design.md). Phases 1
-> and 2 are in place: the core check, and the checks that compare with a base commit.
+> to 3 are in place: the core check, the checks that compare with a base commit, and the
+> commands that agents work with.
 
 ## How it works
 
@@ -27,6 +28,13 @@ the profile lists under `sources` (default `.bondstone/packs`).
 | `bondstone gen` | Regenerate views. |
 | `bondstone baseline [REF]` | Record the commit whose documents count as already adopted. |
 | `bondstone profile check [--format text\|json]` | Validate the profile, packs and bridges. |
+| `bondstone new TYPE --title T [--set k=v]` | Scaffold a document with the next id at the right path. |
+| `bondstone status ID STATUS` | Change the status of a document or an item, if its lifecycle allows the step. |
+| `bondstone supersede ID --title T` | Create a successor, mark the old document superseded, move the links to it. |
+| `bondstone context --for PATH... \| --base REF` | List what to read before editing, and the diff rules that will fire. |
+| `bondstone rules`, `bondstone explain RULE` | List the active rules with their effective severity; explain one. |
+| `bondstone agent [--format md\|skill] [--output F]` | Write the instructions for coding agents. |
+| `bondstone graph [--format json\|mermaid] [--type T]` | Export the graph of documents, links and code tags. |
 
 Every command takes `--root DIR`; without it, bondstone uses the nearest folder that has a
 `.bondstone/profile.yaml`.
@@ -39,12 +47,32 @@ $ bondstone --root examples/habit-tracker check
 | Exit code | Meaning |
 | --- | --- |
 | 0 | No violations at or above `--fail-on` |
-| 1 | Violations found |
+| 1 | Violations found, or a command refused what it was asked |
 | 2 | Configuration error: invalid profile, pack or bridge |
 | 3 | Environment error: no profile found, the root is not a directory, `--base` outside a git repository, or a ref that is not a commit |
 
 JSON output has a `version`, a `summary` and one entry per diagnostic with `rule`, `severity`,
 `path`, `line`, `node`, `message`, `hint` and, when one command resolves it, `fix.command`.
+
+## Working with agents
+
+`bondstone agent` writes `AGENTS.bondstone.md` from the active profile: the workflow, every
+type, every rule with the severity `check` applies, and each pack's guidance. `AGENTS.md` or
+`CLAUDE.md` only needs one line that points at it. `--format skill` writes the same content as
+a Claude Code skill.
+
+An agent's loop then looks like this:
+
+```bash
+bondstone context --for app/lib/reminders.dart   # what to read, which rules will fire
+bondstone new adr:Decision --title "Snooze with one more local notification"
+bondstone status REQ-REM-003 active
+bondstone check --base origin/main --format json # fix until exit 0; run each fix.command
+```
+
+The scaffolding commands refuse what `check` would report afterwards, regenerate stale views,
+and print JSON with `--format json`. `tests/test_walkthrough.py` plays such a task on the
+example from start to finish.
 
 ## Changes over time
 
@@ -86,6 +114,7 @@ uses the `adr` and `capability` packs of the example until the library package e
 | [`docs/adr`](docs/adr) | The decisions of the design (D1 to D14) and later ones, as immutable records. |
 | [`docs/capabilities`](docs/capabilities) | One living spec per engine area. Every requirement is tagged in `src/bondstone` with a `bondstone: REQ-...` comment. |
 | [`docs/generated`](docs/generated) | The decision log, the capability index and the requirement list, written by `bondstone gen`. |
+| [`AGENTS.bondstone.md`](AGENTS.bondstone.md) | The instructions for coding agents, written by `bondstone agent`. |
 
 A change to tagged code must update the capability that code implements, or say why not with a
 `Spec-Impact` trailer. CI runs `bondstone check --base` on every pull request.

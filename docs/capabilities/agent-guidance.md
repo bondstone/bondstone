@@ -6,6 +6,7 @@ status: draft
 owner: dworek
 code: AGT
 depends_on: [CAP-profiles, CAP-rules, CAP-graph]
+constrained_by: [ADR-016]
 ---
 
 ## Purpose

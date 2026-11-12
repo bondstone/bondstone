@@ -28,9 +28,10 @@ def test_bondstone_passes_its_own_check_without_warnings():
 
 def test_the_decisions_of_the_design_are_recorded():
     _, graph = load()
-    decisions = sorted(node.id for node in graph.nodes if node.type == "adr:Decision")
-    assert decisions == [f"ADR-{n:03d}" for n in range(1, 16)]
-    assert {node.status for node in graph.nodes if node.type == "adr:Decision"} == {"accepted"}
+    decisions = {node.id: node.status for node in graph.nodes if node.type == "adr:Decision"}
+    design = [f"ADR-{n:03d}" for n in range(1, 16)]  # D1 to D14, and the mandatory `type` key
+    assert sorted(decisions)[:15] == design
+    assert {decisions[doc_id] for doc_id in design} == {"accepted"}
 
 
 def test_every_requirement_is_tagged_in_the_source():
