@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "bondstone": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:df965ba92fcffcc5b81c4a3714636ce106d43138d6967cf2db30503f347e9e10",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.specify"
+        ]
+      },
+      "registered_skills": {
+        "claude": [
+          "speckit-specify"
+        ]
+      },
+      "installed_at": "2026-11-12T16:52:29.523677+00:00"
+    }
+  }
+}

@@ -75,6 +75,11 @@
 | [REQ-SCF-004](../capabilities/scaffolding.md#req-scf-004-supersede-a-document) | Supersede a document | CAP-scaffolding |
 | [REQ-SCF-005](../capabilities/scaffolding.md#req-scf-005-edit-only-the-lines-that-change) | Edit only the lines that change | CAP-scaffolding |
 | [REQ-SCF-006](../capabilities/scaffolding.md#req-scf-006-regenerate-views-after-an-edit) | Regenerate views after an edit | CAP-scaffolding |
+| [REQ-SKT-001](../capabilities/spec-kit-adapter.md#req-skt-001-read-a-spec-kit-feature-folder-as-one-node) | Read a Spec Kit feature folder as one node | CAP-spec-kit-adapter |
+| [REQ-SKT-002](../capabilities/spec-kit-adapter.md#req-skt-002-add-the-frontmatter-through-a-spec-kit-preset) | Add the frontmatter through a Spec Kit preset | CAP-spec-kit-adapter |
+| [REQ-SKT-003](../capabilities/spec-kit-adapter.md#req-skt-003-fold-an-implemented-feature-into-the-capabilities) | Fold an implemented feature into the capabilities | CAP-spec-kit-adapter |
+| [REQ-SKT-004](../capabilities/spec-kit-adapter.md#req-skt-004-rest-an-implemented-feature-on-accepted-decisions) | Rest an implemented feature on accepted decisions | CAP-spec-kit-adapter |
+| [REQ-SKT-005](../capabilities/spec-kit-adapter.md#req-skt-005-ask-for-a-feature-when-code-changes) | Ask for a feature when code changes | CAP-spec-kit-adapter |
 | [REQ-TRC-001](../capabilities/code-traceability.md#req-trc-001-find-tags-in-code) | Find tags in code | CAP-code-traceability |
 | [REQ-TRC-002](../capabilities/code-traceability.md#req-trc-002-know-the-region-of-code-a-tag-annotates) | Know the region of code a tag annotates | CAP-code-traceability |
 | [REQ-TRC-003](../capabilities/code-traceability.md#req-trc-003-reject-tags-that-point-nowhere) | Reject tags that point nowhere | CAP-code-traceability |

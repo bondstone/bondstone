@@ -12,4 +12,5 @@
 | [CAP-profiles](../capabilities/profiles.md) | Profiles, packs and bridges | active | Adam Dworzyński |
 | [CAP-rules](../capabilities/rules.md) | Rules and traits | active | Adam Dworzyński |
 | [CAP-scaffolding](../capabilities/scaffolding.md) | Scaffolding and edits | active | Adam Dworzyński |
+| [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) | Spec Kit adapter | draft | Adam Dworzyński |
 | [CAP-views](../capabilities/views.md) | Generated views | active | Adam Dworzyński |
