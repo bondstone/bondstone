@@ -3,7 +3,7 @@ id: ADR-014
 type: adr:Decision
 title: Leave portfolio and cross-repository links until after v1
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

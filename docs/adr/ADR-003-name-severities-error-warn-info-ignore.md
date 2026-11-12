@@ -3,7 +3,7 @@ id: ADR-003
 type: adr:Decision
 title: Name severities error, warn, info and ignore
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

@@ -3,7 +3,7 @@ id: CAP-cli
 type: capability:Capability
 title: Command line and output
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: CLI
 constrained_by: [ADR-001]
 depends_on: [CAP-profiles, CAP-rules, CAP-views, CAP-diff-checks]

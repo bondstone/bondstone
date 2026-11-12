@@ -3,7 +3,7 @@ id: CAP-diff-checks
 type: capability:Capability
 title: Checks against a base commit
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: DIF
 constrained_by: [ADR-005]
 depends_on: [CAP-graph, CAP-rules, CAP-code-traceability]

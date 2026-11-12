@@ -3,7 +3,7 @@ id: CAP-scaffolding
 type: capability:Capability
 title: Scaffolding and edits
 status: draft
-owner: dworek
+owner: Adam Dworzyński
 code: SCF
 depends_on: [CAP-graph, CAP-rules, CAP-views]
 ---

@@ -3,7 +3,7 @@ id: ADR-007
 type: adr:Decision
 title: Verify that changes are folded into living docs, do not merge them
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

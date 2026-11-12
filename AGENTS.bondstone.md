@@ -31,7 +31,7 @@ One architecturally significant decision and its rationale.
 - status: proposed | accepted | rejected | deprecated | superseded (new ones start as `proposed`)
 - allowed status changes: proposed → accepted, rejected; accepted → deprecated, superseded; deprecated → superseded
 - needs an `owner`
-- immutable once accepted, rejected, deprecated, superseded: only status may change; supersede it instead of editing it
+- immutable once accepted, rejected, deprecated, superseded: only status, owner may change; supersede it instead of editing it
 - links: `supersedes` → adr:Decision (at most 1)
 
 ### `capability:Capability`

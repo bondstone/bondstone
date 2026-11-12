@@ -3,7 +3,7 @@ id: ADR-002
 type: adr:Decision
 title: Keep the configuration in .bondstone/profile.yaml
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

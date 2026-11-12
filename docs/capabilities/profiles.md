@@ -3,7 +3,7 @@ id: CAP-profiles
 type: capability:Capability
 title: Profiles, packs and bridges
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: PRF
 constrained_by: [ADR-002, ADR-003, ADR-012]
 ---

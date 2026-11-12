@@ -3,7 +3,7 @@ id: CAP-rules
 type: capability:Capability
 title: Rules and traits
 status: active
-owner: dworek
+owner: Adam Dworzyński
 code: RUL
 constrained_by: [ADR-003]
 depends_on: [CAP-graph, CAP-profiles]

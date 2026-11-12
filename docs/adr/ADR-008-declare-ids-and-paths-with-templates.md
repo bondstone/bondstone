@@ -3,7 +3,7 @@ id: ADR-008
 type: adr:Decision
 title: Declare ids and paths with one template each
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 

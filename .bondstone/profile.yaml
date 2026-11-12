@@ -7,7 +7,7 @@ bridges: [adr-capability@1]
 sources: [examples/habit-tracker/.bondstone/packs]
 docs: ["docs/adr/**/*.md", "docs/capabilities/**/*.md"]
 defaults:
-  owner: dworek
+  owner: Adam Dworzyński
 code:
   include: ["src/bondstone/**/*.py"]
 

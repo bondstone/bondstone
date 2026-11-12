@@ -3,7 +3,7 @@ id: ADR-010
 type: adr:Decision
 title: Add matrix views and link columns in v1
 status: accepted
-owner: dworek
+owner: Adam Dworzyński
 date: 2026-11-10
 ---
 
