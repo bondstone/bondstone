@@ -1,7 +1,7 @@
 # Bondstone documents itself: decisions and living capability specs, traced to the code.
 # The packs come from the example until the library package exists (ADR-012).
 bondstone: 1
-baseline: '37aa54efbf738ef7cc9417d7c5e7e38119386556'
+baseline: 'e994d119c55806e90b695d431405cf4db69813bc'
 packs: [adr@1, capability@1]
 bridges: [adr-capability@1]
 sources: [examples/habit-tracker/.bondstone/packs]
