@@ -85,9 +85,11 @@ or uses in a version outside the required range.
 ### REQ-PRF-006: Check what a schema cannot express
 
 Bondstone SHALL report references that lead nowhere: a link or a role that names an unknown
-type, a rule that selects an unknown type, link or role, a view that walks an unknown link or
-writes outside the repository, a trait that names a status its lifecycle does not declare, and
-a malformed id or path template.
+type, a rule that selects an unknown type, link or role, a view that walks an unknown link in
+its levels, its link columns or its matrix path, that selects an unknown type for its rows or
+columns, or that writes outside the repository, a trait that names a status its lifecycle
+does not declare, and a malformed id or path template. It SHALL also report a view whose keys
+do not fit its layout, such as a matrix without `rows`, `cols` and `via`.
 
 #### Scenario: Rule on an unknown type
 

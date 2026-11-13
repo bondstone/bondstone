@@ -86,6 +86,8 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 - `docs/generated/decisions.md` (adr/decision-log)
 - `docs/generated/capabilities.md` (capability/index)
 - `docs/generated/requirements.md` (capability/requirements)
+- `docs/generated/decisions-applied.md` (profile/decisions-applied)
+- `docs/generated/decision-usage.md` (profile/decision-usage)
 
 ## Guidance from `adr`
 

@@ -630,12 +630,25 @@ class _Builder:
         if output in outputs:
             bad(f"output '{output}' is already written by view {outputs[output]}")
         outputs.setdefault(output, view.qid)
-        for message in self._selector_problems(spec.get("select"), view.context_pack):
-            bad(message)
+        for key in ("select", "rows", "cols"):
+            for message in self._selector_problems(spec.get(key), view.context_pack):
+                bad(message)
         for level in spec.get("levels") or []:
             name = level.get("link") or level.get("incoming")
             if not self._link_exists(name):
                 bad(f"unknown link '{name}'")
+        # bondstone: REQ-VIE-006, REQ-VIE-007
+        matrix = spec.get("render") == "matrix"
+        only_matrix = [key for key in ("rows", "cols", "via") if key in spec]
+        if matrix and len(only_matrix) < 3:
+            bad("a matrix needs `rows`, `cols` and `via`")
+        elif not matrix and only_matrix:
+            bad(f"{', '.join(f'`{key}`' for key in only_matrix)} only appl{'ies' if len(only_matrix) == 1 else 'y'} "
+                "to `render: matrix`")
+        backwards = [c for c in spec.get("columns") or [] if c.startswith("<-")]
+        for name in [*spec.get("via", []), *backwards]:
+            if not self._link_exists(name.removeprefix("<-")):
+                bad(f"unknown link '{name.removeprefix('<-')}'")
 
     # ----------------------------------------------------------------------- overrides
 

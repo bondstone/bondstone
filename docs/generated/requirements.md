@@ -84,3 +84,5 @@
 | [REQ-VIE-003](../capabilities/views.md#req-vie-003-write-only-the-views-that-changed) | Write only the views that changed | CAP-views |
 | [REQ-VIE-004](../capabilities/views.md#req-vie-004-fail-the-check-on-a-stale-view) | Fail the check on a stale view | CAP-views |
 | [REQ-VIE-005](../capabilities/views.md#req-vie-005-mark-generated-files) | Mark generated files | CAP-views |
+| [REQ-VIE-006](../capabilities/views.md#req-vie-006-show-linked-nodes-in-table-columns) | Show linked nodes in table columns | CAP-views |
+| [REQ-VIE-007](../capabilities/views.md#req-vie-007-render-matrix-views) | Render matrix views | CAP-views |

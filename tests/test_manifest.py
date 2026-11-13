@@ -217,14 +217,14 @@ def test_rule_and_view_shapes():
             when: {kind: Note}
             require: [{sections: Summary}]
         views:
-          - {id: v, output: out.md, render: matrix}
+          - {id: v, output: out.md, render: chart}
           - {id: w, output: out.md, levels: [{link: a, incoming: b}]}
     """))
     assert "rules[0]: missing required key 'id'" in messages
     assert any(m.startswith("rules[1].id: expected a lower-case rule id") for m in messages)
     assert any(m.startswith("rules[2].when: unknown key 'kind'") for m in messages)
     assert any(m.startswith("rules[2].require[0]: unknown key 'sections'") for m in messages)
-    assert 'views[0].render: expected one of table, tree, got "matrix"' in messages
+    assert 'views[0].render: expected one of table, tree, matrix, got "chart"' in messages
     assert any(m.startswith("views[1].levels[0]: expected exactly one of `link` or `incoming`") for m in messages)
 
 

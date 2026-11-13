@@ -6,6 +6,7 @@ status: active
 owner: Adam Dworzyński
 code: VIE
 depends_on: [CAP-graph, CAP-rules]
+constrained_by: [ADR-010]
 ---
 
 ## Purpose
@@ -75,3 +76,39 @@ globs.
 - Given `docs: ["docs/**/*.md"]` and a view written to `docs/generated/decisions.md`
 - When `bondstone check` runs
 - Then no `bondstone/untyped-document` is reported for the view
+
+### REQ-VIE-006: Show linked nodes in table columns
+
+Bondstone SHALL render a table column that names a link as the ids of the linked nodes, each
+a Markdown link to its document: the name of a link for the nodes a row points at, in the
+order the document lists them, and `<-name` for the nodes that point at the row, sorted by
+id. The heading reads the link's name as words, with an arrow for `<-name`. A target that
+does not exist is shown as plain text, and a `<-name` column for an unknown link MUST be a
+configuration error.
+
+#### Scenario: Where a decision applies
+
+- Given a table of decisions with the column `<-constrained_by`, and CAP-a and CAP-b constrained by ADR-002
+- When the view is rendered
+- Then the row of ADR-002 has the cell `[CAP-a](...), [CAP-b](...)` under the heading `← Constrained by`
+
+### REQ-VIE-007: Render matrix views
+
+Bondstone SHALL render a view with `render: matrix` as one row per node matching `rows` and
+one column per node matching `cols`, both sorted by id, with a mark in every cell whose row
+is connected to its column by the links under `via`. `via` is a path: each entry is followed
+from the nodes the previous one reached, along the link or against it for `<-name`. A matrix
+without `rows`, `cols` or `via`, one of those keys on another layout, and an unknown link
+under `via` MUST be configuration errors.
+
+#### Scenario: Capabilities against decisions
+
+- Given `rows: {type: capability:Capability}`, `cols: {type: adr:Decision}` and `via: [constrained_by]`
+- When CAP-a is constrained by ADR-002
+- Then the cell of CAP-a and ADR-002 has a mark and the other cells of that row are empty
+
+#### Scenario: A path of two links
+
+- Given rows of decisions, columns of capabilities and `via: ["<-constrained_by", "<-depends_on"]`
+- When CAP-a is constrained by ADR-002 and CAP-b depends on CAP-a
+- Then the cell of ADR-002 and CAP-b has a mark
