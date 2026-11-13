@@ -53,10 +53,17 @@ above the current one that contains `.bondstone/profile.yaml`.
 ### REQ-PRF-004: Resolve packs and bridges from local sources
 
 Bondstone SHALL find each pack and bridge the profile names in the folders listed under
-`sources` (default `.bondstone/packs`) and choose the highest version that satisfies the
-requested range. `adr@1` and `^1` mean any 1.x; comparators such as `>=1.0` are combined with
-AND. A component that is missing, or present only in other versions, MUST be a configuration
+`sources` (default `.bondstone/packs`) and choose the first copy, in the order in which the
+sources are searched, whose version satisfies the requested range, so that a repository can
+override a pack with its own copy. `adr@1` and `^1` mean any 1.x; comparators such as
+`>=1.0` are combined with AND. A component that is missing, or present only in other versions, MUST be a configuration
 error. The engine ships no packs of its own.
+
+#### Scenario: A local copy before a newer one
+
+- Given `adr` 1.0.0 in `.bondstone/packs` and `adr` 1.2.0 in an installed package
+- When a profile names `adr@1`
+- Then the local 1.0.0 is used
 
 #### Scenario: Version out of range
 
