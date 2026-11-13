@@ -101,7 +101,7 @@ weaken the profile to make a check pass, by hand or with `bondstone waive`, neve
 (only `bondstone baseline --known --prune` is theirs to run, after fixing a known violation)
 and, when a rule can be exempted, not to add an exemption trailer unless the user asked for
 one. When the repository has known violations, the instructions say how many and how `check`
-shows them. Writing the file again without a change of
+shows them, and when packs come from git sources they say not to edit the lock file. Writing the file again without a change of
 the configuration changes nothing; `--output -` prints it instead.
 
 #### Scenario: Overridden severity

@@ -11,7 +11,7 @@
 | [CAP-known-violations](../capabilities/known-violations.md) Known violations |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |
 | [CAP-library](../capabilities/library.md) Library |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [CAP-pack-tooling](../capabilities/pack-tooling.md) Pack tooling |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
-| [CAP-profiles](../capabilities/profiles.md) Profiles, packs and bridges |  | ✓ | ✓ | ✓ |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
+| [CAP-profiles](../capabilities/profiles.md) Profiles, packs and bridges |  | ✓ | ✓ | ✓ |  |  |  |  |  |  | ✓ | ✓ |  |  |  |  |  |
 | [CAP-rules](../capabilities/rules.md) Rules and traits |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | [CAP-scaffolding](../capabilities/scaffolding.md) Scaffolding and edits |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) Spec Kit adapter |  |  |  |  |  |  | ✓ |  |  |  |  |  | ✓ |  |  |  | ✓ |

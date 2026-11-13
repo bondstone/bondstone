@@ -14,6 +14,7 @@ from typing import Any
 import yaml
 
 from . import __version__, agent, context, edit, export, packs, packtest, report, waive
+from . import update as updating
 from .baseline import record_baseline, record_known
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
@@ -301,6 +302,18 @@ def cmd_report(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# bondstone: REQ-PRF-020
+def cmd_update(args: argparse.Namespace) -> int:
+    if args.locked and args.names:
+        raise Refused("`update --locked` fetches what the lock pins; it takes no names")
+    result = updating.update(_root(args), args.names, args.locked)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **result.to_dict()})
+    else:
+        sys.stdout.write(updating.to_text(result, args.locked))
+    return EXIT_OK
+
+
 def _folder(args: argparse.Namespace) -> Path:
     """The folder a command works in when it needs no profile: `--root`, or the current folder."""
     if args.root is None:
@@ -475,6 +488,15 @@ def build_parser() -> argparse.ArgumentParser:
                                     help="count nodes, coverage, waivers, known violations and exemptions")
     reporting.add_argument("--base", metavar="REF", help="also count the exemptions used since REF")
     reporting.set_defaults(func=cmd_report)
+
+    # bondstone: CLI-update
+    update = commands.add_parser("update", parents=[common, output],
+                                 help="fetch the git sources of packs and pin them in .bondstone/bondstone.lock")
+    update.add_argument("names", metavar="NAME", nargs="*",
+                        help="only move the sources that hold these packs, bridges or presets")
+    update.add_argument("--locked", action="store_true",
+                        help="fetch exactly what the lock pins and change nothing; for CI, before check")
+    update.set_defaults(func=cmd_update)
 
     # bondstone: CLI-init
     init = commands.add_parser("init", parents=[common], help="create a profile in this folder")

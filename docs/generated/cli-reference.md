@@ -19,4 +19,5 @@
 | [CLI-rules](../cli/rules.md) | rules | bondstone rules [--format text\|json] | stable |
 | [CLI-status](../cli/status.md) | status | bondstone status [--format text\|json] ID STATUS | stable |
 | [CLI-supersede](../cli/supersede.md) | supersede | bondstone supersede [--format text\|json] --title TITLE [--set KEY=VALUE] ID | stable |
+| [CLI-update](../cli/update.md) | update | bondstone update [--format text\|json] [--locked] [NAME ...] | experimental |
 | [CLI-waive](../cli/waive.md) | waive | bondstone waive [--format text\|json] --reason REASON --expires DATE RULE [NODE] | experimental |

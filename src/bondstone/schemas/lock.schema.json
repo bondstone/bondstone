@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lock.schema.json",
+  "title": "bondstone bondstone.lock",
+  "description": "The git sources a profile and its presets name, pinned: the commit of each and a SHA-256 of the files of each component. `bondstone update` writes the file.",
+  "type": "object",
+  "properties": {
+    "bondstone": {"const": 1, "x-error": "expected the format version 1"},
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "source": {"description": "The source as the profile or the preset writes it.", "type": "string", "minLength": 1},
+          "commit": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40,64}$",
+            "x-error": "expected a full commit id"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {"enum": ["pack", "bridge", "preset"]},
+                "id": {"type": "string"},
+                "version": {"type": "string"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "x-error": "expected a SHA-256 in hexadecimal"}
+              },
+              "required": ["kind", "id", "version", "sha256"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["source", "commit", "components"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["bondstone", "sources"],
+  "additionalProperties": false
+}

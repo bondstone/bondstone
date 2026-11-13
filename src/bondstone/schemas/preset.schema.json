@@ -20,6 +20,16 @@
     },
     "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "bridges": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "sources": {
+      "description": "Git sources, written host/org/repo//path@ref, where the packs, bridges and presets this preset names are found. A preset cannot name local folders.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9.-]*\\.[A-Za-z0-9-]+(/[A-Za-z0-9._-]+)+(//[A-Za-z0-9._/-]*)?@[A-Za-z0-9][A-Za-z0-9._/+-]*$",
+        "x-error": "expected a git source such as github.com/acme/bondstone-packs//packs@v1.2.0"
+      },
+      "uniqueItems": true
+    },
     "rules": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/rule"}},
     "overrides": {
       "description": "Severity per qualified rule id, applied before the profile's own overrides.",

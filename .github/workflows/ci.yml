@@ -24,6 +24,8 @@ jobs:
           examples/habit-tracker/.bondstone/packs/*
       - name: both packages build
         run: uv build --all-packages --out-dir "$RUNNER_TEMP/dist"
+      - name: git sources of packs, exactly as the lock pins them
+        run: uv run bondstone update --locked
       - name: bondstone check on the example
         run: uv run bondstone --root examples/habit-tracker check
       - name: bondstone check on bondstone's own documentation

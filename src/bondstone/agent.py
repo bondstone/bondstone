@@ -17,6 +17,7 @@ from .config import PLACEHOLDER, Config
 from .context import describe_clause
 from .model import IGNORE, Refused, Rule
 from .rules.diff import describe_trigger
+from .sources import LOCK_PATH, parse_git_source
 
 
 @dataclass
@@ -193,6 +194,11 @@ def _workflow(cfg: Config) -> list[str]:
            "reports those violations as info, marked `known`, and they do not fail. " if cfg.known else "")
         + "After you fix a known violation, run `bondstone baseline --known --prune`, which only removes entries.",
     ]
+    remote = [*(cfg.profile.get("sources") or []),
+              *(name for comp in cfg.components if comp.kind == "preset" for name in comp.data.get("sources") or [])]
+    if any(parse_git_source(str(name)) for name in remote):
+        steps.append(f"Packs come from git sources that `{LOCK_PATH}` pins. Do not edit that file; "
+                     "`bondstone update` rewrites it, and moving a pin is for the user to decide.")
     if trailers:
         names = ", ".join(f"`{name}`" for name in trailers)
         steps.append(f"Do not add an exemption trailer ({names}) to a commit unless the user asked for one.")
