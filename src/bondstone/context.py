@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import Config, as_list
+from .edit import next_item_id
 from .git import ADDED, DELETED, MODIFIED, Change, Repository
 from .graph import Graph, code_files, scan_tags
 from .model import IGNORE, PART_OF, Node, Refused
@@ -26,11 +27,13 @@ class Entry:
     reasons: list[str] = field(default_factory=list)
     note: str | None = None  # a warning, such as immutability
     changed: bool | None = None  # with --base: whether its file changed
+    next_item_id: str | None = None  # the id for the next item added to this document
 
     def to_dict(self) -> dict[str, Any]:
         node = self.node
         out = {"id": node.id, "type": node.type, "path": node.path, "line": node.line, "title": node.title,
-               "status": node.status, "reasons": self.reasons, "note": self.note, "changed": self.changed}
+               "status": node.status, "reasons": self.reasons, "note": self.note, "changed": self.changed,
+               "next_item_id": self.next_item_id}
         return {key: value for key, value in out.items() if value is not None}
 
 
@@ -104,6 +107,8 @@ class _Collector:
         entry = self.entries.get(node.id)
         if entry is None:
             entry = self.entries[node.id] = Entry(node, note=self._note(node))
+            if not node.is_item:
+                entry.next_item_id = next_item_id(self.cfg, self.graph, node)
             if self.changed is not None:
                 entry.changed = node.path in self.changed
         if reason not in entry.reasons:
@@ -261,6 +266,8 @@ def to_text(context: Context) -> str:
             lines.append(f"      {node.title}{status}: {'; '.join(entry.reasons)}")
             if entry.note:
                 lines.append(f"      {entry.note}")
+            if entry.next_item_id:
+                lines.append(f"      next item id: {entry.next_item_id}")
     else:
         lines.append(f"No document is traced to {shown}.")
     lines.append("")

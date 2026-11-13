@@ -106,4 +106,7 @@ def test_graph_command(loaded, project, capsys):
     code, out, _ = run(capsys, "--root", project.root, "graph", "--format", "mermaid", "--type", "Decision")
     assert code == 0 and out == graph_mermaid(*loaded, ["Decision"])
     code, out, err = run(capsys, "--root", project.root, "graph", "--type", "Nope")
-    assert (code, out) == (1, "") and "unknown type 'Nope'" in err
+    assert code == 1 and "unknown type 'Nope'" in err
+    assert json.loads(out)["error"]["kind"] == "refused"  # the default format of `graph` is JSON
+    code, out, _ = run(capsys, "--root", project.root, "graph", "--format", "mermaid", "--type", "Nope")
+    assert (code, out) == (1, "")

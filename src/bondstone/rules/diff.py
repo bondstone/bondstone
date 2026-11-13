@@ -513,6 +513,7 @@ def _exempt(rule: Rule, diag: Diagnostic, trailers: list[Trailer]) -> Diagnostic
             continue
         scope, reason = parsed
         if scope is None or diag.node in scope:
-            diag.exempted_by = {"commit": trailer.commit, "trailer": trailer.key, "reason": reason}
+            diag.exempted_by = {"commit": trailer.commit, "trailer": trailer.key, "reason": reason,
+                                "rule": rule.qid}
             return diag
     return diag

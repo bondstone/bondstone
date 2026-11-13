@@ -25,7 +25,10 @@ def test_instructions_start_with_the_generated_mark_and_the_workflow(project):
     for command in ("bondstone context --for", "bondstone new <Type>", "bondstone status <ID> <STATUS>",
                     "bondstone supersede <ID>", "bondstone gen", "bondstone check --base", "bondstone explain <rule>"):
         assert command in text
-    assert "Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead." in text
+    assert ("Never weaken `.bondstone/profile.yaml` (overrides, waivers, `bondstone waive`) to make a check pass. "
+            "Ask the user instead.") in text
+    assert "Never create `.bondstone/known.json`, add an entry to it or run `bondstone baseline --known` yourself" in text
+    assert "`bondstone context --for <document>` gives the id of the next item" in text
     assert "Active packs and bridges: adr@1.0.0 (pack), capability@1.0.0 (pack), adr-capability@1.0.0 (bridge)\n" in text
 
 

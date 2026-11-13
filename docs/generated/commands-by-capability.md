@@ -15,6 +15,8 @@
 | [CLI-pack-test](../cli/pack-test.md) pack test |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [CLI-packs](../cli/packs.md) packs |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [CLI-profile-check](../cli/profile-check.md) profile check |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |
+| [CLI-report](../cli/report.md) report |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |
 | [CLI-rules](../cli/rules.md) rules | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |
 | [CLI-status](../cli/status.md) status |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |
 | [CLI-supersede](../cli/supersede.md) supersede |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |
+| [CLI-waive](../cli/waive.md) waive |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |

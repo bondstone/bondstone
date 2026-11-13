@@ -33,4 +33,4 @@ bondstone context --base origin/main --format json
 
 ## JSON output
 
-`version`, `paths`, `nodes` (one per node, with `id`, `type`, `path`, `line`, `title`, `status`, the `reasons` it is listed and, where there is one, a `note`) and `rules` (one per diff rule, with `id`, `severity`, `description`, `asks`, `must_change`, `hint` and `exempt`).
+`version`, `paths`, `nodes` (one per node, with `id`, `type`, `path`, `line`, `title`, `status`, the `reasons` it is listed and, where there is one, a `note`; a document with numbered items has `next_item_id`, the id for the next item added to it) and `rules` (one per diff rule, with `id`, `severity`, `description`, `asks`, `must_change`, `hint` and `exempt`).

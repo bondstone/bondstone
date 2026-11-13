@@ -60,8 +60,9 @@ An unknown rule id MUST be refused with the closest known ids.
 `bondstone context --for PATH...` SHALL list the nodes an edit of those files concerns: a
 document among the paths, every node tagged in a file, the document of a tagged item, and the
 nodes one link away from those documents in either direction. Each entry MUST say why it is
-listed, and a document that is immutable in its current status MUST say so. A folder stands
-for the files in it. `bondstone context --base REF` SHALL answer for the files changed since
+listed, and a document that is immutable in its current status MUST say so. A document whose
+type has numbered items is listed with the id that its next item gets, since items are added
+by hand. A folder stands for the files in it. `bondstone context --base REF` SHALL answer for the files changed since
 REF instead, counts only the tags whose code region changed, and says for each node whether
 its file changed.
 
@@ -96,7 +97,7 @@ an item type they say that it is added by hand, with which heading, and what eac
 id stands for. For a type whose status is derived from files they say which file gives which
 status, and that the status is never written in frontmatter. The workflow says to run `gen` after editing documents and that `check --base`
 includes uncommitted changes. A rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
-weaken the profile to make a check pass, never to create or extend `.bondstone/known.json`
+weaken the profile to make a check pass, by hand or with `bondstone waive`, never to create or extend `.bondstone/known.json`
 (only `bondstone baseline --known --prune` is theirs to run, after fixing a known violation)
 and, when a rule can be exempted, not to add an exemption trailer unless the user asked for
 one. When the repository has known violations, the instructions say how many and how `check`

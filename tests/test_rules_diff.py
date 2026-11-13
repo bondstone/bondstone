@@ -514,10 +514,12 @@ def test_a_trailer_exempts_the_change_and_stays_visible(repo):
         f"profile/code-updates-spec on CAP-a exempted by commit {commit[:7]} (Spec-Impact: no behaviour change): "
         "Code changes update a living spec. (src/code.py implements CAP-a, which was not updated)")
     assert (diag.path, diag.node) == ("docs/capabilities/a.md", "CAP-a")
-    assert diag.exempted_by == {"commit": commit, "trailer": "Spec-Impact", "reason": "no behaviour change"}
+    assert diag.exempted_by == {"commit": commit, "trailer": "Spec-Impact", "reason": "no behaviour change",
+                                "rule": "profile/code-updates-spec"}
     assert not fails([d for d in diagnostics if d.rule in HISTORY_RULES], "warn")
     entry = next(d for d in json.loads(to_json(diagnostics))["diagnostics"] if d["rule"] == "bondstone/exemption-used")
-    assert entry["exempted_by"] == {"commit": commit, "trailer": "Spec-Impact", "reason": "no behaviour change"}
+    assert entry["exempted_by"] == {"commit": commit, "trailer": "Spec-Impact", "reason": "no behaviour change",
+                                    "rule": "profile/code-updates-spec"}
     assert list(entry)[-1] == "exempted_by"
 
 

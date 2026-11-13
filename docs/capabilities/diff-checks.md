@@ -157,8 +157,8 @@ Bondstone SHALL mark a violation of a diff rule as exempted when the rule declar
 `NAME: none (<reason>)`. A trailer `NAME: none [ID, ...] (<reason>)` MUST only exempt
 violations on the listed nodes. An exempted violation that no waiver removes is reported as
 `bondstone/exemption-used` with severity `info`, naming the commit, the rule and the reason,
-and JSON output carries `exempted_by` with the commit, the trailer and the reason. A rule
-without `exempt` MUST NOT be exempted.
+and JSON output carries `exempted_by` with the commit, the trailer, the reason and the rule
+that was exempted. A rule without `exempt` MUST NOT be exempted.
 
 #### Scenario: Pure move
 

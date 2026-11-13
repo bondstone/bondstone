@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from . import __version__, agent, context, edit, export, packs, packtest
+from . import __version__, agent, context, edit, export, packs, packtest, report, waive
 from .baseline import record_baseline, record_known
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
@@ -57,8 +57,22 @@ def cmd_check(args: argparse.Namespace) -> int:
     repo = GitRepository(cfg.root) if args.base else None
     graph = build_graph(cfg)
     diagnostics = run_check(cfg, graph, repo=repo, base=args.base, exemptions=not args.no_exemptions)
-    sys.stdout.write(render(args.format, diagnostics, nodes=len(graph.nodes)))
+    compared = _compared(repo, args.base) if repo is not None and args.format == "json" else None
+    sys.stdout.write(render(args.format, diagnostics, nodes=len(graph.nodes), base=compared))
     return EXIT_VIOLATIONS if fails(diagnostics, args.fail_on) else EXIT_OK
+
+
+# bondstone: REQ-CLI-006
+def _compared(repo: GitRepository, ref: str) -> dict[str, Any]:
+    """What `--base` compared: the ref, the merge base it stands for, and the files that differ."""
+    commit = repo.merge_base(ref)
+    changes = []
+    for change in repo.changes(commit):
+        entry = {"path": change.path, "kind": change.kind}
+        if change.old_path:
+            entry["old_path"] = change.old_path
+        changes.append(entry)
+    return {"ref": ref, "commit": commit, "changes": changes}
 
 
 # bondstone: REQ-CLI-002
@@ -149,7 +163,14 @@ def cmd_new(args: argparse.Namespace) -> int:
     cfg = _config(args, args.format)
     if cfg is None:
         return EXIT_CONFIG
-    created = edit.new_document(cfg, build_graph(cfg), args.type, args.title, _sets(args.set))
+    created = edit.new_document(cfg, build_graph(cfg), args.type, args.title, _sets(args.set),
+                                dry_run=args.dry_run)
+    if args.dry_run:
+        if args.format == "json":
+            _print_json({"version": JSON_VERSION, "id": created.id, "path": created.path, "dry_run": True})
+        else:
+            print(f"would create {created.path} ({created.id})")
+        return EXIT_OK
     return _after_edit(args, [f"created {created.path} ({created.id})"], {"id": created.id, "path": created.path})
 
 
@@ -246,6 +267,33 @@ def cmd_explain(args: argparse.Namespace) -> int:
         _print_json({"version": JSON_VERSION, **agent.explain(cfg, args.rule)})
     else:
         sys.stdout.write(agent.explain_text(cfg, args.rule))
+    return EXIT_OK
+
+
+# bondstone: REQ-PRF-016
+def cmd_waive(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    waived = waive.add_waiver(cfg, build_graph(cfg), args.rule, args.node, args.reason, args.expires)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **waived.to_dict()})
+    else:
+        print(f"waived {waived.rule} for {waived.node or 'every node'} until {waived.expires} ({waived.path})")
+    return EXIT_OK
+
+
+# bondstone: REQ-CLI-008
+def cmd_report(args: argparse.Namespace) -> int:
+    cfg = _config(args, args.format)
+    if cfg is None:
+        return EXIT_CONFIG
+    repo = GitRepository(cfg.root) if args.base else None
+    found = report.build_report(cfg, build_graph(cfg), repo=repo, base=args.base)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **found.to_dict()})
+    else:
+        sys.stdout.write(report.to_text(found))
     return EXIT_OK
 
 
@@ -352,6 +400,8 @@ def build_parser() -> argparse.ArgumentParser:
     new = commands.add_parser("new", parents=[common, output, setting],
                               help="scaffold a document with the next id at its type's path")
     new.add_argument("type", metavar="TYPE", help="a document type such as adr:Decision")
+    new.add_argument("--dry-run", action="store_true",
+                     help="check the request and print the id and the path, without creating the document")
     new.set_defaults(func=cmd_new)
 
     # bondstone: CLI-status
@@ -404,6 +454,22 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
     explain.set_defaults(func=cmd_explain)
 
+    # bondstone: CLI-waive
+    waiver = commands.add_parser("waive", parents=[common, output],
+                                 help="add a waiver to the profile: one exception with a reason and an end")
+    waiver.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
+    waiver.add_argument("node", metavar="NODE", nargs="?",
+                        help="the node the waiver is for (default: every node)")
+    waiver.add_argument("--reason", required=True, help="why the exception is acceptable")
+    waiver.add_argument("--expires", required=True, metavar="DATE", help="the last day it applies, as YYYY-MM-DD")
+    waiver.set_defaults(func=cmd_waive)
+
+    # bondstone: CLI-report
+    reporting = commands.add_parser("report", parents=[common, output],
+                                    help="count nodes, coverage, waivers, known violations and exemptions")
+    reporting.add_argument("--base", metavar="REF", help="also count the exemptions used since REF")
+    reporting.set_defaults(func=cmd_report)
+
     # bondstone: CLI-init
     init = commands.add_parser("init", parents=[common], help="create a profile in this folder")
     init.add_argument("--preset", metavar="NAME", help="extend this preset, such as `starter`")
@@ -437,11 +503,18 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return args.func(args)
     except Refused as exc:
-        print(f"bondstone: {exc}", file=sys.stderr)
-        return EXIT_VIOLATIONS
-    except EnvironmentProblem as exc:
-        print(f"bondstone: {exc}", file=sys.stderr)
-        return EXIT_ENVIRONMENT
-    except OSError as exc:
-        print(f"bondstone: {exc}", file=sys.stderr)
-        return EXIT_ENVIRONMENT
+        return _stopped(args, "refused", exc, EXIT_VIOLATIONS)
+    except (EnvironmentProblem, OSError) as exc:
+        return _stopped(args, "environment", exc, EXIT_ENVIRONMENT)
+
+
+# bondstone: REQ-CLI-009
+def _stopped(args: argparse.Namespace, kind: str, exc: Exception, code: int) -> int:
+    """Report why a command did nothing: on stderr, and with `--format json` as an object on stdout.
+
+    The exit codes say whether work is wrong (1) or the checker could not run (3); the object
+    lets a program tell a refused command from a check that found violations, which also exits with 1."""
+    print(f"bondstone: {exc}", file=sys.stderr)
+    if getattr(args, "format", None) == "json":
+        _print_json({"version": JSON_VERSION, "error": {"kind": kind, "message": str(exc)}})
+    return code

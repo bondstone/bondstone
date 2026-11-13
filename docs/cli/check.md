@@ -43,4 +43,12 @@ bondstone check --fail-on warn
                   "node": "CAP-a", "message": "...", "hint": "..."}]}
 ```
 
-`path`, `line`, `node`, `hint`, `fix` and `exempted_by` are left out when they do not apply.
+`path`, `line`, `node`, `hint`, `fix`, `exempted_by` and `known` are left out when they do not apply.
+
+With `--base` the object also has `base`, between `summary` and `diagnostics`: the `ref` that was given, the `commit` the working tree was compared with (the merge base), and `changes`, one `{path, kind}` per file that differs, with `old_path` for a renamed file.
+
+```json
+"base": {"ref": "origin/main", "commit": "92cbf1b…", "changes": [{"path": "src/a.py", "kind": "modified"}]}
+```
+
+When the check could not run, the object is `{"version": 1, "error": {"kind": "environment", "message": "..."}}` and the exit code is 3.

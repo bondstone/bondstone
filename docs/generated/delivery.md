@@ -17,6 +17,8 @@
 | [REQ-CLI-005](../capabilities/cli.md#req-cli-005-print-diagnostics-as-text) | Print diagnostics as text | active | CAP-cli |  |
 | [REQ-CLI-006](../capabilities/cli.md#req-cli-006-print-diagnostics-as-versioned-json) | Print diagnostics as versioned JSON | active | CAP-cli |  |
 | [REQ-CLI-007](../capabilities/cli.md#req-cli-007-tell-wrong-work-from-a-checker-that-could-not-run) | Tell wrong work from a checker that could not run | active | CAP-cli |  |
+| [REQ-CLI-008](../capabilities/cli.md#req-cli-008-report-where-the-documentation-stands) | Report where the documentation stands | active | CAP-cli | [004-waive-and-report](../../specs/004-waive-and-report/spec.md) |
+| [REQ-CLI-009](../capabilities/cli.md#req-cli-009-say-in-json-why-a-command-stopped) | Say in JSON why a command stopped | active | CAP-cli | [004-waive-and-report](../../specs/004-waive-and-report/spec.md) |
 | [REQ-DIF-001](../capabilities/diff-checks.md#req-dif-001-read-history-through-git-only) | Read history through git only | active | CAP-diff-checks |  |
 | [REQ-DIF-002](../capabilities/diff-checks.md#req-dif-002-compare-with-the-merge-base) | Compare with the merge base | active | CAP-diff-checks |  |
 | [REQ-DIF-003](../capabilities/diff-checks.md#req-dif-003-see-committed-uncommitted-and-renamed-changes) | See committed, uncommitted and renamed changes | active | CAP-diff-checks |  |
@@ -78,6 +80,7 @@
 | [REQ-PRF-013](../capabilities/profiles.md#req-prf-013-extend-presets) | Extend presets | active | CAP-profiles |  |
 | [REQ-PRF-014](../capabilities/profiles.md#req-prf-014-apply-severities-in-layers) | Apply severities in layers | active | CAP-profiles |  |
 | [REQ-PRF-015](../capabilities/profiles.md#req-prf-015-let-a-preset-lock-rules) | Let a preset lock rules | active | CAP-profiles |  |
+| [REQ-PRF-016](../capabilities/profiles.md#req-prf-016-add-a-waiver-from-the-command-line) | Add a waiver from the command line | active | CAP-profiles | [004-waive-and-report](../../specs/004-waive-and-report/spec.md) |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes-with-selectors) | Select nodes with selectors | active | CAP-rules |  |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-node-rules) | Evaluate node rules | active | CAP-rules |  |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-evaluate-existence-rules) | Evaluate existence rules | active | CAP-rules |  |
