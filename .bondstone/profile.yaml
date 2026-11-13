@@ -5,12 +5,14 @@
 bondstone: 1
 baseline: 'e994d119c55806e90b695d431405cf4db69813bc'
 extends: [starter-speckit@1]
+packs: [cli@1, release@1]
+bridges: [cli-capability@1, release-speckit@1]
 # `specs/` is not listed: only a feature's spec.md is a document, and its type finds it.
-docs: ["docs/adr/**/*.md", "docs/capabilities/**/*.md"]
+docs: ["docs/adr/**/*.md", "docs/capabilities/**/*.md", "docs/cli/**/*.md", "docs/releases/**/*.md"]
 defaults:
   owner: Adam Dworzyński
 code:
-  include: ["src/bondstone/**/*.py", "library/src/**/*.yaml", "library/src/**/*.yml"]
+  include: ["src/bondstone/**/*.py", "library/src/**/*.yaml", "library/src/**/*.yml", "library/tests/*.py"]
   exclude: ["library/src/**/fixtures/**"]
 overrides:
   starter-speckit/source-change-has-feature: error   # stricter than the preset

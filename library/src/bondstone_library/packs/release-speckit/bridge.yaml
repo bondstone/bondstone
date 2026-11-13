@@ -1,0 +1,48 @@
+id: release-speckit
+version: 1.0.0
+bondstone: ">=1.0"
+description: Releases include Spec Kit features.
+
+requires:
+  release: "^1"
+  speckit: "^1"
+
+# bondstone: REQ-LIB-004
+links:
+  includes:
+    from: release:Release
+    to: speckit:Feature
+    description: Features shipped in this release.
+
+roles:
+  change: [speckit:Feature]
+
+rules:
+  - id: release-includes-only-implemented
+    description: A released version includes only implemented features.
+    when: {type: release:Release, status: released}
+    require:
+      - link: includes
+        all: true
+        to: {type: speckit:Feature, status: implemented}
+    hint: Finish the feature's tasks, or move the feature to the next release.
+
+  - id: implemented-feature-is-released
+    description: An implemented feature is part of a planned or published release.
+    severity: warn
+    when: {type: speckit:Feature, status: implemented}
+    require:
+      - incoming: includes
+        min: 1
+    hint: List the feature under `includes` in the release it ships with.
+
+views:
+  - id: release-contents
+    title: Releases and their features
+    output: docs/generated/release-contents.md
+    render: tree
+    select: {type: release:Release}
+    levels:
+      - {link: includes}
+
+instructions: instructions.md

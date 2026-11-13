@@ -1,0 +1,55 @@
+id: cli
+version: 1.0.0
+bondstone: ">=1.0"
+description: Command-line reference - one document per command, tied to the code that implements it.
+
+# bondstone: REQ-LIB-001
+types:
+  Command:
+    description: >-
+      One command of a command-line tool: a subcommand, or a nested one such as
+      `profile check`. The document is the reference for that command.
+    id: "CLI-{slug}"
+    path: "docs/cli/{slug}.md"
+    template: templates/command.md
+    fields:
+      title: {type: string, minLength: 2, description: "the command as typed, such as `profile check`"}
+      synopsis: {type: string, minLength: 3}
+      json_output: {type: boolean}
+    required: [title, synopsis]
+    sections: [Options, Exit codes, Examples]
+    traits:
+      lifecycle:
+        statuses: [experimental, stable, deprecated]
+        initial: experimental
+        transitions:
+          experimental: [stable, deprecated]
+          stable: [deprecated]
+      code-traceable:
+        coverage: ignore        # the named rule below asks for the tag, with its own hint
+      indexed: {}
+
+rules:
+  - id: stable-command-is-implemented
+    description: A stable command is tagged in the code that implements it.
+    when: {type: Command, status: stable}
+    require:
+      - covered: true
+    hint: "Tag the command's handler or its parser with `bondstone: {id}`."
+
+  - id: json-output-is-documented
+    description: A stable command with JSON output documents its shape.
+    when: {type: Command, status: stable, where: {json_output: true}}
+    require:
+      - section: JSON output
+    hint: Add a "## JSON output" section with an example.
+
+views:
+  - id: reference
+    title: Command reference
+    output: docs/generated/cli-reference.md
+    render: table
+    select: {type: Command}
+    columns: [id, title, synopsis, status]
+
+instructions: instructions.md

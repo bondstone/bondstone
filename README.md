@@ -21,7 +21,7 @@ The engine ships no packs. A profile finds its packs and bridges in two places, 
    the repository;
 2. installed packages that register a folder of packs, such as
    [`bondstone-library`](library/README.md): decisions, capability specs, the Spec Kit
-   adapter and the presets `starter` and `starter-speckit`.
+   adapter, command references, releases and the presets `starter` and `starter-speckit`.
 
 [`examples/habit-tracker`](examples/habit-tracker) is a complete setup with three local packs
 (`adr`, `capability`, `ost`) and two bridges. Bondstone's own documentation runs on the
@@ -48,7 +48,8 @@ library package, and its own changes are planned as Spec Kit features under [`sp
 | `bondstone pack test DIR... [--format text\|json]` | Run the fixtures of packs, bridges and presets. |
 
 Every command takes `--root DIR`; without it, bondstone uses the nearest folder that has a
-`.bondstone/profile.yaml`.
+`.bondstone/profile.yaml`. Each command has a reference document in [`docs/cli`](docs/cli); the
+table in [`docs/generated/cli-reference.md`](docs/generated/cli-reference.md) lists them.
 
 ```text
 $ bondstone --root examples/habit-tracker check

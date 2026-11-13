@@ -1,0 +1,2 @@
+- List every feature a version ships under `includes` in its release document.
+- A version is marked `released` only when every feature it includes is implemented.

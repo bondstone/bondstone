@@ -4,3 +4,4 @@
 | Id | Title | Status |
 |---|---|---|
 | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) | Spec Kit adapter | planned |
+| [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) | CLI and release packs | planned |

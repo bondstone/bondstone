@@ -54,7 +54,8 @@ def test_source_changes_must_update_the_traced_capability():
     rule = cfg.rule("starter/code-change-updates-living-spec")  # from the preset the profile extends
     assert rule.kind == "diff" and rule.spec["exempt"] == {"trailer": "Spec-Impact"}
     assert rule.spec["on_change"] == {"code": True}
-    assert cfg.code_include == ["src/bondstone/**/*.py", "library/src/**/*.yaml", "library/src/**/*.yml"]
+    assert cfg.code_include == ["src/bondstone/**/*.py", "library/src/**/*.yaml", "library/src/**/*.yml",
+                                "library/tests/*.py"]
     assert rule.spec["require"] == [{"changed": {"role": "living-spec"}, "traced": True}]
     assert cfg.code_exclude == ["library/src/**/fixtures/**"]
 
@@ -84,11 +85,23 @@ def test_the_spec_kit_preset_installed_here_is_the_one_the_library_ships():
         assert (installed / name).read_text(encoding="utf-8") == (shipped / name).read_text(encoding="utf-8"), name
 
 
-def test_every_library_component_for_spec_kit_is_traced_to_a_requirement():
+def test_library_components_are_traced_to_requirements():
     _, graph = load()
     tagged = {tag.path: tag.id for tag in graph.code_tags if tag.path.startswith("library/")}
     packs = "library/src/bondstone_library/packs"
     assert tagged == {
         f"{packs}/speckit/pack.yaml": "REQ-SKT-001", f"{packs}/speckit/spec-kit/preset.yml": "REQ-SKT-002",
         f"{packs}/speckit-capability/bridge.yaml": "REQ-SKT-003", f"{packs}/speckit-adr/bridge.yaml": "REQ-SKT-004",
-        f"{packs}/starter-speckit/preset.yaml": "REQ-SKT-005"}
+        f"{packs}/starter-speckit/preset.yaml": "REQ-SKT-005",
+        f"{packs}/cli/pack.yaml": "REQ-LIB-001", f"{packs}/cli-capability/bridge.yaml": "REQ-LIB-002",
+        f"{packs}/release/pack.yaml": "REQ-LIB-003", f"{packs}/release-speckit/bridge.yaml": "REQ-LIB-004",
+        "library/tests/test_library.py": "REQ-LIB-005"}
+
+
+def test_bondstone_documents_its_commands_and_its_next_release():
+    cfg, graph = load()
+    assert {c.id for c in cfg.components} >= {"cli", "release", "cli-capability", "release-speckit"}
+    releases = [node for node in graph.nodes if node.type == "release:Release"]
+    assert [node.id for node in releases] == ["v1.0.0"]
+    assert (REPO / "CHANGELOG.md").read_text(encoding="utf-8").startswith(
+        "<!-- bondstone:generated view=release/changelog;")
