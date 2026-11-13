@@ -11,6 +11,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 EXAMPLE = REPO / "examples" / "habit-tracker"
 EXAMPLE_PACKS = EXAMPLE / ".bondstone" / "packs"
+LIBRARY_PACKS = REPO / "library" / "src" / "bondstone_library" / "packs"
 
 
 class Project:

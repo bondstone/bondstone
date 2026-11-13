@@ -13,14 +13,14 @@ from typing import Any
 
 import yaml
 
-from . import __version__, agent, context, edit, export
+from . import __version__, agent, context, edit, export, packs, packtest
 from .baseline import record_baseline
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
 from .git import GitRepository
 from .graph import build_graph
-from .model import ERROR, IGNORE, WARN, EnvironmentProblem, Refused
-from .resolve import find_root
+from .model import ERROR, IGNORE, PROFILE_PATH, WARN, EnvironmentProblem, Refused
+from .resolve import find_root, resolve
 from .rules import fails, run_check
 from .views import generate
 
@@ -226,6 +226,57 @@ def cmd_explain(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _folder(args: argparse.Namespace) -> Path:
+    """The folder a command works in when it needs no profile: `--root`, or the current folder."""
+    if args.root is None:
+        return Path.cwd()
+    root = Path(args.root)
+    if not root.is_dir():
+        raise EnvironmentProblem(f"--root: '{args.root}' is not a directory")
+    return root.resolve()
+
+
+# bondstone: REQ-PKT-003
+def cmd_packs(args: argparse.Namespace) -> int:
+    """Without a profile, list what a new profile here could use."""
+    try:
+        root = _root(args)
+    except EnvironmentProblem:
+        root = _folder(args)
+    profile, components = None, []
+    if (root / PROFILE_PATH).is_file():
+        resolution = resolve(root)
+        if resolution.profile is None:
+            sys.stdout.write(render(args.format, resolution.problems))
+            return EXIT_CONFIG
+        profile, components = resolution.profile, resolution.components
+    found = packs.available(root, profile, components)
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, "components": [item.to_dict() for item in found]})
+    else:
+        sys.stdout.write(packs.to_text(found))
+    return EXIT_OK
+
+
+# bondstone: REQ-PKT-001
+def cmd_pack_test(args: argparse.Namespace) -> int:
+    results = [result for directory in args.dirs for result in packtest.run_fixtures(Path(directory))]
+    if args.format == "json":
+        _print_json({"version": JSON_VERSION, **packtest.to_dict(results)})
+    else:
+        sys.stdout.write(packtest.to_text(results))
+    return EXIT_OK if all(result.passed for result in results) else EXIT_VIOLATIONS
+
+
+# bondstone: REQ-PRF-012
+def cmd_init(args: argparse.Namespace) -> int:
+    root = _folder(args)
+    path = packs.init_profile(root)
+    print(f"created {path}")
+    print("next: `bondstone packs` lists the packs and bridges to add to it")
+    return EXIT_OK
+
+
 def build_parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--root", default=argparse.SUPPRESS,
@@ -310,6 +361,19 @@ def build_parser() -> argparse.ArgumentParser:
                                   help="explain one rule: what it asks, why, and how to satisfy it")
     explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
     explain.set_defaults(func=cmd_explain)
+
+    init = commands.add_parser("init", parents=[common], help="create an empty profile in this folder")
+    init.set_defaults(func=cmd_init)
+
+    listing = commands.add_parser("packs", parents=[common, output],
+                                  help="list the packs and bridges available to this repository")
+    listing.set_defaults(func=cmd_packs)
+
+    pack = commands.add_parser("pack", help="pack commands")
+    pack_commands = pack.add_subparsers(dest="pack_command", required=True, metavar="COMMAND")
+    pack_test = pack_commands.add_parser("test", parents=[output], help="run the fixtures of packs and bridges")
+    pack_test.add_argument("dirs", nargs="+", metavar="DIR", help="folder of a pack or a bridge")
+    pack_test.set_defaults(func=cmd_pack_test)
 
     profile = commands.add_parser("profile", help="profile commands")
     profile_commands = profile.add_subparsers(dest="profile_command", required=True, metavar="COMMAND")

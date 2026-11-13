@@ -53,10 +53,17 @@ above the current one that contains `.bondstone/profile.yaml`.
 ### REQ-PRF-004: Resolve packs and bridges from local sources
 
 Bondstone SHALL find each pack and bridge the profile names in the folders listed under
-`sources` (default `.bondstone/packs`) and choose the highest version that satisfies the
-requested range. `adr@1` and `^1` mean any 1.x; comparators such as `>=1.0` are combined with
-AND. A component that is missing, or present only in other versions, MUST be a configuration
+`sources` (default `.bondstone/packs`) and choose the first copy, in the order in which the
+sources are searched, whose version satisfies the requested range, so that a repository can
+override a pack with its own copy. `adr@1` and `^1` mean any 1.x; comparators such as
+`>=1.0` are combined with AND. A component that is missing, or present only in other versions, MUST be a configuration
 error. The engine ships no packs of its own.
+
+#### Scenario: A local copy before a newer one
+
+- Given `adr` 1.0.0 in `.bondstone/packs` and `adr` 1.2.0 in an installed package
+- When a profile names `adr@1`
+- Then the local 1.0.0 is used
 
 #### Scenario: Version out of range
 
@@ -136,3 +143,35 @@ errors as `bondstone/profile` diagnostics, which no override or waiver can silen
 - Given a profile that names a pack that does not exist
 - When `bondstone check` runs
 - Then only configuration errors are printed and the exit code is 2
+
+### REQ-PRF-011: Resolve packs and bridges from installed packages
+
+Bondstone SHALL search, after the profile's `sources`, every folder that an installed Python
+package registers under the entry point group `bondstone.sources`, such as bondstone-library.
+A component in the profile's own sources MUST win over one with the same id in an installed
+package, and nothing from an installed package is loaded unless the profile names it. A
+registered source that cannot be loaded MUST be a configuration error that names the package.
+
+#### Scenario: A pack from the library
+
+- Given bondstone-library is installed and a profile names `adr@1` without having it locally
+- When the configuration is loaded
+- Then the pack `adr` is read from the library's folder
+
+#### Scenario: A local pack with the same id
+
+- Given a pack `adr` in `.bondstone/packs` and another in an installed package
+- When the configuration is loaded
+- Then the local pack is used
+
+### REQ-PRF-012: Create a profile
+
+`bondstone init` SHALL create `.bondstone/profile.yaml` in the folder given with `--root`, or
+in the current folder, as a valid profile without packs. It MUST refuse to overwrite an
+existing profile.
+
+#### Scenario: A profile exists already
+
+- Given a folder with `.bondstone/profile.yaml`
+- When `bondstone init` runs there
+- Then the command fails with exit code 1 and the file is unchanged

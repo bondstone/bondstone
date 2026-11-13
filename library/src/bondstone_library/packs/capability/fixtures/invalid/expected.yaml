@@ -1,0 +1,11 @@
+errors:
+- bondstone/field-invalid
+- bondstone/id-format
+- bondstone/item-heading
+- bondstone/todo-left
+- capability/requirement-has-scenario
+- capability/requirement-uses-normative-language
+warnings:
+- bondstone/code-coverage
+- bondstone/code-coverage
+- bondstone/tag-retired

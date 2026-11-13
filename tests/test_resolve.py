@@ -2,7 +2,9 @@ import pytest
 
 from bondstone import __version__
 from bondstone.model import EnvironmentProblem
-from bondstone.resolve import find_root, parse_ref, parse_version, range_is_valid, resolve, version_matches
+from bondstone import resolve as resolver
+from bondstone.resolve import (find_root, find_sources, installed_sources, parse_ref, parse_version, range_is_valid,
+                               resolve, shown_path, version_matches)
 
 PACK = """
     id: {id}
@@ -77,7 +79,7 @@ def test_not_found_version_mismatch_and_wrong_list(project):
     project.profile(packs=["a@2", "nope@1", "a-b", "b@one"], bridges=[])
     assert messages(project) == [
         "pack 'a': no version matches '2' (available: 1.2.0)",
-        "pack 'nope' not found in the profile's sources",
+        "pack 'nope' not found in the profile's sources or in an installed package",
         "pack 'a-b' not found: 'a-b' is a bridge; list it under `bridges`",
         "pack 'b': invalid version range 'one'",
     ]
@@ -108,7 +110,7 @@ def test_first_source_wins_and_listed_sources_must_exist(project):
 
 def test_default_source_and_extra_sources(project, tmp_path):
     project.profile(packs=["a@1"])
-    assert messages(project) == ["pack 'a' not found in the profile's sources"]  # no folder: no error about it
+    assert messages(project) == ["pack 'a' not found in the profile's sources or in an installed package"]  # no folder: no error about it
     project.pack("a", PACK.format(id="a", version="1.0.0"), folder="elsewhere")
     result = resolve(project.root, extra_sources=[tmp_path / "elsewhere"])
     assert [c.id for c in result.components] == ["a"] and result.problems == []
@@ -144,3 +146,81 @@ def test_presets_duplicates_and_engine_range(project):
         "packs: pack 'a' is listed more than once",
         "bondstone: invalid version range 'soon'",
     ]
+
+
+# ----------------------------------------------------------------------- installed packages
+
+
+class FakeEntry:
+    """Stands in for an entry point of an installed package."""
+
+    def __init__(self, name, target, package="acme-packs"):
+        self.name, self._target = name, target
+        self.dist = type("Dist", (), {"name": package})() if package else None
+
+    def load(self):
+        if isinstance(self._target, Exception):
+            raise self._target
+        return self._target
+
+
+@pytest.fixture
+def installed(monkeypatch):
+    """Replace the installed packages that register pack sources."""
+    def install(*entries):
+        monkeypatch.setattr(resolver, "entry_points", lambda group: list(entries) if group == "bondstone.sources" else [])
+    return install
+
+
+def test_the_library_registers_its_folder():
+    from conftest import LIBRARY_PACKS
+    sources, errors = installed_sources()
+    assert errors == []
+    assert [(s.label, s.dir, s.installed) for s in sources] == [("bondstone-library", LIBRARY_PACKS, True)]
+
+
+def test_packs_of_installed_packages_resolve_after_the_profiles_sources(project, tmp_path_factory, installed):
+    site = tmp_path_factory.mktemp("site-packages") / "acme"
+    Project = type(project)
+    Project(site).pack("a", PACK.format(id="a", version="1.5.0"), folder=".").pack(
+        "b", PACK.format(id="b", version="1.0.0"), folder=".")
+    installed(FakeEntry("acme", lambda: site))
+    project.pack("a", PACK.format(id="a", version="1.2.0"))
+    project.profile(packs=["a@1", "b@1"])
+    result = resolve(project.root)
+    assert result.problems == []
+    assert [(c.id, c.version, c.manifest) for c in result.components] == [
+        ("a", "1.2.0", ".bondstone/packs/a/pack.yaml"),  # the local copy wins
+        ("b", "1.0.0", (site / "b" / "pack.yaml").as_posix()),  # outside the repository: the full path
+    ]
+
+    project.profile(packs=["a@1.5"])  # the local copy is too old, the installed one fits
+    assert [c.version for c in resolve(project.root).components] == ["1.5.0"]
+
+
+def test_an_installed_source_may_be_a_path_and_sources_are_ordered_by_name(project, tmp_path, installed):
+    first, second = tmp_path / "one", tmp_path / "two"
+    first.mkdir(), second.mkdir()
+    installed(FakeEntry("zeta", lambda: second, package="zeta-packs"), FakeEntry("alpha", first, package=None))
+    project.profile()
+    sources, errors = find_sources(project.root, {}, extra_sources=[tmp_path / "extra"])
+    assert errors == []
+    assert [(s.label, s.installed) for s in sources] == [
+        ("extra", False), (".bondstone/packs", False), ("alpha", True), ("zeta-packs", True)]
+
+
+def test_a_broken_installed_source_is_a_configuration_error(project, tmp_path, installed):
+    installed(FakeEntry("broken", ImportError("no module named acme")),
+              FakeEntry("gone", lambda: tmp_path / "missing", package="gone-packs"))
+    project.profile()
+    assert messages(project) == [
+        "installed package 'acme-packs': its pack source 'broken' could not be loaded "
+        "(ImportError: no module named acme)",
+        f"installed package 'gone-packs': its pack source '{tmp_path / 'missing'}' is not a folder",
+    ]
+
+
+def test_shown_path_is_relative_inside_the_repository_only(tmp_path):
+    root = tmp_path / "repo"
+    assert shown_path(root, root / "docs" / "a.md") == "docs/a.md"
+    assert shown_path(root, tmp_path / "elsewhere" / "pack.yaml") == (tmp_path / "elsewhere" / "pack.yaml").as_posix()

@@ -16,7 +16,7 @@
       "rule": "bondstone/profile",
       "severity": "error",
       "path": ".bondstone/profile.yaml",
-      "message": "pack 'missing' not found in the profile's sources"
+      "message": "pack 'missing' not found in the profile's sources or in an installed package"
     }
   ]
 }

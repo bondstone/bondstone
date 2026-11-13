@@ -6,7 +6,7 @@ and CI run it as a gate.
 
 > Status: v1 under construction. The design is [docs/design.md](docs/design.md). Phases 1
 > to 3 are in place: the core check, the checks that compare with a base commit, and the
-> commands that agents work with.
+> commands that agents work with. Phase 4, the pack library, is under way.
 
 ## How it works
 
@@ -14,10 +14,16 @@ A profile (`.bondstone/profile.yaml`) names the packs and bridges a repository u
 define document types, links, rules and views; bridges connect packs. Bondstone reads the
 documents and the code tags into one graph and checks the rules against it.
 
-The engine ships no packs. For now, packs and bridges live in the repository, in the folders
-the profile lists under `sources` (default `.bondstone/packs`).
-[`examples/habit-tracker`](examples/habit-tracker) is a complete setup with three packs
-(`adr`, `capability`, `ost`) and two bridges.
+The engine ships no packs. A profile finds its packs and bridges in two places, in this order:
+
+1. the folders it lists under `sources` (default `.bondstone/packs`), for packs that live in
+   the repository;
+2. installed packages that register a folder of packs, such as
+   [`bondstone-library`](library/README.md) (`adr`, `capability` and their bridge so far).
+
+[`examples/habit-tracker`](examples/habit-tracker) is a complete setup with three local packs
+(`adr`, `capability`, `ost`) and two bridges. Bondstone's own documentation runs on the
+library package.
 
 ## Commands
 
@@ -35,6 +41,9 @@ the profile lists under `sources` (default `.bondstone/packs`).
 | `bondstone rules`, `bondstone explain RULE` | List the active rules with their effective severity; explain one. |
 | `bondstone agent [--format md\|skill] [--output F]` | Write the instructions for coding agents. |
 | `bondstone graph [--format json\|mermaid] [--type T]` | Export the graph of documents, links and code tags. |
+| `bondstone init` | Create an empty profile in the current folder. |
+| `bondstone packs [--format text\|json]` | List the packs and bridges available to the repository, and which ones its profile uses. |
+| `bondstone pack test DIR... [--format text\|json]` | Run the fixtures of packs and bridges. |
 
 Every command takes `--root DIR`; without it, bondstone uses the nearest folder that has a
 `.bondstone/profile.yaml`.
@@ -49,10 +58,27 @@ $ bondstone --root examples/habit-tracker check
 | 0 | No violations at or above `--fail-on` |
 | 1 | Violations found, or a command refused what it was asked |
 | 2 | Configuration error: invalid profile, pack or bridge |
-| 3 | Environment error: no profile found, the root is not a directory, `--base` outside a git repository, or a ref that is not a commit |
+| 3 | Environment error: no profile found, the root is not a directory, `--base` outside a git repository, a ref that is not a commit, or `pack test` on a folder that is no pack |
 
 JSON output has a `version`, a `summary` and one entry per diagnostic with `rule`, `severity`,
 `path`, `line`, `node`, `message`, `hint` and, when one command resolves it, `fix.command`.
+
+## Testing a pack
+
+A pack or bridge keeps its fixtures next to its manifest. Each fixture is a small repository
+with a profile, a few documents and an `expected.yaml` that lists the rule of every error and
+warning the check must report there:
+
+```text
+adr/
+  pack.yaml
+  fixtures/
+    valid/      .bondstone/profile.yaml, docs/..., expected.yaml (errors: [], warnings: [])
+    invalid/    .bondstone/profile.yaml, docs/..., expected.yaml (errors: [adr/..., ...])
+```
+
+`bondstone pack test adr` checks every fixture and fails when a rule is missing or unexpected.
+The pack under test and the packs in the same folder are used before any other copy.
 
 ## Working with agents
 

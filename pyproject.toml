@@ -18,10 +18,16 @@ dependencies = [
 bondstone = "bondstone.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "bondstone-library"]
+
+[tool.uv.workspace]
+members = ["library"]
+
+[tool.uv.sources]
+bondstone-library = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bondstone"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "library/tests"]

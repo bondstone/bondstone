@@ -1,0 +1,5 @@
+bondstone: 1
+packs: [adr@1, capability@1]
+bridges: [adr-capability@1]
+overrides:
+  bondstone/view-stale: ignore

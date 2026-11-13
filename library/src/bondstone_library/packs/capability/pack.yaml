@@ -1,0 +1,94 @@
+id: capability
+version: 1.0.0
+bondstone: ">=1.0"
+description: Living capability specs - what the system does today - with requirements and scenarios.
+
+types:
+  Capability:
+    description: >-
+      The living specification of one capability. It describes current behaviour and is
+      updated whenever that behaviour changes.
+    id: "CAP-{slug}"
+    path: "docs/capabilities/{slug}.md"
+    template: templates/capability.md
+    fields:
+      title: {type: string, minLength: 3}
+      code: {type: string, pattern: "^[A-Z][A-Z0-9]{1,9}$", description: "short code used in requirement ids"}
+    required: [title, code]
+    sections: [Purpose, Requirements]
+    items:
+      type: Requirement
+      section: Requirements
+      heading: "### {id}: {title}"
+      id: "REQ-{code}-{n:03d}"
+    traits:
+      lifecycle:
+        statuses: [draft, active, deprecated]
+        initial: draft
+        transitions:
+          draft: [active, deprecated]
+          active: [deprecated]
+      owned: {}
+      indexed: {}
+
+  Requirement:
+    description: >-
+      One requirement inside a capability, written as a level-3 heading
+      `### REQ-<CODE>-001: <title>` under `## Requirements`, with SHALL/MUST wording and
+      at least one `#### Scenario:`. A line `Status: planned` or `Status: removed` under the
+      heading sets its status; without it the requirement is active.
+    embedded: true
+    traits:
+      lifecycle:
+        statuses: [planned, active, removed]
+        default: active
+        transitions:
+          planned: [active, removed]
+          active: [removed]
+      code-traceable:
+        coverage: warn
+        when: [active]
+        retired: [removed]
+      indexed: {}
+
+links:
+  depends_on:
+    from: Capability
+    to: Capability
+    description: Capabilities this one relies on.
+
+rules:
+  - id: requirement-has-scenario
+    description: Every requirement has at least one scenario.
+    when: {type: Requirement}
+    require:
+      - contains: "(?m)^####\\s+Scenario:"
+    hint: "Add '#### Scenario: <name>' with Given/When/Then lines."
+
+  - id: requirement-uses-normative-language
+    description: Requirements use SHALL or MUST.
+    when: {type: Requirement}
+    require:
+      - contains: "\\b(SHALL|MUST)\\b"
+
+  - id: active-capability-has-requirements
+    description: An active capability lists at least one requirement.
+    when: {type: Capability, status: active}
+    require:
+      - items: {type: Requirement, min: 1}
+
+views:
+  - id: index
+    title: Capabilities
+    output: docs/generated/capabilities.md
+    render: table
+    select: {type: Capability}
+    columns: [id, title, status, owner]
+  - id: requirements
+    title: Requirements
+    output: docs/generated/requirements.md
+    render: table
+    select: {type: Requirement}
+    columns: [id, title, parent]
+
+instructions: instructions.md

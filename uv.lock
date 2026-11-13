@@ -2,6 +2,12 @@ version = 1
 revision = 5
 requires-python = ">=3.11"
 
+[manifest]
+members = [
+    "bondstone",
+    "bondstone-library",
+]
+
 [[package]]
 name = "attrs"
 version = "26.1.0"
@@ -22,6 +28,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "bondstone-library" },
     { name = "pytest" },
 ]
 
@@ -32,7 +39,21 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8" }]
+dev = [
+    { name = "bondstone-library", editable = "library" },
+    { name = "pytest", specifier = ">=8" },
+]
+
+[[package]]
+name = "bondstone-library"
+version = "0.1.0"
+source = { editable = "library" }
+dependencies = [
+    { name = "bondstone" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "bondstone", editable = "." }]
 
 [[package]]
 name = "colorama"

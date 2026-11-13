@@ -38,6 +38,9 @@
 | [REQ-GRA-007](../capabilities/graph.md#req-gra-007-check-that-ids-are-present-well-formed-and-unique) | Check that ids are present, well formed and unique | CAP-graph |
 | [REQ-GRA-008](../capabilities/graph.md#req-gra-008-check-fields-and-sections-against-the-type) | Check fields and sections against the type | CAP-graph |
 | [REQ-GRA-009](../capabilities/graph.md#req-gra-009-check-links-against-their-definition) | Check links against their definition | CAP-graph |
+| [REQ-PKT-001](../capabilities/pack-tooling.md#req-pkt-001-run-the-fixtures-of-a-pack-or-a-bridge) | Run the fixtures of a pack or a bridge | CAP-pack-tooling |
+| [REQ-PKT-002](../capabilities/pack-tooling.md#req-pkt-002-compare-a-fixture-with-what-it-expects) | Compare a fixture with what it expects | CAP-pack-tooling |
+| [REQ-PKT-003](../capabilities/pack-tooling.md#req-pkt-003-list-the-packs-and-bridges-that-are-available) | List the packs and bridges that are available | CAP-pack-tooling |
 | [REQ-PRF-001](../capabilities/profiles.md#req-prf-001-validate-manifests-against-their-schemas) | Validate manifests against their schemas | CAP-profiles |
 | [REQ-PRF-002](../capabilities/profiles.md#req-prf-002-reject-a-yaml-boolean-used-as-a-severity) | Reject a YAML boolean used as a severity | CAP-profiles |
 | [REQ-PRF-003](../capabilities/profiles.md#req-prf-003-find-the-repository-root) | Find the repository root | CAP-profiles |
@@ -48,6 +51,8 @@
 | [REQ-PRF-008](../capabilities/profiles.md#req-prf-008-apply-waivers-that-have-a-reason-and-an-expiry-date) | Apply waivers that have a reason and an expiry date | CAP-profiles |
 | [REQ-PRF-009](../capabilities/profiles.md#req-prf-009-warn-about-packs-that-no-bridge-connects) | Warn about packs that no bridge connects | CAP-profiles |
 | [REQ-PRF-010](../capabilities/profiles.md#req-prf-010-stop-on-a-configuration-error) | Stop on a configuration error | CAP-profiles |
+| [REQ-PRF-011](../capabilities/profiles.md#req-prf-011-resolve-packs-and-bridges-from-installed-packages) | Resolve packs and bridges from installed packages | CAP-profiles |
+| [REQ-PRF-012](../capabilities/profiles.md#req-prf-012-create-a-profile) | Create a profile | CAP-profiles |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes-with-selectors) | Select nodes with selectors | CAP-rules |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-node-rules) | Evaluate node rules | CAP-rules |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-evaluate-existence-rules) | Evaluate existence rules | CAP-rules |

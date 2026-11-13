@@ -1,0 +1,2 @@
+- When a capability's behaviour depends on a decision, list it in `constrained_by`.
+- When an ADR is superseded, move every `constrained_by` reference to the new ADR.
