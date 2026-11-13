@@ -31,6 +31,14 @@ jobs:
       - name: bondstone check against the pull request's base
         if: github.event_name == 'pull_request'
         run: uv run bondstone check --fail-on warn --base origin/${{ github.base_ref }}
+      - name: bondstone check as SARIF
+        if: always() && matrix.python == '3.13'
+        run: uv run bondstone check --format sarif > "$RUNNER_TEMP/bondstone.sarif" || test $? -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.python == '3.13'
+        with:
+          name: bondstone-sarif
+          path: ${{ runner.temp }}/bondstone.sarif
       - name: generated views and agent instructions are up to date
         run: |
           uv run bondstone --root examples/habit-tracker gen

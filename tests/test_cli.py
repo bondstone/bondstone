@@ -357,7 +357,7 @@ def test_usage_errors_and_version(capsys):
 
 
 def test_commands_of_later_phases_do_not_exist_yet(capsys):
-    for command in (["check", "--format", "sarif"], ["update"]):
+    for command in (["update"],):
         with pytest.raises(SystemExit) as exit_info:
             main(command)
         assert exit_info.value.code == 2

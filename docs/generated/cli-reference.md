@@ -5,7 +5,7 @@
 |---|---|---|---|
 | [CLI-agent](../cli/agent.md) | agent | bondstone agent [--format md\|skill] [--output FILE] | stable |
 | [CLI-baseline](../cli/baseline.md) | baseline | bondstone baseline [REF] [--known [--prune]] | stable |
-| [CLI-check](../cli/check.md) | check | bondstone check [--format text\|json] [--fail-on error\|warn] [--base REF] [--no-exemptions] | stable |
+| [CLI-check](../cli/check.md) | check | bondstone check [--format text\|json\|sarif] [--fail-on error\|warn] [--base REF] [--no-exemptions] | stable |
 | [CLI-context](../cli/context.md) | context | bondstone context [--format text\|json] [--for PATH...] [--base REF] | stable |
 | [CLI-explain](../cli/explain.md) | explain | bondstone explain [--format text\|json] RULE | stable |
 | [CLI-gen](../cli/gen.md) | gen | bondstone gen | stable |

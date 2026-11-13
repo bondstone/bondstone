@@ -1,0 +1,438 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "bondstone",
+          "version": "<version>",
+          "informationUri": "https://github.com/bondstone/bondstone",
+          "rules": [
+            {
+              "id": "bondstone/supersede-orphan",
+              "shortDescription": {
+                "text": "A document has the status `superseded` but nothing supersedes it."
+              },
+              "fullDescription": {
+                "text": "A document has the status `superseded` but nothing supersedes it. Readers cannot find what replaced it."
+              },
+              "help": {
+                "text": "Add the supersede link to its successor, or change its status."
+              },
+              "defaultConfiguration": {
+                "level": "note"
+              }
+            },
+            {
+              "id": "adr-capability/accepted-decision-is-applied",
+              "shortDescription": {
+                "text": "An accepted decision constrains at least one capability."
+              },
+              "fullDescription": {
+                "text": "An accepted decision constrains at least one capability."
+              },
+              "help": {
+                "text": "An accepted decision constrains at least one capability."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "adr/alternatives-considered",
+              "shortDescription": {
+                "text": "Accepted decisions record the alternatives that were considered."
+              },
+              "fullDescription": {
+                "text": "Accepted decisions record the alternatives that were considered."
+              },
+              "help": {
+                "text": "Add a \"## Alternatives considered\" section."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "bondstone/field-unknown",
+              "shortDescription": {
+                "text": "A frontmatter key is neither a field nor a link of the document's type."
+              },
+              "fullDescription": {
+                "text": "A frontmatter key is neither a field nor a link of the document's type. Unknown keys are usually typos of links, which would otherwise be silently ignored."
+              },
+              "help": {
+                "text": "Use one of the fields or links listed in the hint."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "bondstone/link-broken",
+              "shortDescription": {
+                "text": "A link points to an id that does not exist."
+              },
+              "fullDescription": {
+                "text": "A link points to an id that does not exist. Broken links are exactly the drift bondstone exists to prevent."
+              },
+              "help": {
+                "text": "Fix the id or create the missing document."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "adr-capability/constrained-by-live-decision",
+              "shortDescription": {
+                "text": "Capabilities are constrained only by proposed or accepted decisions."
+              },
+              "fullDescription": {
+                "text": "Capabilities are constrained only by proposed or accepted decisions."
+              },
+              "help": {
+                "text": "Point to the decision that superseded it."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "bondstone/code-coverage",
+              "shortDescription": {
+                "text": "A code-traceable node is not tagged anywhere in code. With `when`, only nodes in the listed statuses are checked."
+              },
+              "fullDescription": {
+                "text": "A code-traceable node is not tagged anywhere in code. With `when`, only nodes in the listed statuses are checked. An untagged requirement may be unimplemented, or its code cannot be found."
+              },
+              "help": {
+                "text": "Add a `bondstone: <id>` comment above the implementing code."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            },
+            {
+              "id": "bondstone/view-stale",
+              "shortDescription": {
+                "text": "A generated view is missing or differs from what `bondstone gen` would write."
+              },
+              "fullDescription": {
+                "text": "A generated view is missing or differs from what `bondstone gen` would write. Committed views must match the documents they are generated from."
+              },
+              "help": {
+                "text": "Run `bondstone gen` and commit the result."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "bondstone/untyped-document",
+              "shortDescription": {
+                "text": "A file under the profile's `docs` globs is at no type's path."
+              },
+              "fullDescription": {
+                "text": "A file under the profile's `docs` globs is at no type's path. Managed folders hold only documents that bondstone can check."
+              },
+              "help": {
+                "text": "Move the file to a type's path, or narrow `docs` in the profile."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            },
+            {
+              "id": "bondstone/code-ref-unknown",
+              "shortDescription": {
+                "text": "A code tag `bondstone: <id>` refers to an id that does not exist."
+              },
+              "fullDescription": {
+                "text": "A code tag `bondstone: <id>` refers to an id that does not exist. A tag for something the documentation does not contain is stale traceability."
+              },
+              "help": {
+                "text": "Fix or remove the tag."
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              }
+            }
+          ]
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "bondstone/supersede-orphan",
+          "ruleIndex": 0,
+          "level": "note",
+          "message": {
+            "text": "ADR-001 is superseded but nothing supersedes it"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/adr/ADR-001-a.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "8ea6993524345e8ba711ef23dc917094"
+          },
+          "properties": {
+            "node": "ADR-001"
+          }
+        },
+        {
+          "ruleId": "adr-capability/accepted-decision-is-applied",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "An accepted decision constrains at least one capability. (needs 1 incoming 'constrained_by' link(s), has 0)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/adr/ADR-002-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "35db7b5986a17c033d1f4a0f37a3d74f"
+          },
+          "properties": {
+            "node": "ADR-002"
+          }
+        },
+        {
+          "ruleId": "adr/alternatives-considered",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Accepted decisions record the alternatives that were considered. (body must match /(?im)^#{2,3}\\s+(Alternatives|Options)/)\n\nAdd a \"## Alternatives considered\" section."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/adr/ADR-002-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "74128a031f2e7479bebd4bb966db17d9"
+          },
+          "properties": {
+            "node": "ADR-002"
+          }
+        },
+        {
+          "ruleId": "bondstone/field-unknown",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "unknown key(s) colour for adr:Decision\n\nFields: date, deciders, owner, status, title. Links: supersedes."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/adr/ADR-002-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 8
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "b5af6500e4019b2d764e6d8b3eb54cb1"
+          },
+          "properties": {
+            "node": "ADR-002"
+          }
+        },
+        {
+          "ruleId": "bondstone/link-broken",
+          "ruleIndex": 4,
+          "level": "error",
+          "message": {
+            "text": "supersedes -> 'ADR-009': no such document"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/adr/ADR-002-b.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "f46af33d4de9324d0591c05cd7a99b17"
+          },
+          "properties": {
+            "node": "ADR-002"
+          }
+        },
+        {
+          "ruleId": "adr-capability/constrained-by-live-decision",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "Capabilities are constrained only by proposed or accepted decisions. ('constrained_by' targets not allowed: ADR-001)\n\nPoint to the decision that superseded it."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/capabilities/a.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "606cb5264e75f53c4247225eed275fed"
+          },
+          "properties": {
+            "node": "CAP-a"
+          }
+        },
+        {
+          "ruleId": "bondstone/code-coverage",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "REQ-AA-001 is not referenced from code\n\nAdd a `bondstone: REQ-AA-001` comment where it is implemented."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/capabilities/a.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 16
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "2d8b3b033e89df665f9d936cd2a753d1"
+          },
+          "properties": {
+            "node": "REQ-AA-001"
+          }
+        },
+        {
+          "ruleId": "bondstone/view-stale",
+          "ruleIndex": 7,
+          "level": "error",
+          "message": {
+            "text": "generated view adr/decision-log is out of date\n\nRun `bondstone gen`."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/generated/decisions.md",
+                  "uriBaseId": "%SRCROOT%"
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "33ed9d11ae84bbf6426ece295253c994"
+          },
+          "properties": {
+            "fix": [
+              "bondstone",
+              "gen"
+            ]
+          }
+        },
+        {
+          "ruleId": "bondstone/untyped-document",
+          "ruleIndex": 8,
+          "level": "error",
+          "message": {
+            "text": "file is under `docs` but at no type's path\n\nMove it to a type's path, or narrow `docs` in the profile."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "docs/notes.md",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "607f15d62737fde21009fc5101dabf9c"
+          }
+        },
+        {
+          "ruleId": "bondstone/code-ref-unknown",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "code references unknown id 'REQ-ZZ-009'"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/a.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "bondstone/v1": "7c1782270a78f40f534f6cecf913f768"
+          }
+        }
+      ]
+    }
+  ]
+}

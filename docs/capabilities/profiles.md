@@ -141,7 +141,8 @@ that no bridge connects.
 ### REQ-PRF-010: Stop on a configuration error
 
 Bondstone SHALL read no documents when the configuration has an error. It MUST print the
-errors as `bondstone/profile` diagnostics, which no override or waiver can silence.
+errors as `bondstone/profile` diagnostics, in the output format that was asked for, which no
+override or waiver can silence.
 
 #### Scenario: Check with a broken profile
 

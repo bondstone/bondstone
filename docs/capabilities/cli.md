@@ -143,3 +143,26 @@ found violations by the `error` key. Text output is unchanged.
 - Given no node `ADR-404`
 - When `bondstone status ADR-404 accepted --format json` runs
 - Then standard output has an `error` of kind `refused` and the exit code is 1
+
+### REQ-CLI-010: Print diagnostics as SARIF
+
+With `--format sarif`, `bondstone check` SHALL print one SARIF 2.1.0 log with a single run:
+one result per diagnostic with the rule id, the level (`error`, `warning`, and `note` for
+info), the message followed by the hint, the file and the line, and a fingerprint made from
+the rule, the node and the diagnostic's key, so that it stays the same when lines move. The
+run describes each rule that reported, with what it checks, how to satisfy it and its
+effective level. A known violation and an exempted violation MUST carry a suppression that
+says why. A configuration error is printed as a run that did not succeed, with exit code 2.
+The exit codes are those of the other formats.
+
+#### Scenario: A broken link in a pull request
+
+- Given a document with a broken link at line 6
+- When `bondstone check --format sarif` runs
+- Then the result has the rule `bondstone/link-broken`, the level `error` and `startLine` 6
+
+#### Scenario: A known violation
+
+- Given a violation recorded in `known.json`
+- When `bondstone check --format sarif` runs
+- Then its result has the level `note` and a suppression that names `known.json`
