@@ -39,8 +39,10 @@ the design did not fit what was built since:
 4. **`plan.md` and `tasks.md` are part of the feature, not documents.** They have no
    frontmatter and no type. A change to one of them counts as a change to the feature when a
    diff rule asks which documents changed.
-5. **The adapter is pinned to Spec Kit 1.4.0.** The preset requires `>=1.4.0,<2`, the pack's
-   README names the tested release, and a test in the library keeps the two in step.
+5. **The adapter is pinned to Spec Kit 1.4.0.** The preset requires `>=1.4.0,<1.5`: patch
+   releases are accepted, and a new minor release is tested before the bound is raised (D13).
+   The pack's README names the tested release and the steps of that test, and a test in the
+   library keeps the pin and the README in step.
 
 ## Alternatives considered
 

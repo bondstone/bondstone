@@ -9,8 +9,11 @@ Makes [Spec Kit](https://github.com/github/spec-kit) features part of the graph:
 | `planned` | `plan.md` exists |
 | `implemented` | every task in `tasks.md` is ticked |
 
-Tested with **Spec Kit 1.4.0** (bondstone ADR-017). Spec Kit changes its templates and its
-customisation mechanisms between releases, so test again before using a newer one.
+Tested with **Spec Kit 1.4.0** (bondstone ADR-017); the preset accepts `>=1.4.0,<1.5`. Spec
+Kit changes its templates and its customisation mechanisms between releases, so a new minor
+release is tested before the bound is raised: install the preset in a fresh project with
+`specify init`, check `specify preset resolve spec-template`, create a feature with
+`.specify/scripts/bash/create-new-feature.sh` and run `bondstone check` on it.
 
 ## Frontmatter
 

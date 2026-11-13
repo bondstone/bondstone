@@ -10,9 +10,9 @@ preset:
   license: "MIT"
 
 requires:
-  # The Spec Kit release this preset was tested with (bondstone ADR-017). Newer patch and
-  # minor releases are accepted; test again before raising the upper bound.
-  speckit_version: ">=1.4.0,<2"
+  # The Spec Kit release this preset was tested with (bondstone ADR-017). Patch releases are
+  # accepted; a new minor release is tested before the upper bound is raised.
+  speckit_version: ">=1.4.0,<1.5"
 
 # bondstone: REQ-SKT-002
 provides:

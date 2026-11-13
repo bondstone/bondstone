@@ -62,7 +62,7 @@ def test_the_spec_kit_preset_is_pinned_to_the_tested_release():
     folder = bondstone_library.speckit_preset()
     manifest = yaml.safe_load((folder / "preset.yml").read_text(encoding="utf-8"))
     assert manifest["schema_version"] == "1.0" and manifest["preset"]["id"] == "bondstone"
-    assert manifest["requires"]["speckit_version"] == f">={SPECKIT_VERSION},<2"
+    assert manifest["requires"]["speckit_version"] == f">={SPECKIT_VERSION},<1.5"
     assert SPECKIT_VERSION in (SOURCE / "speckit" / "README.md").read_text(encoding="utf-8")
     provided = {(item["type"], item["name"]): item for item in manifest["provides"]["templates"]}
     assert provided[("template", "spec-template")]["strategy"] == "prepend"
