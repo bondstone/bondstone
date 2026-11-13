@@ -380,3 +380,20 @@ def test_supersede_command(cli, capsys):
                    "wrote docs/generated/decisions.md\n")
     code, out, _ = run(capsys, "--root", cli.root, "check")
     assert code == 0 and out.endswith("✓ 0 error(s), 1 warning(s), 5 nodes\n")
+
+
+def test_a_dry_run_names_the_id_and_the_path_and_writes_nothing(repo, capsys):
+    from bondstone.cli import main
+    assert main(["--root", str(repo.root), "new", "adr:Decision", "--title", "Use a queue", "--dry-run"]) == 0
+    assert capsys.readouterr().out == "would create docs/adr/ADR-003-use-a-queue.md (ADR-003)\n"
+    assert not (repo.root / "docs/adr/ADR-003-use-a-queue.md").exists()
+    assert main(["--root", str(repo.root), "new", "adr:Decision", "--title", "Use a queue", "--dry-run",
+                 "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "version": 1, "id": "ADR-003", "path": "docs/adr/ADR-003-use-a-queue.md", "dry_run": True}
+
+
+def test_a_dry_run_refuses_what_new_would_refuse(repo, capsys):
+    from bondstone.cli import main
+    assert main(["--root", str(repo.root), "new", "adr:Decision", "--title", "X", "--set", "colour=red", "--dry-run"]) == 1
+    assert "has no such field or link" in capsys.readouterr().err

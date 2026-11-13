@@ -82,7 +82,7 @@ def rules_text(rules: list[RuleInfo]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def _find(cfg: Config, rule_id: str) -> Rule | EngineRule:
+def find_rule(cfg: Config, rule_id: str) -> Rule | EngineRule:
     known: dict[str, Rule | EngineRule] = {rule.qid: rule for rule in cfg.rules}
     known.update({rule.id: rule for rule in ENGINE_RULES})
     if rule_id in known:
@@ -106,7 +106,7 @@ def _severity_line(info: RuleInfo) -> str:
 # bondstone: REQ-AGT-002
 def explain(cfg: Config, rule_id: str) -> dict[str, Any]:
     """Everything about one rule, declared or engine: what it asks, why, and how to satisfy it."""
-    rule = _find(cfg, rule_id)
+    rule = find_rule(cfg, rule_id)
     info = _info(cfg, rule)
     out = info.to_dict()
     if isinstance(rule, Rule):
@@ -126,7 +126,7 @@ def explain(cfg: Config, rule_id: str) -> dict[str, Any]:
 
 def explain_text(cfg: Config, rule_id: str) -> str:
     data = explain(cfg, rule_id)
-    info = _info(cfg, _find(cfg, rule_id))
+    info = _info(cfg, find_rule(cfg, rule_id))
     if info.kind == "engine":
         lines = [f"{info.id} (engine rule)", _severity_line(info), "",
                  f"Fires when: {data['fires']}", f"Why: {data['why']}", f"Fix: {data['fix']}"]
@@ -170,7 +170,8 @@ def _workflow(cfg: Config) -> list[str]:
         "Create a document with `bondstone new <Type> --title \"...\"`, never by hand. It picks the id, the "
         "path and the frontmatter."
         + (" Some types are items: headings inside a document, which you add by hand. The type's entry below "
-           "gives the heading and the id to use." if items else ""),
+           "gives the heading and the id to use, and `bondstone context --for <document>` gives the id of "
+           "the next item." if items else ""),
         "Change a status with `bondstone status <ID> <STATUS>`. Replace a document that may no longer be "
         "edited with `bondstone supersede <ID> --title \"...\"`.",
         "Write links as ids in frontmatter, never as paths.",
@@ -184,7 +185,8 @@ def _workflow(cfg: Config) -> list[str]:
         "Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. "
         "It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, "
         "run that command. `bondstone explain <rule>` says what a rule wants.",
-        "Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.",
+        "Never weaken `.bondstone/profile.yaml` (overrides, waivers, `bondstone waive`) to make a check pass. "
+        "Ask the user instead.",
         "Never create `.bondstone/known.json`, add an entry to it or run `bondstone baseline --known` yourself: "
         "the file lists the violations a repository had when it adopted a rule, and it may only shrink. "
         + (f"It has {len(cfg.known.entries)} entr{'y' if len(cfg.known.entries) == 1 else 'ies'} here; `check` "

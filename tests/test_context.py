@@ -219,3 +219,23 @@ def test_context_needs_for_or_base(repo, capsys):
         run(capsys, "--root", repo.root, "context")
     assert exit_info.value.code == 2
     capsys.readouterr()
+
+
+# --------------------------------------------------------------------------- the next item id
+
+
+def test_a_document_with_items_names_the_id_of_its_next_item(repo):
+    repo.write("docs/capabilities/a.md", capability("CAP-a", "AA", requirements=(
+        "### REQ-AA-001: One\n\nIt SHALL.\n\n#### Scenario: ok\n\n- Then fine\n\n"
+        "### REQ-AA-007: Seven\n\nIt SHALL.\n\n#### Scenario: ok\n\n- Then fine\n")))
+    found = context_for(*load(repo), ["docs/capabilities/a.md", "docs/adr/ADR-002-b.md"])
+    next_ids = {entry.node.id: entry.next_item_id for entry in found.entries}
+    assert next_ids["CAP-a"] == "REQ-AA-008"
+    assert next_ids["ADR-002"] is None
+    assert "      next item id: REQ-AA-008\n" in to_text(found)
+    assert [entry.to_dict().get("next_item_id") for entry in found.entries if entry.node.id == "CAP-a"] == ["REQ-AA-008"]
+
+
+def test_the_next_item_id_counts_only_the_documents_own_items(repo):
+    found = context_for(*load(repo), ["docs/capabilities/b.md"])
+    assert {entry.node.id: entry.next_item_id for entry in found.entries}["CAP-b"] == "REQ-BB-002"

@@ -23,7 +23,8 @@ type's `id` template and at the path from its `path` template. `{n}` is one more
 highest number an existing id of the type carries, `{slug}` comes from the title, and any
 other placeholder is a field given with `--set`. The type may be named without its pack when
 only one pack has it. An embedded type, an id that is taken and a file that exists MUST be
-refused.
+refused. With `--dry-run` the command checks the same things and prints the id and the path
+without creating the document.
 
 #### Scenario: Third decision
 

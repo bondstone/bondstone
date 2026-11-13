@@ -170,19 +170,47 @@ def _fill(template: str, values: dict[str, Any], what: str) -> str:
     return PLACEHOLDER.sub(value, template)
 
 
+def _highest(template: str, ids: list[str], values: dict[str, Any] | None = None) -> int:
+    """The highest number that one of `ids` carries in the `{n}` position of a template.
+
+    A placeholder with a value in `values` must match that value; any other matches anything."""
+    pattern, position = "", 0
+    for match in PLACEHOLDER.finditer(template):
+        pattern += re.escape(template[position:match.start()])
+        name = match.group(1)
+        if name == "n":
+            pattern += r"(?P<n>\d+)"
+        elif values and values.get(name) not in (None, ""):
+            pattern += re.escape(str(values[name]))
+        else:
+            pattern += r".+?"
+        position = match.end()
+    pattern += re.escape(template[position:])
+    return max((int(found.group("n")) for node_id in ids if (found := re.fullmatch(pattern, node_id))), default=0)
+
+
 def _next_number(tdef: TypeDef, graph: Graph) -> int:
     """One more than the highest number that an id of this type carries in the `{n}` position."""
-    if "n" not in {name for name, _ in PLACEHOLDER.findall(tdef.id_template or "")}:
+    template = tdef.id_template or ""
+    if "n" not in {name for name, _ in PLACEHOLDER.findall(template)}:
         return 1
-    pattern, position = "", 0
-    for match in PLACEHOLDER.finditer(tdef.id_template or ""):
-        pattern += re.escape((tdef.id_template or "")[position:match.start()])
-        pattern += r"(?P<n>\d+)" if match.group(1) == "n" else r".+?"
-        position = match.end()
-    pattern += re.escape((tdef.id_template or "")[position:])
-    numbers = [int(found.group("n")) for node in graph.nodes if node.type == tdef.qname and node.id
-               and (found := re.fullmatch(pattern, node.id))]
-    return max(numbers, default=0) + 1
+    return _highest(template, [node.id for node in graph.nodes if node.type == tdef.qname and node.id]) + 1
+
+
+# bondstone: REQ-AGT-003
+def next_item_id(cfg: Config, graph: Graph, document: Node) -> str | None:
+    """The id the next item of a document gets, or None when its type has no numbered items.
+
+    Items are headings added by hand, so nothing else hands out their ids."""
+    items = cfg.types[document.type].items
+    template = items.id_template if items else None
+    if not template or "n" not in {name for name, _ in PLACEHOLDER.findall(template)}:
+        return None
+    values = {**document.fields, "id": document.id}
+    if any(values.get(name) in (None, "") for name, _ in PLACEHOLDER.findall(template) if name != "n"):
+        return None
+    ids = [node.id for node in graph.nodes if node.is_item and node.parent == document.id and node.id]
+    return _fill(template, {**values, "n": _highest(template, ids, values) + 1}, "id template")
 
 
 def _git_user(root: Path) -> str:
@@ -196,11 +224,12 @@ def _git_user(root: Path) -> str:
 
 # bondstone: REQ-SCF-001, REQ-SCF-002
 def new_document(cfg: Config, graph: Graph, type_name: str, title: str, sets: dict[str, Any] | None = None,
-                 today: dt.date | None = None) -> Created:
+                 today: dt.date | None = None, dry_run: bool = False) -> Created:
     """Scaffold a document of a type: next id, the type's path, valid frontmatter, the template's body.
 
     `sets` gives frontmatter values by field or link name; `id` and `slug` may be set too.
-    Refuses rather than writing a document that `check` would reject."""
+    Refuses rather than writing a document that `check` would reject. With `dry_run` it checks
+    everything and says which id and path the document would get, without writing it."""
     tdef = _resolve_type(cfg, type_name)
     sets = dict(sets or {})
     spec, traits = tdef.spec, tdef.traits
@@ -259,6 +288,8 @@ def new_document(cfg: Config, graph: Graph, type_name: str, title: str, sets: di
     if (cfg.root / path).exists():
         raise Refused(f"{path} already exists")
 
+    if dry_run:
+        return Created(doc_id, path)
     frontmatter = {"id": doc_id, "type": tdef.qname, **fields, **links}
     body = _body(tdef, {key: value for key, value in values.items()})
     target = cfg.root / path

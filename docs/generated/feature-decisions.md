@@ -6,3 +6,4 @@
 | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) Spec Kit adapter |  |  |  |  |  |  | ✓ |  |  |  |  |  | ✓ |  | ✓ |  | ✓ |
 | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) CLI and release packs |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [003-known-violations](../../specs/003-known-violations/spec.md) Known violations |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |
+| [004-waive-and-report](../../specs/004-waive-and-report/spec.md) Waive and report |  |  |  |  | ✓ | ✓ |  |  |  |  |  |  |  |  |  |  |  |

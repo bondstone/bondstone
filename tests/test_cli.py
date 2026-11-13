@@ -226,12 +226,57 @@ def test_check_base_json_output(history, capsys):
     project, base, exempting = history
     code, out, _ = run(capsys, "--root", project.root, "check", "--base", base, "--format", "json")
     assert code == 1
-    assert_golden("check-base.json", out.replace(exempting, "<commit>").replace(exempting[:7], "<commit>"))
+    assert_golden("check-base.json", out.replace(exempting, "<commit>").replace(exempting[:7], "<commit>")
+                  .replace(base, "<base>"))
     payload = json.loads(out)
+    assert payload["base"] == {"ref": base, "commit": base, "changes": [
+        {"path": "docs/adr/ADR-001-a.md", "kind": "modified"}, {"path": "docs/adr/ADR-002-b.md", "kind": "modified"},
+        {"path": "docs/adr/ADR-003-c.md", "kind": "added"}, {"path": "docs/generated/decisions.md", "kind": "modified"},
+        {"path": "src/a.py", "kind": "modified"}, {"path": "src/b.py", "kind": "modified"}]}
     exempted = [d for d in payload["diagnostics"] if "exempted_by" in d]
     assert [(d["rule"], d["severity"], d["node"]) for d in exempted] == [("bondstone/exemption-used", "info", "CAP-a")]
     assert exempted[0]["exempted_by"] == {"commit": exempting, "trailer": "Spec-Impact",
-                                          "reason": "no behaviour change"}
+                                          "reason": "no behaviour change", "rule": "profile/code-updates-spec"}
+
+
+def test_check_json_without_a_base_has_no_base(clean, capsys):
+    _, out, _ = run(capsys, "--root", clean.root, "check", "--format", "json")
+    assert list(json.loads(out)) == ["version", "summary", "diagnostics"]
+
+
+def test_a_renamed_file_is_listed_with_its_old_path(history, capsys):
+    project, _, _ = history
+    project.commit("everything")
+    project.git("mv", "src/a.py", "src/c.py")
+    _, out, _ = run(capsys, "--root", project.root, "check", "--base", "HEAD", "--format", "json")
+    assert {"path": "src/c.py", "kind": "modified", "old_path": "src/a.py"} in json.loads(out)["base"]["changes"]
+
+
+# --------------------------------------------------------------------------- commands that stop
+
+
+def test_a_refused_command_prints_an_error_object_with_json(clean, capsys):
+    code, out, err = run(capsys, "--root", clean.root, "status", "ADR-404", "accepted", "--format", "json")
+    assert code == 1 and err.startswith("bondstone: ")
+    assert json.loads(out) == {"version": 1, "error": {"kind": "refused", "message": err[len("bondstone: "):-1]}}
+
+
+def test_a_refused_command_prints_nothing_on_stdout_as_text(clean, capsys):
+    code, out, err = run(capsys, "--root", clean.root, "status", "ADR-404", "accepted")
+    assert (code, out) == (1, "") and "ADR-404" in err
+
+
+def test_an_environment_error_prints_an_error_object_with_json(tmp_path, capsys):
+    code, out, err = run(capsys, "--root", tmp_path, "check", "--format", "json")
+    assert code == 3
+    assert json.loads(out)["error"] == {"kind": "environment", "message": err[len("bondstone: "):-1]}
+    code, out, _ = run(capsys, "--root", tmp_path / "x", "rules", "--format", "json")
+    assert code == 3 and json.loads(out)["error"]["kind"] == "environment"
+
+
+def test_violations_are_not_an_error_object(broken, capsys):
+    code, out, _ = run(capsys, "--root", broken.root, "check", "--format", "json")
+    assert code == 1 and "error" not in json.loads(out)
 
 
 def test_no_exemptions_reports_the_exempted_violation(history, capsys):
@@ -312,7 +357,7 @@ def test_usage_errors_and_version(capsys):
 
 
 def test_commands_of_later_phases_do_not_exist_yet(capsys):
-    for command in (["report"], ["check", "--format", "sarif"], ["update"], ["waive"]):
+    for command in (["check", "--format", "sarif"], ["update"]):
         with pytest.raises(SystemExit) as exit_info:
             main(command)
         assert exit_info.value.code == 2

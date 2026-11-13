@@ -11,10 +11,12 @@
 | [CLI-gen](../cli/gen.md) | gen | bondstone gen | stable |
 | [CLI-graph](../cli/graph.md) | graph | bondstone graph [--format json\|mermaid] [--type TYPE] | stable |
 | [CLI-init](../cli/init.md) | init | bondstone init [--preset NAME] | stable |
-| [CLI-new](../cli/new.md) | new | bondstone new [--format text\|json] --title TITLE [--set KEY=VALUE] TYPE | stable |
+| [CLI-new](../cli/new.md) | new | bondstone new [--format text\|json] --title TITLE [--set KEY=VALUE] [--dry-run] TYPE | stable |
 | [CLI-pack-test](../cli/pack-test.md) | pack test | bondstone pack test [--format text\|json] DIR... | stable |
 | [CLI-packs](../cli/packs.md) | packs | bondstone packs [--format text\|json] | stable |
 | [CLI-profile-check](../cli/profile-check.md) | profile check | bondstone profile check [--format text\|json] | stable |
+| [CLI-report](../cli/report.md) | report | bondstone report [--format text\|json] [--base REF] | experimental |
 | [CLI-rules](../cli/rules.md) | rules | bondstone rules [--format text\|json] | stable |
 | [CLI-status](../cli/status.md) | status | bondstone status [--format text\|json] ID STATUS | stable |
 | [CLI-supersede](../cli/supersede.md) | supersede | bondstone supersede [--format text\|json] --title TITLE [--set KEY=VALUE] ID | stable |
+| [CLI-waive](../cli/waive.md) | waive | bondstone waive [--format text\|json] --reason REASON --expires DATE RULE [NODE] | experimental |

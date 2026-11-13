@@ -6,6 +6,36 @@
     "info": 1,
     "nodes": 7
   },
+  "base": {
+    "ref": "<base>",
+    "commit": "<base>",
+    "changes": [
+      {
+        "path": "docs/adr/ADR-001-a.md",
+        "kind": "modified"
+      },
+      {
+        "path": "docs/adr/ADR-002-b.md",
+        "kind": "modified"
+      },
+      {
+        "path": "docs/adr/ADR-003-c.md",
+        "kind": "added"
+      },
+      {
+        "path": "docs/generated/decisions.md",
+        "kind": "modified"
+      },
+      {
+        "path": "src/a.py",
+        "kind": "modified"
+      },
+      {
+        "path": "src/b.py",
+        "kind": "modified"
+      }
+    ]
+  },
   "diagnostics": [
     {
       "rule": "bondstone/immutable",
@@ -43,7 +73,8 @@
       "exempted_by": {
         "commit": "<commit>",
         "trailer": "Spec-Impact",
-        "reason": "no behaviour change"
+        "reason": "no behaviour change",
+        "rule": "profile/code-updates-spec"
       }
     },
     {

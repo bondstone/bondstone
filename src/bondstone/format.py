@@ -49,14 +49,15 @@ def to_text(diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
 
 
 # bondstone: REQ-CLI-006
-def to_json(diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
-    payload: dict[str, Any] = {
-        "version": JSON_VERSION,
-        "summary": summarize(diagnostics, nodes),
-        "diagnostics": [diag.to_dict() for diag in diagnostics],
-    }
+def to_json(diagnostics: list[Diagnostic], nodes: int | None = None, base: dict[str, Any] | None = None) -> str:
+    """`base`, with `check --base`: the ref, the commit compared with and the files that differ."""
+    payload: dict[str, Any] = {"version": JSON_VERSION, "summary": summarize(diagnostics, nodes)}
+    if base is not None:
+        payload["base"] = base
+    payload["diagnostics"] = [diag.to_dict() for diag in diagnostics]
     return json.dumps(payload, indent=2, ensure_ascii=False) + "\n"
 
 
-def render(fmt: str, diagnostics: list[Diagnostic], nodes: int | None = None) -> str:
-    return to_json(diagnostics, nodes) if fmt == "json" else to_text(diagnostics, nodes)
+def render(fmt: str, diagnostics: list[Diagnostic], nodes: int | None = None,
+           base: dict[str, Any] | None = None) -> str:
+    return to_json(diagnostics, nodes, base) if fmt == "json" else to_text(diagnostics, nodes)

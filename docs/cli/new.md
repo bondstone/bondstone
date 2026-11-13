@@ -3,7 +3,7 @@ id: CLI-new
 type: cli:Command
 title: new
 status: stable
-synopsis: bondstone new [--format text|json] --title TITLE [--set KEY=VALUE] TYPE
+synopsis: bondstone new [--format text|json] --title TITLE [--set KEY=VALUE] [--dry-run] TYPE
 json_output: true
 implements: [CAP-scaffolding]
 ---
@@ -16,6 +16,7 @@ Creates a document of a type with the next free id, at the type's path, from the
 - `--format text|json`: Output format (default: text).
 - `--title TITLE`: Title of the new document.
 - `--set KEY=VALUE`: A frontmatter field or link of the new document; may be repeated.
+- `--dry-run`: Check the request and print the id and the path, without creating the document.
 - `TYPE`: A document type such as adr:Decision.
 
 ## Exit codes
@@ -30,6 +31,7 @@ Creates a document of a type with the next free id, at the type's path, from the
 ```sh
 bondstone new adr:Decision --title "Use SQLite"
 bondstone new capability:Capability --title "Reminders" --set code=REM
+bondstone new adr:Decision --title "Use SQLite" --dry-run
 ```
 
 ## JSON output
@@ -37,3 +39,5 @@ bondstone new capability:Capability --title "Reminders" --set code=REM
 ```json
 {"version": 1, "id": "ADR-004", "path": "docs/adr/ADR-004-use-sqlite.md", "views": ["docs/generated/decisions.md"]}
 ```
+
+With `--dry-run` the object has `"dry_run": true` and no `views`. A refused command prints `{"version": 1, "error": {"kind": "refused", "message": "..."}}`.

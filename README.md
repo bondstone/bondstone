@@ -36,8 +36,10 @@ library package, and its own changes are planned as Spec Kit features under [`sp
 | `bondstone gen` | Regenerate views. |
 | `bondstone baseline [REF]` | Record the commit whose documents count as already adopted. |
 | `bondstone baseline --known [--prune]` | Record the current violations, so that only new ones fail; `--prune` removes the fixed ones. |
+| `bondstone waive RULE [NODE] --reason R --expires D` | Add a waiver to the profile: one exception with a reason and an end. |
+| `bondstone report [--base REF] [--format text\|json]` | Count nodes, coverage, waivers, known violations and exemptions. |
 | `bondstone profile check [--format text\|json]` | Validate the profile, packs and bridges. |
-| `bondstone new TYPE --title T [--set k=v]` | Scaffold a document with the next id at the right path. |
+| `bondstone new TYPE --title T [--set k=v] [--dry-run]` | Scaffold a document with the next id at the right path. |
 | `bondstone status ID STATUS` | Change the status of a document or an item, if its lifecycle allows the step. |
 | `bondstone supersede ID --title T` | Create a successor, mark the old document superseded, move the links to it. |
 | `bondstone context --for PATH... \| --base REF` | List what to read before editing, and the diff rules that will fire. |

@@ -236,3 +236,23 @@ that must also hold for existing documents ([CAP-known-violations](known-violati
 - Given a preset with `overrides: {bondstone/immutable: error}` and `lock: [bondstone/immutable]`
 - When a profile that extends it sets `bondstone/immutable: warn`
 - Then a `bondstone/profile` error says the rule is locked by that preset
+
+### REQ-PRF-016: Add a waiver from the command line
+
+`bondstone waive RULE [NODE] --reason R --expires D` SHALL add a waiver to the profile as one
+line under `waivers`, leaving every other line as it is, and without NODE the waiver covers
+every node. It MUST refuse, and change nothing, when the rule is unknown, is locked or is
+`bondstone/profile`, when the node does not exist, when the reason is empty, when the date is
+malformed or in the past, and when the same rule and node are waived already.
+
+#### Scenario: A decision from before the rule
+
+- Given ADR-004, an accepted decision without alternatives
+- When `bondstone waive adr/alternatives-considered ADR-004 --reason "..." --expires 2027-06-30` runs
+- Then the profile has that waiver and `bondstone check` no longer reports the rule for ADR-004
+
+#### Scenario: A locked rule
+
+- Given a preset that locks `adr/alternatives-considered`
+- When `bondstone waive adr/alternatives-considered ADR-004 ...` runs
+- Then it exits with 1, says which preset locks the rule, and the profile is unchanged

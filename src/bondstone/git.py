@@ -64,6 +64,9 @@ class Repository(Protocol):
     def trailers(self, base: str) -> list[Trailer]:
         """Trailers of the commits made since `base`, newest commit first."""
 
+    def author(self, commit: str) -> str | None:
+        """The name of a commit's author."""
+
 
 _HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.M)
 _TRAILER = re.compile(r"^([A-Za-z0-9][A-Za-z0-9-]*)\s*:\s*(.*)$")
@@ -164,3 +167,7 @@ class GitRepository:
                 if commit and match:
                     found.append(Trailer(commit, match.group(1), match.group(2).strip()))
         return found
+
+    def author(self, commit: str) -> str | None:
+        out = self._run("log", "-1", "--format=%an", commit, check=False)
+        return out.strip() or None if out else None
