@@ -164,6 +164,10 @@ of its own, which is how an organisation's preset brings its packs with it. The 
 `$BONDSTONE_CACHE`, or `bondstone` in the user's cache folder. Git fetches
 `https://host/org/repo`; use git's `url.<base>.insteadOf` for SSH.
 
+Private repositories need no setup in bondstone: it uses the credentials git has, from a
+credential helper on your machine or a token in CI. [`docs/cli/update.md`](docs/cli/update.md)
+shows both.
+
 ## Spec Kit
 
 The library's `speckit` pack reads each [Spec Kit](https://github.com/github/spec-kit) feature

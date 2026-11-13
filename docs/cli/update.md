@@ -16,6 +16,20 @@ Without options every ref is resolved again, so a source written with a branch m
 
 Git reads `https://<host>/<org>/<repo>`. To fetch another way, such as over SSH, set git's own `url.<base>.insteadOf`.
 
+## Private sources
+
+Bondstone has no credentials of its own: it asks git, and git never prompts. A private repository is read with whatever git can authenticate with.
+
+- **On your machine:** a credential helper, such as `gh auth setup-git` for GitHub or your system's keychain. With an SSH key, `git config --global url."git@github.com:".insteadOf "https://github.com/"` fetches over SSH, while the source keeps its `https` spelling, so the lock is the same for everyone.
+- **In CI:** a token that can read the repository, set before `update --locked`. On GitHub Actions the job's own `GITHUB_TOKEN` reads only its repository; use a fine-grained token or a GitHub App token, stored as a secret:
+
+  ```yaml
+  - run: git config --global url."https://x-access-token:${{ secrets.PACKS_TOKEN }}@github.com/".insteadOf "https://github.com/"
+  - run: bondstone update --locked
+  ```
+
+The lock records each source as the profile writes it, without credentials, and messages leave out any user name or password a URL carries. When git cannot read a repository, the message says that it does not exist or that it is private and git has no credentials for it: a host answers the same for both.
+
 ## Options
 
 - `--root ROOT`: Repository root (default: the nearest folder with .bondstone/profile.yaml).
