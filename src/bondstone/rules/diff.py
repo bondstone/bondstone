@@ -42,6 +42,38 @@ def glob_to_regex(pattern: str) -> re.Pattern[str]:
     return re.compile(out + r"\Z")
 
 
+# bondstone: REQ-DIF-007, REQ-DIF-013
+def fired_by(cfg: Config, rule: Rule, changes: list[Change]) -> list[Change]:
+    """The changes that set a diff rule off: the right kind, at a path the rule watches.
+
+    A rule watches the globs under `paths`, or with `code: true` the files that the profile
+    selects as code. A renamed file counts at its old and at its new path."""
+    trigger = rule.spec["on_change"]
+    kinds = set(trigger.get("kinds") or KINDS)
+    if trigger.get("code"):
+        include = [glob_to_regex(pattern) for pattern in cfg.code_include]
+        exclude = [glob_to_regex(pattern) for pattern in cfg.code_exclude]
+
+        def watched(path: str) -> bool:
+            return any(p.match(path) for p in include) and not any(p.match(path) for p in exclude)
+    else:
+        patterns = [glob_to_regex(pattern) for pattern in as_list(trigger.get("paths"))]
+
+        def watched(path: str) -> bool:
+            return any(p.match(path) for p in patterns)
+    return [change for change in changes
+            if change.kind in kinds and any(watched(path) for path in (change.path, change.old_path) if path)]
+
+
+def describe_trigger(cfg: Config, rule: Rule) -> str:
+    """The files a diff rule watches, in words."""
+    trigger = rule.spec["on_change"]
+    if trigger.get("code"):
+        globs = ", ".join(cfg.code_include) or "none yet: set `code.include` in the profile"
+        return f"files that the profile selects as code ({globs})"
+    return "files matching " + ", ".join(str(path) for path in trigger.get("paths") or [])
+
+
 @dataclass
 class ChangeSet:
     """What differs between the base commit and the working tree."""
@@ -249,14 +281,7 @@ def _check_diff_rules(cfg: Config, graph: Graph, repo: Repository, changes: Chan
     out += _invalid_exemptions(rules, trailers)
     changed_nodes = [node for node in graph.nodes if node.path in changes.present]
     for rule in rules:
-        trigger = rule.spec["on_change"]
-        kinds = set(trigger.get("kinds") or KINDS)
-        patterns = [glob_to_regex(pattern) for pattern in as_list(trigger.get("paths"))]
-        triggering = [
-            change for change in changes.changes
-            if change.kind in kinds and any(
-                pattern.match(path) for pattern in patterns for path in (change.path, change.old_path) if path)
-        ]
+        triggering = fired_by(cfg, rule, changes.changes)
         if not triggering:
             continue
         found = _evaluate(cfg, graph, repo, changes, rule, triggering, changed_nodes)

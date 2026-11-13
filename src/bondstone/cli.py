@@ -271,9 +271,12 @@ def cmd_pack_test(args: argparse.Namespace) -> int:
 # bondstone: REQ-PRF-012
 def cmd_init(args: argparse.Namespace) -> int:
     root = _folder(args)
-    path = packs.init_profile(root)
+    path = packs.init_profile(root, args.preset)
     print(f"created {path}")
-    print("next: `bondstone packs` lists the packs and bridges to add to it")
+    if args.preset:
+        print("next: list this repository's source files under `code.include`, then run `bondstone agent`")
+    else:
+        print("next: `bondstone packs` lists the packs, bridges and presets to add to it")
     return EXIT_OK
 
 
@@ -362,17 +365,19 @@ def build_parser() -> argparse.ArgumentParser:
     explain.add_argument("rule", metavar="RULE", help="a rule id such as adr/alternatives-considered")
     explain.set_defaults(func=cmd_explain)
 
-    init = commands.add_parser("init", parents=[common], help="create an empty profile in this folder")
+    init = commands.add_parser("init", parents=[common], help="create a profile in this folder")
+    init.add_argument("--preset", metavar="NAME", help="extend this preset, such as `starter`")
     init.set_defaults(func=cmd_init)
 
     listing = commands.add_parser("packs", parents=[common, output],
-                                  help="list the packs and bridges available to this repository")
+                                  help="list the packs, bridges and presets available to this repository")
     listing.set_defaults(func=cmd_packs)
 
     pack = commands.add_parser("pack", help="pack commands")
     pack_commands = pack.add_subparsers(dest="pack_command", required=True, metavar="COMMAND")
-    pack_test = pack_commands.add_parser("test", parents=[output], help="run the fixtures of packs and bridges")
-    pack_test.add_argument("dirs", nargs="+", metavar="DIR", help="folder of a pack or a bridge")
+    pack_test = pack_commands.add_parser("test", parents=[output],
+                                         help="run the fixtures of packs, bridges and presets")
+    pack_test.add_argument("dirs", nargs="+", metavar="DIR", help="folder of a pack, a bridge or a preset")
     pack_test.set_defaults(func=cmd_pack_test)
 
     profile = commands.add_parser("profile", help="profile commands")

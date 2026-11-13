@@ -1,0 +1,19 @@
+id: starter
+version: 1.0.0
+bondstone: ">=1.0"
+description: Decisions and living capability specs, with a rule that code changes update the spec they implement.
+
+packs: [adr@1, capability@1]
+bridges: [adr-capability@1]
+
+rules:
+  - id: code-change-updates-living-spec
+    description: A change to code updates the living specs that code implements.
+    on_change: {code: true}
+    require:
+      - changed: {role: living-spec}
+        traced: true
+    exempt: {trailer: Spec-Impact}
+    hint: 'Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed.'
+
+instructions: instructions.md

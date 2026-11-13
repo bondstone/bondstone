@@ -1,4 +1,4 @@
-"""The exit criterion of phase 2: bondstone documents itself.
+"""The exit criterion of phase 2, kept true since: bondstone documents itself.
 
 The repository's own profile, decisions and capability specs pass `bondstone check`, and every
 requirement is tagged in the engine's source. CI adds `check --base` on pull requests. The date
@@ -51,6 +51,7 @@ def test_every_engine_module_implements_a_requirement():
 
 def test_source_changes_must_update_the_traced_capability():
     cfg, _ = load()
-    rule = cfg.rule("profile/source-change-updates-traced-spec")
+    rule = cfg.rule("starter/code-change-updates-living-spec")  # from the preset the profile extends
     assert rule.kind == "diff" and rule.spec["exempt"] == {"trailer": "Spec-Impact"}
+    assert rule.spec["on_change"] == {"code": True} and cfg.code_include == ["src/bondstone/**/*.py"]
     assert rule.spec["require"] == [{"changed": {"role": "living-spec"}, "traced": True}]

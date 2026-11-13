@@ -20,9 +20,10 @@ that `check` applies, so the answers and the gate cannot disagree.
 ### REQ-AGT-001: List the active rules with their effective severity
 
 `bondstone rules` SHALL list every rule that can report in the repository: the rules that
-packs, bridges and the profile declare, followed by the engine rules. Each rule MUST show the
-severity that `check` applies, after the profile's overrides, and say when that differs from
-the rule's default.
+packs, bridges, presets and the profile declare, followed by the engine rules. Each rule MUST
+show the severity that `check` applies, after the overrides of presets and the profile, and
+say when that differs from the rule's default and which preset set it. A rule that is locked,
+where it is declared or by a preset, is marked as locked.
 
 #### Scenario: Overridden rule
 
@@ -35,8 +36,16 @@ the rule's default.
 `bondstone explain RULE` SHALL print what one rule asks and how to satisfy it: for a declared
 rule its description, hint, selector and clauses and the manifest that declares it, and for a
 diff rule one sentence per clause that says in words what it asks; for an engine rule when it
-fires, why, and the fix. An unknown rule id MUST be refused with the
-closest known ids.
+fires, why, and the fix. It MUST say whether the effective severity is the default or was set
+by a preset or the profile, and name the preset that locks the rule. A diff rule that watches
+the repository's code (`on_change: {code: true}`) is explained with the profile's code globs.
+An unknown rule id MUST be refused with the closest known ids.
+
+#### Scenario: A severity set by a preset
+
+- Given a preset `org` that sets `adr/alternatives-considered` to `error` and locks it
+- When `bondstone explain adr/alternatives-considered` runs
+- Then it says the severity was set by the preset org and that the rule is locked
 
 #### Scenario: Misspelt rule id
 
@@ -62,7 +71,8 @@ its file changed.
 
 ### REQ-AGT-004: Say which diff rules will fire
 
-`bondstone context` SHALL list every diff rule that the given or changed files trigger, with
+`bondstone context` SHALL list every diff rule that the given or changed files trigger, by
+its `paths` or as the repository's code, with
 its effective severity, what each clause asks for, its hint, and for a traced clause the
 documents that must change. A file that does not exist yet counts as added. A rule overridden
 to `ignore` MUST be left out. When a rule can be exempted, the output names the trailer and

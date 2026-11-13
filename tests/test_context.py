@@ -98,6 +98,14 @@ def test_a_file_that_does_not_exist_yet_counts_as_added(repo):
     assert context_for(*load(repo), ["src/code.py"]).rules == []
 
 
+def test_a_rule_that_watches_the_repositorys_code(repo):
+    standard(repo, code={"include": ["src/**/*.py"], "exclude": ["src/plain.py"]},
+             rules=[{**RULE, "on_change": {"code": True}}])
+    assert [rule.must_change for rule in context_for(*load(repo), ["src/code.py"]).rules] == [["CAP-a", "CAP-b"]]
+    assert context_for(*load(repo), ["src/plain.py"]).rules == []  # excluded from the code globs
+    assert context_for(*load(repo), ["README.md"]).rules == []
+
+
 def test_a_rule_overridden_to_ignore_is_left_out(repo):
     standard(repo, code={"include": ["src/**/*.py"]}, rules=[RULE], overrides={"profile/code-updates-spec": "ignore"})
     assert context_for(*load(repo), ["src/code.py"]).rules == []

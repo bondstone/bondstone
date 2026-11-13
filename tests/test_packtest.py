@@ -152,7 +152,7 @@ def test_component_of(packs, tmp_path):
     assert component_of(packs.root / "adr") == ("pack", "adr")
     packs.pack("renamed", "version: 1.0.0\n", folder=".")
     assert component_of(packs.root / "renamed") == ("pack", "renamed")  # no id: the folder's name
-    with pytest.raises(EnvironmentProblem, match="is not a pack or a bridge: it has no pack.yaml or bridge.yaml"):
+    with pytest.raises(EnvironmentProblem, match="is not a pack, a bridge or a preset: it has none of pack.yaml, bridge.yaml, preset.yaml"):
         component_of(packs.root)
     with pytest.raises(EnvironmentProblem, match="is not a directory"):
         component_of(tmp_path / "missing")

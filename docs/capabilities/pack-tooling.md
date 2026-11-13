@@ -11,19 +11,19 @@ constrained_by: [ADR-012]
 
 ## Purpose
 
-Packs and bridges are written by many hands: the library, an organisation, one repository.
+Packs, bridges and presets are written by many hands: the library, an organisation, one repository.
 Their authors need to know that the rules fire where they should and stay silent where they
 should, and users need to see what is available before they name it in a profile.
 
 ## Requirements
 
-### REQ-PKT-001: Run the fixtures of a pack or a bridge
+### REQ-PKT-001: Run the fixtures of a pack, a bridge or a preset
 
-`bondstone pack test DIR...` SHALL run every fixture of the pack or bridge in each folder. A
+`bondstone pack test DIR...` SHALL run every fixture of the pack, bridge or preset in each folder. A
 fixture is a small repository in `fixtures/<case>/` with its own profile, checked like any
 other repository. The component under test and the components next to it MUST be found before
 any other copy with the same id. The exit code is 0 when every fixture passes and 1 otherwise;
-a folder that holds no pack and no bridge is an environment error.
+a folder that holds no pack, bridge or preset is an environment error.
 
 #### Scenario: A bridge fixture
 
@@ -51,11 +51,12 @@ failure names the rule, and for an unexpected one the place and the message.
 - When the check of that fixture reports no such error
 - Then the fixture fails with "expected error adr/alternatives-considered was not reported"
 
-### REQ-PKT-003: List the packs and bridges that are available
+### REQ-PKT-003: List the packs, bridges and presets that are available
 
-`bondstone packs` SHALL list every pack and bridge in the profile's sources and in installed
-packages, with its kind, id, version, source and description, and mark the ones the profile
-uses. Copies of one component are listed in the order in which they are searched. Without a
+`bondstone packs` SHALL list every pack, bridge and preset in the profile's sources and in
+installed packages, with its kind, id, version, source and description, and mark the ones the
+profile uses, directly or through a preset. Packs come first, then bridges, then presets.
+Copies of one component are listed in the order in which they are searched. Without a
 profile, it lists what a new profile in that folder could use.
 
 #### Scenario: A local copy hides the library's

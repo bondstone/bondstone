@@ -102,6 +102,18 @@ def test_explain_says_in_words_what_a_diff_rule_asks(project):
     assert "asks" not in explain(cfg, "adr/alternatives-considered")
 
 
+def test_explain_names_the_code_globs_of_a_rule_that_watches_code(project):
+    rule = {"id": "code-updates-spec", "description": "Code changes update a living spec.",
+            "on_change": {"code": True}, "require": [{"changed": {"role": "living-spec"}, "min": 1}]}
+    standard(project, rules=[rule], code={"include": ["src/**/*.py", "lib/**"]})
+    asks = explain(load_config(project.root), "profile/code-updates-spec")["asks"]
+    assert asks[0].startswith("When files that the profile selects as code (src/**/*.py, lib/**) change, it asks that ")
+    standard(project, rules=[rule])
+    asks = explain(load_config(project.root), "profile/code-updates-spec")["asks"]
+    assert asks[0].startswith("When files that the profile selects as code (none yet: set `code.include` in the "
+                              "profile) change, ")
+
+
 def test_explain_an_engine_rule(cfg):
     data = explain(cfg, "bondstone/code-coverage")
     assert data["kind"] == "engine" and data["severity"] == "ignore"

@@ -136,14 +136,13 @@ def test_invalid_profile_stops_resolution(project):
     assert [d.message for d in result.problems] == ["bondstone: expected the format version 1, got 0.1"]
 
 
-def test_presets_duplicates_and_engine_range(project):
+def test_duplicates_and_engine_range(project):
     project.pack("a", "id: a\nversion: 1.0.0\nbondstone: '>=2.0'\n")
     project.pack("b", "id: b\nversion: 1.0.0\nbondstone: 'soon'\n")
-    project.profile(extends=["starter@1"], packs=["a@1", "a", "b"])
+    project.profile(packs=["a@1", "a", "b"])
     assert messages(project) == [
-        "extends: presets are not supported yet; list the packs and bridges in the profile",
-        f"pack 'a' needs bondstone >=2.0; this is bondstone {__version__}",
         "packs: pack 'a' is listed more than once",
+        f"pack 'a' needs bondstone >=2.0; this is bondstone {__version__}",
         "bondstone: invalid version range 'soon'",
     ]
 

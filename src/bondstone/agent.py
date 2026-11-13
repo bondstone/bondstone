@@ -16,6 +16,7 @@ from .catalogue import ENGINE_RULES, EngineRule
 from .config import PLACEHOLDER, Config
 from .context import describe_clause
 from .model import IGNORE, Refused, Rule
+from .rules.diff import describe_trigger
 
 
 @dataclass
@@ -26,11 +27,12 @@ class RuleInfo:
     kind: str  # node | diff | existence | engine
     severity: str  # effective
     default: str
-    set_by: str  # "default" | "profile": where the effective severity comes from
+    set_by: str  # "default" | "profile" | "preset <id>": where the effective severity comes from
     locked: bool
     description: str
     declared_in: str | None  # manifest of a declared rule; None for engine rules
     hint: str | None = None
+    locked_by: str | None = None  # the pack, bridge or preset that locks the rule
 
     def to_dict(self) -> dict[str, Any]:
         return {key: value for key, value in asdict(self).items() if value is not None}
@@ -43,8 +45,10 @@ def _info(cfg: Config, rule: Rule | EngineRule) -> RuleInfo:
     else:
         rule_id, kind, default, locked = rule.id, "engine", rule.severity, not rule.overridable
         description, declared_in, hint = rule.fires, None, None
+    lock = cfg.locks.get(rule_id)
     return RuleInfo(rule_id, kind, cfg.severity(rule_id, default), default,
-                    "profile" if rule_id in cfg.overrides else "default", locked, description, declared_in, hint)
+                    cfg.override_sources.get(rule_id, "default"), locked or lock is not None, description,
+                    declared_in, hint, lock.by if lock is not None else None)
 
 
 # bondstone: REQ-AGT-001
@@ -57,8 +61,8 @@ def rules_text(rules: list[RuleInfo]) -> str:
     lines = []
     for rule in rules:
         notes = []
-        if rule.set_by == "profile":
-            notes.append(f"default: {rule.default}")
+        if rule.set_by != "default":
+            notes.append(f"default: {rule.default}" + ("" if rule.set_by == "profile" else f", set by {rule.set_by}"))
         if rule.locked:
             notes.append("locked")
         suffix = f" [{'; '.join(notes)}]" if notes else ""
@@ -79,8 +83,8 @@ def _find(cfg: Config, rule_id: str) -> Rule | EngineRule:
 
 
 def _severity_line(info: RuleInfo) -> str:
-    if info.set_by == "profile":
-        return f"Severity: {info.severity} (set by the profile; default: {info.default})"
+    if info.set_by != "default":
+        return f"Severity: {info.severity} (set by the {info.set_by}; default: {info.default})"
     return f"Severity: {info.severity} (default)"
 
 
@@ -92,8 +96,8 @@ def explain(cfg: Config, rule_id: str) -> dict[str, Any]:
     out = info.to_dict()
     if isinstance(rule, Rule):
         if rule.kind == "diff":
-            paths = ", ".join(str(path) for path in rule.spec["on_change"].get("paths") or [])
-            out["asks"] = [f"When files matching {paths} change, it asks that {describe_clause(clause)}."
+            watched = describe_trigger(cfg, rule)
+            out["asks"] = [f"When {watched} change, it asks that {describe_clause(clause)}."
                            for clause in rule.spec.get("require") or []]
         out["spec"] = {key: value for key, value in rule.spec.items()
                        if key not in ("id", "description", "severity", "locked", "hint")}
@@ -113,7 +117,9 @@ def explain_text(cfg: Config, rule_id: str) -> str:
                  f"Fires when: {data['fires']}", f"Why: {data['why']}", f"Fix: {data['fix']}"]
         if data.get("note"):
             lines.append(f"Note: {data['note']}")
-        if info.locked:
+        if info.locked_by:
+            lines.append(f"Locked by preset {info.locked_by}: it can be raised but not lowered or waived.")
+        elif info.locked:
             lines.append("This rule cannot be overridden or waived.")
         return "\n".join(lines) + "\n"
     lines = [f"{info.id} ({info.kind} rule, declared in {info.declared_in})",
@@ -247,7 +253,8 @@ def instructions(cfg: Config) -> str:
            "`bondstone` checks this repository's living documentation. The rules below are the ones it enforces.", "",
            "## Workflow", ""]
     out += [f"{number}. {step}" for number, step in enumerate(_workflow(cfg), 1)]
-    out += ["", "Active packs and bridges: "
+    out += ["", ("Active packs, bridges and presets: " if any(c.kind == "preset" for c in cfg.components)
+                 else "Active packs and bridges: ")
             + (", ".join(f"{c.id}@{c.version} ({c.kind})" for c in cfg.components) or "none"), ""]
 
     out += ["## Document types", ""]

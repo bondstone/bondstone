@@ -176,3 +176,16 @@ MUST NOT exempt anything with it. With `--no-exemptions`, it SHALL ignore every 
 - Given a commit with the trailer `Spec-Impact: none`
 - When `bondstone check --base` runs
 - Then `bondstone/exemption-invalid` names the commit, and the violation is still reported
+
+### REQ-DIF-013: Trigger diff rules on the repository's code
+
+Bondstone SHALL evaluate a rule with `on_change: {code: true}` when a changed file is one the
+profile selects as code: it matches a glob under `code.include` and none under `code.exclude`.
+This lets a preset or a pack ship a diff rule without knowing a repository's paths. A rule
+MUST name exactly one of `paths` and `code`.
+
+#### Scenario: A preset's rule in two repositories
+
+- Given a preset rule with `on_change: {code: true}`, used by a profile with `code.include: ["app/**"]`
+- When `app/main.dart` changes
+- Then the rule is evaluated; a change to `tools/build.sh` does not evaluate it
