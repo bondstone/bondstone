@@ -2,7 +2,7 @@
 id: CLI-update
 type: cli:Command
 title: update
-status: experimental
+status: stable
 synopsis: bondstone update [--format text|json] [--locked] [NAME ...]
 json_output: true
 implements: [CAP-profiles]

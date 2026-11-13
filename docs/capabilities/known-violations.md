@@ -2,7 +2,7 @@
 id: CAP-known-violations
 type: capability:Capability
 title: Known violations
-status: draft
+status: active
 owner: Adam Dworzyński
 code: KNV
 depends_on: [CAP-rules, CAP-profiles, CAP-diff-checks]
