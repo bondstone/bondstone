@@ -2,7 +2,7 @@
 id: CLI-report
 type: cli:Command
 title: report
-status: experimental
+status: stable
 synopsis: bondstone report [--format text|json] [--base REF]
 json_output: true
 implements: [CAP-cli]

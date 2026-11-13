@@ -4,7 +4,7 @@ type: cli:Command
 title: baseline
 status: stable
 synopsis: bondstone baseline [REF] [--known [--prune]]
-implements: [CAP-diff-checks]
+implements: [CAP-diff-checks, CAP-known-violations]
 ---
 
 Records in the profile the commit whose documents count as already adopted, so that the first `check --base` does not treat them as new.

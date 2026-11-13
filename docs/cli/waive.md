@@ -2,7 +2,7 @@
 id: CLI-waive
 type: cli:Command
 title: waive
-status: experimental
+status: stable
 synopsis: bondstone waive [--format text|json] --reason REASON --expires DATE RULE [NODE]
 json_output: true
 implements: [CAP-profiles]
