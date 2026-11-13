@@ -1,8 +1,9 @@
 """Find the profile and the packs and bridges it names.
 
-The profile's `sources` folders are searched first, then the folders that installed packages
-such as bondstone-library register. Presets named under `extends` add their packs and bridges
-to the profile's. Git sources and the lock file come later."""
+The profile's `sources` folders are searched first, then the git sources that the profile and
+its presets name, then the folders that installed packages such as bondstone-library register.
+Presets named under `extends` add their packs and bridges to the profile's. A git source is
+read from the cache, at the commit the lock file pins: nothing here touches the network."""
 
 from __future__ import annotations
 
@@ -16,6 +17,17 @@ from typing import Any
 from . import __version__
 from .manifest import MANIFEST_NAMES, ManifestError, load_manifest, load_yaml
 from .model import CONFIG_RULE, ERROR, PROFILE_PATH, Component, Diagnostic, EnvironmentProblem
+from .sources import (
+    EXAMPLE,
+    LOCK_PATH,
+    GitSource,
+    Locked,
+    looks_remote,
+    parse_git_source,
+    read_lock,
+    source_dir,
+    verify,
+)
 
 DEFAULT_SOURCES = [".bondstone/packs"]
 ENTRY_POINT_GROUP = "bondstone.sources"  # installed packages register a folder of packs here
@@ -115,8 +127,9 @@ class Source:
     """A folder that holds packs and bridges, one per subfolder."""
 
     dir: Path
-    label: str  # how listings name it: the folder as the profile writes it, or the package
+    label: str  # how listings name it: the folder or the git source as written, or the package
     installed: bool = False
+    git: GitSource | None = None
 
 
 @dataclass
@@ -154,32 +167,80 @@ def installed_sources() -> tuple[list[Source], list[str]]:
     return sources, errors
 
 
-# bondstone: REQ-PRF-004, REQ-PRF-011
-def find_sources(root: Path, profile: dict[str, Any] | None,
-                 extra_sources: list[Path] | None = None) -> tuple[list[Source], list[str]]:
-    """Every folder to search, in priority order: the profile's `sources`, then installed packages.
+# bondstone: REQ-PRF-004, REQ-PRF-017
+def local_sources(root: Path, profile: dict[str, Any] | None,
+                  extra_sources: list[Path] | None = None) -> tuple[list[Source], list[str], list[str]]:
+    """The folders of the repository to search, the git sources the profile names, and errors.
 
-    `extra_sources` come first; fixtures use them to find the component under test."""
+    `extra_sources` come first; fixtures use them to find the component under test. The
+    default folder is searched unless the profile names folders of its own."""
     profile = profile or {}
     sources = [Source(path, shown_path(root, path)) for path in extra_sources or []]
     errors: list[str] = []
-    for name in profile.get("sources", DEFAULT_SOURCES):
+    remote: list[str] = []
+    folders: list[str] = []
+    for name in profile.get("sources", []):
+        if parse_git_source(name) is not None:
+            remote.append(name)
+        elif looks_remote(name):
+            errors.append(f"sources: '{name}' is neither a folder nor a git source such as {EXAMPLE}")
+        else:
+            folders.append(name)
+    for name in folders or DEFAULT_SOURCES:
         directory = root / name
-        if "sources" in profile and not directory.is_dir():
+        if folders and not directory.is_dir():
             errors.append(f"sources: folder '{name}' does not exist")
         sources.append(Source(directory, name))
+    return sources, remote, errors
+
+
+@dataclass
+class Unavailable:
+    """A git source that cannot be read: the lock does not pin it, or the cache does not hold it."""
+
+    source: GitSource
+    reason: str  # "unlocked" | "uncached"
+    detail: str
+    where: str  # the file that names the source
+
+
+# bondstone: REQ-PRF-019
+def cached_source(source: GitSource, lock: dict[str, Locked], where: str) -> Source | Unavailable:
+    """The folder of a git source in the cache, when the lock pins it and the cache holds exactly that."""
+    locked = lock.get(source.spec)
+    if locked is None:
+        return Unavailable(source, "unlocked", f"is not in {LOCK_PATH}", where)
+    problem = verify(source, locked)
+    if problem is not None:
+        return Unavailable(source, "uncached", problem, where)
+    return Source(source_dir(source, locked.commit), source.spec, git=source)
+
+
+# bondstone: REQ-PRF-004, REQ-PRF-011
+def find_sources(root: Path, profile: dict[str, Any] | None,
+                 extra_sources: list[Path] | None = None) -> tuple[list[Source], list[str]]:
+    """Every folder to search, in priority order: local folders, git sources, installed packages.
+
+    Of the profile's git sources only those that the lock pins and the cache holds are
+    included; `resolve` reports the others."""
+    local, remote, errors = local_sources(root, profile, extra_sources)
+    lock, _ = read_lock(root)
+    cached = [cached_source(parse_git_source(name), lock, PROFILE_PATH) for name in remote]
     installed, problems = installed_sources()
-    return sources + installed, errors + problems
+    return local + [source for source in cached if isinstance(source, Source)] + installed, errors + problems
 
 
 def index_sources(sources: list[Source]) -> dict[tuple[str, str], list[Candidate]]:
-    """Packs, bridges and presets found directly under the source folders, in priority order."""
+    """Packs, bridges and presets found directly under the source folders, in priority order.
+
+    A git source may also be one component: its folder then holds the manifest itself."""
     found: dict[tuple[str, str], list[Candidate]] = {}
     for source in sources:
         if not source.dir.is_dir():
             continue
         for kind, filename in MANIFEST_NAMES.items():
-            for manifest in sorted(source.dir.glob(f"*/{filename}")):
+            own = source.dir / filename
+            for manifest in ([own] if source.git is not None and own.is_file() else sorted(source.dir.glob(f"*/{filename}"))):
                 folder = manifest.parent
                 try:
                     data = load_yaml(manifest)
@@ -204,6 +265,48 @@ class Resolution:
     profile: dict[str, Any] | None = None
     components: list[Component] = field(default_factory=list)
     problems: list[Diagnostic] = field(default_factory=list)
+    git_sources: list[GitSource] = field(default_factory=list)  # every git source reached, in order
+    unavailable: list[Unavailable] = field(default_factory=list)
+
+
+class _Index:
+    """The components that can be chosen, by kind and id, in the order the sources are searched.
+
+    Git sources arrive while presets are loaded, since a preset may name its own; they stay
+    between the local folders and the installed packages."""
+
+    def __init__(self, result: Resolution, local: list[Source], installed: list[Source], lock: dict[str, Locked]):
+        self.result, self.local, self.installed, self.lock = result, local, installed, lock
+        self.git: list[Source] = []
+        self.found = index_sources(local + installed)
+
+    def get(self, key: tuple[str, str], default: Any = None) -> Any:
+        return self.found.get(key, default)
+
+    # bondstone: REQ-PRF-017
+    def add_git(self, names: list[str], where: str) -> None:
+        added = False
+        for name in names:
+            source = parse_git_source(name)
+            if source is None or source in self.result.git_sources:
+                continue
+            self.result.git_sources.append(source)
+            found = cached_source(source, self.lock, where)
+            if isinstance(found, Unavailable):
+                self.result.unavailable.append(found)
+            else:
+                self.git.append(found)
+                added = True
+        if added:
+            self.found = index_sources(self.local + self.git + self.installed)
+
+
+def _shown(root: Path, candidate: Candidate) -> str:
+    """A manifest as diagnostics show it; one from a git source is named by the source, not by the cache."""
+    source = candidate.source
+    if source is not None and source.git is not None:
+        return f"{source.label}:{candidate.manifest.relative_to(source.dir).as_posix()}"
+    return shown_path(root, candidate.manifest)
 
 
 def _problem(message: str, path: str = PROFILE_PATH) -> Diagnostic:
@@ -211,12 +314,16 @@ def _problem(message: str, path: str = PROFILE_PATH) -> Diagnostic:
 
 
 # bondstone: REQ-PRF-004, REQ-PRF-013
-def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
+def resolve(root: Path, extra_sources: list[Path] | None = None, *, fetching: bool = False) -> Resolution:
     """Load the profile and every preset, pack and bridge it needs.
 
     The components come back as packs, bridges and then presets, each in the order in which
     they are first named: presets in `extends` order, then the profile. `extra_sources` are
-    searched before the profile's own; fixtures use them to find the component under test."""
+    searched before the profile's own; fixtures use them to find the component under test.
+
+    A git source that the lock does not pin is a configuration error, and one that the cache
+    does not hold is an environment error. With `fetching`, both are only listed in
+    `unavailable`, for `bondstone update` to fetch."""
     result = Resolution(root)
     profile_file = root / PROFILE_PATH
     if not profile_file.is_file():
@@ -227,11 +334,20 @@ def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
         return result
     result.profile = profile
 
-    sources, errors = find_sources(root, profile, extra_sources)
-    result.problems += [_problem(message) for message in errors]
-    index = index_sources(sources)
+    local, remote, errors = local_sources(root, profile, extra_sources)
+    installed, broken = installed_sources()
+    result.problems += [_problem(message) for message in errors + broken]
+    lock, lock_problems = read_lock(root)
+    result.problems += [_problem(message, LOCK_PATH) for message in lock_problems]
+    index = _Index(result, local, installed, lock)
+    index.add_git(remote, PROFILE_PATH)
 
     presets = _presets(result, index, profile)
+    if result.unavailable:
+        # bondstone: REQ-PRF-019
+        if not fetching:
+            _report_unavailable(result)
+        return result  # what the missing sources hold is unknown: choosing packs would only add noise
     requested: dict[tuple[str, str], list[tuple[str | None, str]]] = {}  # ranges and where each is written
     for where, data in [*((preset.manifest, preset.data) for preset in presets), (PROFILE_PATH, profile)]:
         for kind, key in (("pack", "packs"), ("bridge", "bridges")):
@@ -255,9 +371,20 @@ def resolve(root: Path, extra_sources: list[Path] | None = None) -> Resolution:
     return result
 
 
+def _report_unavailable(result: Resolution) -> None:
+    """Sources the lock does not pin are configuration errors; else the cache is behind, which stops the run."""
+    unlocked = [item for item in result.unavailable if item.reason == "unlocked"]
+    for item in unlocked:
+        result.problems.append(_problem(
+            f"sources: git source '{item.source.spec}' {item.detail}; run `bondstone update` and commit the lock",
+            item.where))
+    if not unlocked:
+        listing = "; ".join(f"{item.source.spec}: {item.detail}" for item in result.unavailable)
+        raise EnvironmentProblem(f"{listing}; run `bondstone update --locked`")
+
+
 # bondstone: REQ-PRF-013
-def _presets(result: Resolution, index: dict[tuple[str, str], list[Candidate]],
-             profile: dict[str, Any]) -> list[Component]:
+def _presets(result: Resolution, index: _Index, profile: dict[str, Any]) -> list[Component]:
     """The presets a profile extends, each after the presets it extends itself.
 
     A preset reached more than once is applied once, where it is first needed."""
@@ -282,6 +409,7 @@ def _presets(result: Resolution, index: dict[tuple[str, str], list[Candidate]],
         visited[cid] = preset
         if preset is None:
             return
+        index.add_git(preset.data.get("sources", []), preset.manifest)
         for parent in preset.data.get("extends", []):
             visit(parent, [*chain, cid], preset.manifest)
         ordered.append(preset)
@@ -295,7 +423,7 @@ _LISTS = {"pack": "packs", "bridge": "bridges", "preset": "extends"}
 
 
 # bondstone: REQ-PRF-004
-def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], kind: str,
+def _choose(result: Resolution, index: _Index, kind: str,
             cid: str, specs: list[tuple[str | None, str]]) -> Component | None:
     """The first copy of a component, in the order of the sources, that fits every range asked for.
 
@@ -306,18 +434,21 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
             result.problems.append(_problem(f"{kind} '{cid}': invalid version range '{spec}'", asked_in))
             return None
     candidates = index.get((kind, cid), [])
+    if not candidates and result.unavailable:
+        return None  # it may be in a git source that is not available yet; that is reported
     if not candidates:
         other = next((k for k in _LISTS if k != kind and index.get((k, cid))), None)
         if other is not None:
             result.problems.append(_problem(
                 f"{kind} '{cid}' not found: '{cid}' is a {other}; list it under `{_LISTS[other]}`", where))
         else:
+            places = "the profile's sources" + (", its git sources" if result.git_sources else "")
             result.problems.append(_problem(
-                f"{kind} '{cid}' not found in the profile's sources or in an installed package", where))
+                f"{kind} '{cid}' not found in {places} or in an installed package", where))
         return None
     broken = next((c for c in candidates if c.error), None)
     if broken is not None:
-        result.problems.append(_problem(broken.error, shown_path(result.root, broken.manifest)))
+        result.problems.append(_problem(broken.error, _shown(result.root, broken)))
         return None
     chosen = next((c for c in candidates if all(version_matches(c.version, spec) for spec, _ in specs)), None)
     if chosen is None:
@@ -330,7 +461,7 @@ def _choose(result: Resolution, index: dict[tuple[str, str], list[Candidate]], k
         result.problems.append(_problem(
             f"{kind} '{cid}': no version matches {wanted} (available: {versions})", where))
         return None
-    shown = shown_path(result.root, chosen.manifest)
+    shown = _shown(result.root, chosen)
     data, problems = load_manifest(kind, chosen.manifest, shown)
     result.problems += problems
     if data is None:

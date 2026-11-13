@@ -5,7 +5,7 @@ title: Profiles, packs and bridges
 status: active
 owner: Adam Dworzyński
 code: PRF
-constrained_by: [ADR-002, ADR-003, ADR-004, ADR-012]
+constrained_by: [ADR-002, ADR-003, ADR-004, ADR-011, ADR-012]
 ---
 
 ## Purpose
@@ -55,7 +55,8 @@ above the current one that contains `.bondstone/profile.yaml`.
 Bondstone SHALL find each pack and bridge the profile names in the folders listed under
 `sources` (default `.bondstone/packs`) and choose the first copy, in the order in which the
 sources are searched, whose version satisfies the requested range, so that a repository can
-override a pack with its own copy. `adr@1` and `^1` mean any 1.x; comparators such as
+override a pack with its own copy. Folders are searched before git sources, whatever the
+order they are written in, and git sources before installed packages. `adr@1` and `^1` mean any 1.x; comparators such as
 `>=1.0` are combined with AND. A component that is missing, or present only in other versions, MUST be a configuration
 error. The engine ships no packs of its own.
 
@@ -192,7 +193,9 @@ MUST be refused. It MUST refuse to overwrite an existing profile.
 ### REQ-PRF-013: Extend presets
 
 Bondstone SHALL load every preset a profile names under `extends`, found in the same sources
-as packs, as a `preset.yaml` validated against its schema. A preset may extend other presets;
+as packs, as a `preset.yaml` validated against its schema. A preset may name git sources of
+its own under `sources`, where its packs, its bridges and the presets it extends are found; a
+folder there MUST be a configuration error. A preset may extend other presets;
 those are applied before it, and a preset reached more than once is applied once. The packs
 and bridges of the presets are used together with the profile's own, and a component named
 more than once MUST satisfy every range asked for. The rules a preset defines are qualified
@@ -257,3 +260,78 @@ malformed or in the past, and when the same rule and node are waived already.
 - Given a preset that locks `adr/alternatives-considered`
 - When `bondstone waive adr/alternatives-considered ADR-004 ...` runs
 - Then it exits with 1, says which preset locks the rule, and the profile is unchanged
+
+### REQ-PRF-017: Name git sources
+
+A profile's `sources` and a preset's `sources` SHALL accept git sources written
+`host/org/repo//path@ref`: a repository, a folder in it (the root when left out) and a tag, a
+branch or a commit. The folder holds one component per subfolder, or is one component itself.
+A profile that names no folder keeps the default folder next to its git sources. An entry
+with `//` or `@` that is not a git source MUST be a configuration error.
+
+#### Scenario: Packs of an organisation
+
+- Given the profile entry `github.com/acme/bondstone-packs//packs@v1.2.0`
+- When the configuration is loaded
+- Then the packs in the folder `packs` of that repository at `v1.2.0` can be named under `packs`
+
+### REQ-PRF-018: Pin git sources in a lock file
+
+`.bondstone/bondstone.lock` SHALL record for every git source that the profile and its
+presets reach the commit its ref stood for and, for each pack, bridge and preset in it, the
+kind, id, version and a SHA-256 over the paths and contents of its files. The file is written
+by `bondstone update`, sorted by source, and is deleted when nothing is pinned. A lock that
+does not match its schema MUST be a configuration error.
+
+#### Scenario: A branch that moved
+
+- Given a source written with `@main`, pinned last week
+- When `bondstone check` runs after the branch got new commits
+- Then the pinned commit is used
+
+### REQ-PRF-019: Read git sources from the lock and the cache only
+
+Every command except `update` SHALL read a git source from a cache outside the repository
+(`$BONDSTONE_CACHE`, else `bondstone` in the user's cache folder), at the commit the lock
+pins, and MUST NOT use the network. A source that the lock does not pin is a configuration
+error that says to run `bondstone update`. A source whose commit is not in the cache, or
+whose cached files do not have the hashes of the lock, is an environment error (exit code 3)
+that says to run `bondstone update --locked`. Neither is followed by reports of the
+components the source would hold. Diagnostics name a manifest from a git source by the
+source and the path inside it, not by its place in the cache.
+
+#### Scenario: A fresh clone in CI
+
+- Given a repository with a lock and a machine with an empty cache
+- When `bondstone check` runs
+- Then it exits with 3 and says to run `bondstone update --locked`
+
+#### Scenario: A source added without updating
+
+- Given a profile with a new git source and a lock from before
+- When `bondstone check` runs
+- Then a `bondstone/profile` error says the source is not in the lock, and the exit code is 2
+
+### REQ-PRF-020: Fetch and pin with update
+
+`bondstone update` SHALL fetch every git source the profile reaches, also through presets
+that name sources of their own, resolve each ref to a commit, put the source's folder at that
+commit into the cache and rewrite the lock; a source that nothing names any more leaves it.
+With names, only the sources that hold a component of that name move, and the others keep
+their commit. `bondstone update --locked` SHALL fetch exactly the pinned commits, replace
+cached files that differ and leave the lock as it is; it MUST refuse a lock that does not pin
+a source or whose hashes the pinned commit does not have. A source without components MUST be
+refused, and a ref or a repository that cannot be fetched is an environment error. Git is
+never asked for a password, so a job cannot hang.
+
+#### Scenario: A moved tag does not move the lock
+
+- Given a lock that pins `v1` at a commit, and a remote where `v1` now names another commit
+- When `bondstone update --locked` runs with an empty cache
+- Then the pinned commit is fetched and the lock is unchanged
+
+#### Scenario: One pack moves
+
+- Given two sources written with `@main` that both got new commits
+- When `bondstone update architecture` runs
+- Then only the source that holds `architecture` gets a new commit in the lock

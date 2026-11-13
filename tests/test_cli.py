@@ -356,14 +356,6 @@ def test_usage_errors_and_version(capsys):
     assert capsys.readouterr().out == f"bondstone {__version__}\n"
 
 
-def test_commands_of_later_phases_do_not_exist_yet(capsys):
-    for command in (["update"],):
-        with pytest.raises(SystemExit) as exit_info:
-            main(command)
-        assert exit_info.value.code == 2
-    capsys.readouterr()
-
-
 def test_module_entry_point(clean):
     result = subprocess.run([sys.executable, "-m", "bondstone", "--root", str(clean.root), "check"],
                             capture_output=True, text=True, encoding="utf-8",

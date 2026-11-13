@@ -38,6 +38,7 @@ library package, and its own changes are planned as Spec Kit features under [`sp
 | `bondstone baseline --known [--prune]` | Record the current violations, so that only new ones fail; `--prune` removes the fixed ones. |
 | `bondstone waive RULE [NODE] --reason R --expires D` | Add a waiver to the profile: one exception with a reason and an end. |
 | `bondstone report [--base REF] [--format text\|json]` | Count nodes, coverage, waivers, known violations and exemptions. |
+| `bondstone update [NAME ...] [--locked]` | Fetch the git sources of packs and pin them in the lock file. |
 | `bondstone profile check [--format text\|json]` | Validate the profile, packs and bridges. |
 | `bondstone new TYPE --title T [--set k=v] [--dry-run]` | Scaffold a document with the next id at the right path. |
 | `bondstone status ID STATUS` | Change the status of a document or an item, if its lifecycle allows the step. |
@@ -132,6 +133,36 @@ rules:
 `bondstone init --preset starter` creates a profile that extends the library's `starter`
 preset: decisions, living capability specs, and the rule that a change to tagged code updates
 the capability it implements.
+
+## Sharing packs through git
+
+A team that shares packs, bridges or presets between repositories keeps them in a git
+repository and names it under `sources`, as `host/org/repo//path@ref`:
+
+```yaml
+# .bondstone/profile.yaml
+sources:
+  - github.com/acme/bondstone-packs//packs@v1.2.0
+extends: [acme-standard@1]
+```
+
+`bondstone update` fetches each source, and writes `.bondstone/bondstone.lock` with the commit
+its ref stood for and a SHA-256 of every component. Commit the lock. From then on `check`
+reads only the lock and a cache outside the repository, so it never uses the network and
+gives the same result on every machine:
+
+- A source that the lock does not pin is a configuration error; run `bondstone update`.
+- A machine whose cache does not hold the pinned commit, such as a fresh CI runner, stops
+  with exit code 3; run `bondstone update --locked`, which fetches exactly what the lock pins
+  and never changes it.
+- `bondstone update` resolves every ref again, so a source written with a branch moves.
+  `bondstone update NAME` moves only the source that holds that pack, bridge or preset.
+
+The resolver searches the repository's own folders first, then git sources, then installed
+packages such as bondstone-library, so a local copy always wins. A preset may name git sources
+of its own, which is how an organisation's preset brings its packs with it. The cache is
+`$BONDSTONE_CACHE`, or `bondstone` in the user's cache folder. Git fetches
+`https://host/org/repo`; use git's `url.<base>.insteadOf` for SSH.
 
 ## Spec Kit
 
@@ -262,6 +293,7 @@ The generated agent instructions tell agents never to create or extend the file.
 - uses: actions/checkout@v4
   with:
     fetch-depth: 0          # --base and the baseline read older commits
+- run: bondstone update --locked   # only with git sources: fetch exactly what the lock pins
 - run: bondstone check --base origin/${{ github.base_ref }}
 ```
 

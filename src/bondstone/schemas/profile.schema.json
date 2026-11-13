@@ -20,7 +20,7 @@
     "packs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "bridges": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "sources": {
-      "description": "Folders searched for local packs and bridges; default: .bondstone/packs.",
+      "description": "Where packs, bridges and presets are searched: folders of the repository (default: .bondstone/packs) and git sources written host/org/repo//path@ref, which `bondstone update` pins in .bondstone/bondstone.lock.",
       "type": "array",
       "items": {"type": "string"}
     },

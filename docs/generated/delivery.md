@@ -82,6 +82,10 @@
 | [REQ-PRF-014](../capabilities/profiles.md#req-prf-014-apply-severities-in-layers) | Apply severities in layers | active | CAP-profiles |  |
 | [REQ-PRF-015](../capabilities/profiles.md#req-prf-015-let-a-preset-lock-rules) | Let a preset lock rules | active | CAP-profiles |  |
 | [REQ-PRF-016](../capabilities/profiles.md#req-prf-016-add-a-waiver-from-the-command-line) | Add a waiver from the command line | active | CAP-profiles | [004-waive-and-report](../../specs/004-waive-and-report/spec.md) |
+| [REQ-PRF-017](../capabilities/profiles.md#req-prf-017-name-git-sources) | Name git sources | active | CAP-profiles | [006-git-sources](../../specs/006-git-sources/spec.md) |
+| [REQ-PRF-018](../capabilities/profiles.md#req-prf-018-pin-git-sources-in-a-lock-file) | Pin git sources in a lock file | active | CAP-profiles | [006-git-sources](../../specs/006-git-sources/spec.md) |
+| [REQ-PRF-019](../capabilities/profiles.md#req-prf-019-read-git-sources-from-the-lock-and-the-cache-only) | Read git sources from the lock and the cache only | active | CAP-profiles | [006-git-sources](../../specs/006-git-sources/spec.md) |
+| [REQ-PRF-020](../capabilities/profiles.md#req-prf-020-fetch-and-pin-with-update) | Fetch and pin with update | active | CAP-profiles | [006-git-sources](../../specs/006-git-sources/spec.md) |
 | [REQ-RUL-001](../capabilities/rules.md#req-rul-001-select-nodes-with-selectors) | Select nodes with selectors | active | CAP-rules |  |
 | [REQ-RUL-002](../capabilities/rules.md#req-rul-002-evaluate-node-rules) | Evaluate node rules | active | CAP-rules |  |
 | [REQ-RUL-003](../capabilities/rules.md#req-rul-003-evaluate-existence-rules) | Evaluate existence rules | active | CAP-rules |  |

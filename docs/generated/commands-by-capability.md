@@ -19,4 +19,5 @@
 | [CLI-rules](../cli/rules.md) rules | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |
 | [CLI-status](../cli/status.md) status |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |
 | [CLI-supersede](../cli/supersede.md) supersede |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |
+| [CLI-update](../cli/update.md) update |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |
 | [CLI-waive](../cli/waive.md) waive |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |
