@@ -19,6 +19,7 @@
 | [REQ-CLI-007](../capabilities/cli.md#req-cli-007-tell-wrong-work-from-a-checker-that-could-not-run) | Tell wrong work from a checker that could not run | CAP-cli |
 | [REQ-CLI-008](../capabilities/cli.md#req-cli-008-report-where-the-documentation-stands) | Report where the documentation stands | CAP-cli |
 | [REQ-CLI-009](../capabilities/cli.md#req-cli-009-say-in-json-why-a-command-stopped) | Say in JSON why a command stopped | CAP-cli |
+| [REQ-CLI-010](../capabilities/cli.md#req-cli-010-print-diagnostics-as-sarif) | Print diagnostics as SARIF | CAP-cli |
 | [REQ-DIF-001](../capabilities/diff-checks.md#req-dif-001-read-history-through-git-only) | Read history through git only | CAP-diff-checks |
 | [REQ-DIF-002](../capabilities/diff-checks.md#req-dif-002-compare-with-the-merge-base) | Compare with the merge base | CAP-diff-checks |
 | [REQ-DIF-003](../capabilities/diff-checks.md#req-dif-003-see-committed-uncommitted-and-renamed-changes) | See committed, uncommitted and renamed changes | CAP-diff-checks |

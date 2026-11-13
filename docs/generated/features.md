@@ -7,3 +7,4 @@
 | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) | CLI and release packs | implemented |
 | [003-known-violations](../../specs/003-known-violations/spec.md) | Known violations | implemented |
 | [004-waive-and-report](../../specs/004-waive-and-report/spec.md) | Waive and report | implemented |
+| [005-sarif-output](../../specs/005-sarif-output/spec.md) | SARIF output | implemented |

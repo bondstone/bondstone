@@ -31,7 +31,7 @@ library package, and its own changes are planned as Spec Kit features under [`sp
 
 | Command | Purpose |
 | --- | --- |
-| `bondstone check [--format text\|json] [--fail-on warn]` | Validate documents, links, rules, code tags and views. |
+| `bondstone check [--format text\|json\|sarif] [--fail-on warn]` | Validate documents, links, rules, code tags and views. |
 | `bondstone check --base REF [--no-exemptions]` | Also check the changes since REF: lifecycles, immutability and diff rules. |
 | `bondstone gen` | Regenerate views. |
 | `bondstone baseline [REF]` | Record the commit whose documents count as already adopted. |
@@ -252,6 +252,33 @@ problem. It has no line number, so editing the document elsewhere does not break
   `lock: [{rule: adr/alternatives-considered, allow_known: false}]`.
 
 The generated agent instructions tell agents never to create or extend the file.
+
+## In CI
+
+`check` never touches the network, and its exit code is the gate: 0 passes, 1 means violations,
+2 a broken configuration and 3 an environment the checker could not run in.
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0          # --base and the baseline read older commits
+- run: bondstone check --base origin/${{ github.base_ref }}
+```
+
+`bondstone check --format sarif` prints the same diagnostics as SARIF 2.1.0, which code-scanning
+tools read. On GitHub, uploading the file shows the diagnostics as annotations on the pull
+request (the job needs the `security-events: write` permission):
+
+```yaml
+- run: bondstone check --base origin/${{ github.base_ref }} --format sarif > bondstone.sarif
+  continue-on-error: true   # the gate is the step above; this one only reports
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: bondstone.sarif
+```
+
+Known violations and exempted changes are in the file as suppressed results, so they do not
+show up as open alerts.
 
 ## Bondstone on bondstone
 

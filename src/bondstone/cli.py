@@ -23,6 +23,7 @@ from .known import KNOWN_PATH
 from .model import ERROR, IGNORE, PROFILE_PATH, WARN, EnvironmentProblem, Refused
 from .resolve import find_root, resolve
 from .rules import fails, run_check
+from .sarif import to_sarif
 from .views import generate
 
 EXIT_OK, EXIT_VIOLATIONS, EXIT_CONFIG, EXIT_ENVIRONMENT = 0, 1, 2, 3
@@ -43,7 +44,7 @@ def _config(args: argparse.Namespace, fmt: str = "text") -> Config | None:
     """The configuration, or None after reporting configuration errors (exit code 2)."""
     cfg = load_config(_root(args))
     if cfg.errors:
-        sys.stdout.write(render(fmt, cfg.errors))
+        sys.stdout.write(to_sarif(cfg, cfg.errors, successful=False) if fmt == "sarif" else render(fmt, cfg.errors))
         print("bondstone: the configuration is invalid; nothing was checked", file=sys.stderr)
         return None
     return cfg
@@ -57,8 +58,11 @@ def cmd_check(args: argparse.Namespace) -> int:
     repo = GitRepository(cfg.root) if args.base else None
     graph = build_graph(cfg)
     diagnostics = run_check(cfg, graph, repo=repo, base=args.base, exemptions=not args.no_exemptions)
-    compared = _compared(repo, args.base) if repo is not None and args.format == "json" else None
-    sys.stdout.write(render(args.format, diagnostics, nodes=len(graph.nodes), base=compared))
+    if args.format == "sarif":
+        sys.stdout.write(to_sarif(cfg, diagnostics))
+    else:
+        compared = _compared(repo, args.base) if repo is not None and args.format == "json" else None
+        sys.stdout.write(render(args.format, diagnostics, nodes=len(graph.nodes), base=compared))
     return EXIT_VIOLATIONS if fails(diagnostics, args.fail_on) else EXIT_OK
 
 
@@ -366,8 +370,10 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
     # bondstone: CLI-check
-    check = commands.add_parser("check", parents=[common, output],
+    check = commands.add_parser("check", parents=[common],
                                 help="validate documents, links, rules, code tags and views")
+    check.add_argument("--format", choices=[*FORMATS, "sarif"], default="text",
+                       help="output format (default: text); sarif is SARIF 2.1.0 for code-scanning tools")
     check.add_argument("--fail-on", choices=[ERROR, WARN], default=ERROR,
                        help="lowest severity that fails the run (default: error)")
     check.add_argument("--base", metavar="REF",
