@@ -2,7 +2,7 @@
 id: CLI-agent
 type: cli:Command
 title: agent
-status: experimental
+status: stable
 synopsis: bondstone agent [--format md|skill] [--output FILE]
 implements: [CAP-agent-guidance]
 ---

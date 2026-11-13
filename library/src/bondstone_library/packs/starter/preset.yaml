@@ -3,6 +3,7 @@ version: 1.0.0
 bondstone: ">=1.0"
 description: Decisions and living capability specs, with a rule that code changes update the spec they implement.
 
+# bondstone: REQ-LIB-009
 packs: [adr@1, capability@1]
 bridges: [adr-capability@1]
 

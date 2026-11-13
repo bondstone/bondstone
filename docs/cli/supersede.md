@@ -2,7 +2,7 @@
 id: CLI-supersede
 type: cli:Command
 title: supersede
-status: experimental
+status: stable
 synopsis: bondstone supersede [--format text|json] --title TITLE [--set KEY=VALUE] ID
 json_output: true
 implements: [CAP-scaffolding]

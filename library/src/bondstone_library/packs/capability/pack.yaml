@@ -3,6 +3,7 @@ version: 1.0.0
 bondstone: ">=1.0"
 description: Living capability specs - what the system does today - with requirements and scenarios.
 
+# bondstone: REQ-LIB-007
 types:
   Capability:
     description: >-

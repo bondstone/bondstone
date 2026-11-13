@@ -3,6 +3,7 @@ version: 1.0.0
 bondstone: ">=1.0"
 description: Architecture Decision Records with a lifecycle, supersession and immutability.
 
+# bondstone: REQ-LIB-006
 types:
   Decision:
     description: One architecturally significant decision and its rationale.

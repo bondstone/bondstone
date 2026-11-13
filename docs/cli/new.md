@@ -2,7 +2,7 @@
 id: CLI-new
 type: cli:Command
 title: new
-status: experimental
+status: stable
 synopsis: bondstone new [--format text|json] --title TITLE [--set KEY=VALUE] TYPE
 json_output: true
 implements: [CAP-scaffolding]

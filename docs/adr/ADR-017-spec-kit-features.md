@@ -2,7 +2,7 @@
 id: ADR-017
 type: adr:Decision
 title: Read Spec Kit features through a frontmatter block and derive their status
-status: proposed
+status: accepted
 owner: Adam Dworzyński
 date: 2026-11-12
 ---

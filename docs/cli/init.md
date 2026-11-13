@@ -2,7 +2,7 @@
 id: CLI-init
 type: cli:Command
 title: init
-status: experimental
+status: stable
 synopsis: bondstone init [--preset NAME]
 implements: [CAP-profiles]
 ---

@@ -19,4 +19,4 @@
 | [ADR-014](../adr/ADR-014-leave-portfolio-links-until-after-v1.md) | Leave portfolio and cross-repository links until after v1 | accepted |  |
 | [ADR-015](../adr/ADR-015-require-a-type-in-every-document.md) | Require a type in every document's frontmatter | accepted | [CAP-graph](../capabilities/graph.md) |
 | [ADR-016](../adr/ADR-016-keep-the-engine-rule-catalogue-in-code.md) | Keep the engine rule catalogue in code | accepted | [CAP-agent-guidance](../capabilities/agent-guidance.md) |
-| [ADR-017](../adr/ADR-017-spec-kit-features.md) | Read Spec Kit features through a frontmatter block and derive their status | proposed | [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) |
+| [ADR-017](../adr/ADR-017-spec-kit-features.md) | Read Spec Kit features through a frontmatter block and derive their status | accepted | [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) |

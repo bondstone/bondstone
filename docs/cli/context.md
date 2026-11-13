@@ -2,7 +2,7 @@
 id: CLI-context
 type: cli:Command
 title: context
-status: experimental
+status: stable
 synopsis: bondstone context [--format text|json] [--for PATH...] [--base REF]
 json_output: true
 implements: [CAP-agent-guidance]

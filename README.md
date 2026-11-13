@@ -5,8 +5,8 @@ that live in the same repository. Coding agents run it to validate their own wor
 and CI run it as a gate.
 
 > Status: v1 under construction. The design is [docs/design.md](docs/design.md). Phases 1
-> to 3 are in place: the core check, the checks that compare with a base commit, and the
-> commands that agents work with. Phase 4, the pack library, is under way.
+> to 4 are in place: the core check, the checks that compare with a base commit, the
+> commands that agents work with, and the pack library with presets and the Spec Kit adapter.
 
 ## How it works
 

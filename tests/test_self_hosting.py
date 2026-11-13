@@ -95,7 +95,9 @@ def test_library_components_are_traced_to_requirements():
         f"{packs}/starter-speckit/preset.yaml": "REQ-SKT-005",
         f"{packs}/cli/pack.yaml": "REQ-LIB-001", f"{packs}/cli-capability/bridge.yaml": "REQ-LIB-002",
         f"{packs}/release/pack.yaml": "REQ-LIB-003", f"{packs}/release-speckit/bridge.yaml": "REQ-LIB-004",
-        "library/tests/test_library.py": "REQ-LIB-005"}
+        "library/tests/test_library.py": "REQ-LIB-005",
+        f"{packs}/adr/pack.yaml": "REQ-LIB-006", f"{packs}/capability/pack.yaml": "REQ-LIB-007",
+        f"{packs}/adr-capability/bridge.yaml": "REQ-LIB-008", f"{packs}/starter/preset.yaml": "REQ-LIB-009"}
 
 
 def test_bondstone_documents_its_commands_and_its_next_release():

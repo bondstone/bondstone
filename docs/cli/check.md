@@ -2,7 +2,7 @@
 id: CLI-check
 type: cli:Command
 title: check
-status: experimental
+status: stable
 synopsis: bondstone check [--format text|json] [--fail-on error|warn] [--base REF] [--no-exemptions]
 json_output: true
 implements: [CAP-cli, CAP-graph, CAP-rules, CAP-code-traceability, CAP-views, CAP-diff-checks]

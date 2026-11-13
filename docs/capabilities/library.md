@@ -2,7 +2,7 @@
 id: CAP-library
 type: capability:Capability
 title: Library
-status: draft
+status: active
 owner: Adam Dworzyński
 code: LIB
 depends_on: [CAP-profiles, CAP-pack-tooling, CAP-spec-kit-adapter]
@@ -76,3 +76,52 @@ run them all.
 - Given a pack folder in the library with only `fixtures/valid`
 - When the library's tests run
 - Then they fail and name the pack
+
+### REQ-LIB-006: Record decisions with the adr pack
+
+The `adr` pack SHALL define `adr:Decision` at `docs/adr/ADR-NNN-<slug>.md` with the sections
+Context, Decision and Consequences, a lifecycle from `proposed` to `accepted`, `rejected`,
+`deprecated` or `superseded`, and an owner. An accepted decision MUST NOT be edited except
+for its status and owner, and is replaced with `bondstone supersede`.
+
+#### Scenario: Editing an accepted decision
+
+- Given an accepted decision whose Decision section changed since the base commit
+- When `bondstone check --base` runs
+- Then `bondstone/immutable` is an error that suggests `bondstone supersede`
+
+### REQ-LIB-007: Keep living capability specs with the capability pack
+
+The `capability` pack SHALL define `capability:Capability` at `docs/capabilities/<slug>.md`
+with Requirement items `### REQ-<CODE>-NNN: title`, each with SHALL or MUST wording and at
+least one scenario. An active requirement MUST be tagged in code; a planned one need not be.
+
+#### Scenario: A requirement without a scenario
+
+- Given a requirement heading followed by text but no `#### Scenario:`
+- When `bondstone check` runs
+- Then `capability/requirement-has-scenario` is an error
+
+### REQ-LIB-008: Tie capabilities to decisions
+
+The bridge `adr-capability` SHALL let a capability name the decisions it is `constrained_by`.
+A capability MUST point only at proposed or accepted decisions, and an accepted decision that
+constrains no capability is warned about.
+
+#### Scenario: A superseded decision
+
+- Given a capability with `constrained_by: [ADR-002]` and ADR-002 in status `superseded`
+- When `bondstone check` runs
+- Then `adr-capability/constrained-by-live-decision` is an error
+
+### REQ-LIB-009: Start a repository with the starter preset
+
+The preset `starter` SHALL bring `adr`, `capability` and `adr-capability`, and a diff rule
+that a change to code tagged for a requirement updates that requirement's capability in the
+same change, exemptible with a `Spec-Impact` commit trailer.
+
+#### Scenario: Code changed without its spec
+
+- Given a profile that extends `starter`, and a change inside code tagged `REQ-AA-001`
+- When `bondstone check --base` runs and CAP-a did not change
+- Then `starter/code-change-updates-living-spec` is an error

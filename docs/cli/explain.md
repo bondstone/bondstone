@@ -2,7 +2,7 @@
 id: CLI-explain
 type: cli:Command
 title: explain
-status: experimental
+status: stable
 synopsis: bondstone explain [--format text|json] RULE
 json_output: true
 implements: [CAP-agent-guidance]
