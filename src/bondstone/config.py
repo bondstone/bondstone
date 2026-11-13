@@ -14,6 +14,8 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 from .catalogue import engine_rule
+from .known import KNOWN_PATH, Known
+from .known import load as load_known
 from .model import (
     CONFIG_RULE,
     ERROR,
@@ -52,6 +54,7 @@ NODE_CLAUSES: dict[str, tuple[str, ...]] = {
 DIFF_CLAUSES: dict[str, tuple[str, ...]] = {
     "changed": ("traced", "min"),
     "exists": ("min",),
+    "link_changed": ("from",),
     "any": (),
 }
 
@@ -192,6 +195,8 @@ class Config:
     override_sources: dict[str, str] = field(default_factory=dict)  # rule id -> "profile" | "preset <id>"
     locks: dict[str, Lock] = field(default_factory=dict)
     waivers: list[dict[str, Any]] = field(default_factory=list)
+    known: Known = field(default_factory=Known)  # `.bondstone/known.json`
+    no_known: dict[str, str] = field(default_factory=dict)  # rule id -> the preset that refuses known violations
     problems: list[Diagnostic] = field(default_factory=list)
 
     @property
@@ -224,6 +229,20 @@ class Config:
     def severity(self, qid: str, default: str) -> str:
         """A rule's effective severity: its default unless a preset or the profile overrides it."""
         return self.overrides.get(qid, default)
+
+    # bondstone: REQ-KNV-007
+    def accepts_known(self, qid: str) -> bool:
+        """Whether `known.json` may record violations of a rule.
+
+        It may not for rules about a change or about the configuration, for a rule declared
+        with `allow_known: false`, and for one that a preset locks with `allow_known: false`."""
+        if qid in self.no_known:
+            return False
+        engine = engine_rule(qid)
+        if engine is not None:
+            return engine.known
+        rule = self.rule(qid)
+        return rule is not None and rule.kind != "diff" and rule.spec.get("allow_known", True) is not False
 
     def links_from(self, type_qname: str) -> list[LinkDef]:
         return [link for link in self.links.values() if type_qname in link.from_types]
@@ -288,6 +307,10 @@ def load_config(root: Path, extra_sources: list[Path] | None = None) -> Config:
     builder.overrides()
     builder.unbridged_packs()
     cfg.waivers = list(cfg.profile.get("waivers") or [])
+    # bondstone: REQ-KNV-008
+    cfg.known, problems = load_known(root)
+    for message in problems:
+        builder.bad(message, KNOWN_PATH)
     return cfg
 
 
@@ -635,7 +658,7 @@ class _Builder:
         for key in ("to", "from", "changed", "exists"):
             for message in self._selector_problems(clause.get(key), rule.context_pack):
                 bad(message)
-        if kind in ("link", "incoming") and not self._link_exists(clause[kind]):
+        if kind in ("link", "incoming", "link_changed") and not self._link_exists(clause[kind]):
             bad(f"unknown link '{clause[kind]}'")
         if kind == "contains":
             try:
@@ -701,9 +724,16 @@ class _Builder:
                     continue
                 cfg.overrides[qid] = severity
                 cfg.override_sources[qid] = f"preset {preset}" if preset else "profile"
-            for qid in data.get("lock") or []:
+            for entry in data.get("lock") or []:
+                qid, allow_known = (entry, True) if isinstance(entry, str) else (
+                    entry["rule"], entry.get("allow_known", True))
                 default = self._default_severity(qid, f"lock: {qid}", path)
-                if default is None or qid in cfg.locks:
+                if default is None:
+                    continue
+                if not allow_known:
+                    # bondstone: REQ-KNV-007
+                    cfg.no_known.setdefault(qid, preset or "profile")
+                if qid in cfg.locks:
                     continue  # the first lock sets the floor
                 cfg.locks[qid] = Lock(cfg.severity(qid, default), preset or "profile")
                 rule = cfg.rule(qid)

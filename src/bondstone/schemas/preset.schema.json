@@ -27,9 +27,26 @@
       "additionalProperties": {"$ref": "common.schema.json#/$defs/severity"}
     },
     "lock": {
-      "description": "Qualified ids of rules that later presets and the profile may raise but not lower or waive.",
+      "description": "Qualified ids of rules that later presets and the profile may raise but not lower or waive. An entry may be `{rule: ID, allow_known: false}` for a rule that must hold from the first day.",
       "type": "array",
-      "items": {"type": "string"},
+      "items": {
+        "oneOf": [
+          {"type": "string"},
+          {
+            "type": "object",
+            "properties": {
+              "rule": {"type": "string"},
+              "allow_known": {
+                "description": "false: `.bondstone/known.json` cannot record violations of this rule.",
+                "type": "boolean"
+              }
+            },
+            "required": ["rule"],
+            "additionalProperties": false
+          }
+        ],
+        "x-error": "expected a rule id or `{rule: ID, allow_known: false}`"
+      },
       "uniqueItems": true
     },
     "instructions": {"type": "string"}

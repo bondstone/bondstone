@@ -30,13 +30,17 @@ def check_rules(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 for clause in rule.spec["require"]:
                     failure = clause_failure(cfg, graph, rule, node, clause)
                     if failure:
-                        out.append(rule_diagnostic(rule, failure, node))
+                        out.append(rule_diagnostic(rule, failure, node,
+                                                   key=clause_key(cfg, graph, rule, node, clause)))
     return out
 
 
 # bondstone: REQ-RUL-009
-def rule_diagnostic(rule: Rule, detail: str, node: Node | None, path: str | None = None) -> Diagnostic:
-    """A violation of a declared rule; `{id}` in the hint and the fix stands for the node's id."""
+def rule_diagnostic(rule: Rule, detail: str, node: Node | None, path: str | None = None,
+                    key: str | None = None) -> Diagnostic:
+    """A violation of a declared rule; `{id}` in the hint and the fix stands for the node's id.
+
+    `key` names the clause that failed, for the fingerprint of a known violation."""
     node_id = node.id if node else None
 
     def fill(text: str) -> str:
@@ -48,7 +52,7 @@ def rule_diagnostic(rule: Rule, detail: str, node: Node | None, path: str | None
         rule.qid, rule.severity, f"{rule.description or rule.qid} ({detail})",
         path=node.path if node else (path or PROFILE_PATH), line=node.line if node else None,
         node=node_id, hint=fill(hint) if hint else None,
-        fix={"command": [fill(part) for part in fix["command"]]} if fix else None,
+        fix={"command": [fill(part) for part in fix["command"]]} if fix else None, key=key,
     )
 
 
@@ -62,7 +66,7 @@ def clause_failure(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: di
     if "link" in clause:
         found = targets(cfg, graph, node, clause["link"])
         if clause.get("all"):
-            wrong = [t.id for t in found if not matches(cfg, t, clause.get("to"), context)]
+            wrong = _wrong_targets(cfg, graph, rule, node, clause)
             return f"'{clause['link']}' targets not allowed: {', '.join(wrong)}" if wrong else None
         good = [t for t in found if matches(cfg, t, clause.get("to"), context)]
         need = int(clause.get("min", 1))
@@ -99,6 +103,39 @@ def clause_failure(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: di
         failures = [clause_failure(cfg, graph, rule, node, alternative) for alternative in clause["any"]]
         return "needs one of: " + "; or ".join(failures) if all(failures) else None
     return f"unsupported clause {sorted(clause)}"
+
+
+def _wrong_targets(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> list[str]:
+    """Ids of the targets of a `link ... all: true` clause that its `to` selector does not allow."""
+    return [target.id or "?" for target in targets(cfg, graph, node, clause["link"])
+            if not matches(cfg, target, clause.get("to"), rule.context_pack)]
+
+
+# bondstone: REQ-KNV-002
+def clause_key(cfg: Config, graph: Graph, rule: Rule, node: Node, clause: dict[str, Any]) -> str:
+    """What names a failed clause in the fingerprint of a known violation.
+
+    It says what the clause asks for and leaves out counts, so the key stays the same while
+    the document changes elsewhere. For `link ... all: true` it is the targets that are not
+    allowed: one more wrong target is a new violation."""
+    if "link" in clause:
+        if clause.get("all"):
+            return ", ".join(_wrong_targets(cfg, graph, rule, node, clause))
+        return str(clause["link"])
+    if "incoming" in clause:
+        return f"<-{clause['incoming']}"
+    for kind in ("field", "section", "contains"):
+        if kind in clause:
+            return str(clause[kind])
+    if "items" in clause:
+        return qualify(clause["items"]["type"], rule.context_pack)
+    if "covered" in clause:
+        return "covered"
+    if "file_field" in clause:
+        return f"{clause['file_field']['path']}#{clause['file_field']['key']}"
+    if "any" in clause:
+        return " | ".join(clause_key(cfg, graph, rule, node, alternative) for alternative in clause["any"])
+    return ""
 
 
 def _render(template: str, values: dict[str, Any]) -> str | None:
@@ -154,5 +191,5 @@ def _existence(cfg: Config, graph: Graph, rule: Rule) -> list[Diagnostic]:
         expected = posixpath.normpath(_render(spec["document"], values) or spec["document"])
         if not any(p == expected and (not types or t in types) for p, t in documents):
             kind = " or ".join(sorted(types)) if types else "document"
-            out.append(rule_diagnostic(rule, f"{path} has no {kind} at {expected}", None, path))
+            out.append(rule_diagnostic(rule, f"{path} has no {kind} at {expected}", None, path, key=expected))
     return out

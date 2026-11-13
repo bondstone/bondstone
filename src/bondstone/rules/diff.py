@@ -14,9 +14,11 @@ from ..catalogue import diagnostic
 from ..config import Config, as_list
 from ..git import ADDED, DELETED, KINDS, Change, Repository, Trailer
 from ..graph import Graph, scan_tags, tag_regions
+from ..known import KNOWN_PATH
+from ..known import parse as parse_known
 from ..model import IGNORE, PROFILE_PATH, Diagnostic, Node, Rule
 from ..parse import ParsedDoc, find_items, parse_document
-from ..select import describe, matches
+from ..select import describe, matches, targets
 from .node import rule_diagnostic
 
 # `none (reason)` or `none [ID, ID] (reason)`
@@ -99,7 +101,31 @@ def check_changes(cfg: Config, graph: Graph, repo: Repository, base_ref: str,
     out += _check_history(cfg, graph, repo, changes, baseline)
     trailers = repo.trailers(changes.base) if exemptions else []
     out += _check_diff_rules(cfg, graph, repo, changes, trailers)
+    out += _known_growth(cfg, repo, changes.base)
     return out
+
+
+# bondstone: REQ-KNV-006
+def _known_growth(cfg: Config, repo: Repository, base: str) -> list[Diagnostic]:
+    """`bondstone/known-grew` when `known.json` has entries that it did not have at the base.
+
+    The change that adds the profile is the adoption itself: nothing was gated before it, so
+    its entries are not growth."""
+    if not cfg.known or repo.file_at(base, PROFILE_PATH) is None:
+        return []
+    before = repo.file_at(base, KNOWN_PATH)
+    old = set(parse_known(before)[0].entries) if before is not None else set()
+    added = sorted(entry for entry in cfg.known.entries if entry not in old)
+    if not added:
+        return []
+    shown = "; ".join(str(entry) for entry in added[:_SHOWN_FILES])
+    more = f"; and {len(added) - _SHOWN_FILES} more" if len(added) > _SHOWN_FILES else ""
+    return [diagnostic(
+        "bondstone/known-grew",
+        f"{len(added)} known violation(s) added since {base[:7]}: {shown}{more}",
+        KNOWN_PATH, cfg.known.lines.get(added[0]) or None,
+        hint="Fix the new violations; `bondstone baseline --known --prune` takes entries out and never "
+             "adds any. A deliberate reset overrides bondstone/known-grew in the profile in the same change.")]
 
 
 # --------------------------------------------------------------------------- previous versions
@@ -324,6 +350,13 @@ def _evaluate(cfg: Config, graph: Graph, repo: Repository, changes: ChangeSet, r
                 continue
             if "min" not in clause:
                 continue  # nothing traced and no minimum asked for: the clause holds
+        if "link_changed" in clause:
+            # bondstone: REQ-DIF-015
+            for node, target in unchanged_targets(cfg, graph, rule, changed_nodes, clause):
+                out.append(rule_diagnostic(
+                    rule, f"{node.id} changed, and {target.id}, which it names under "
+                          f"'{clause['link_changed']}', was not updated", node))
+            continue
         failure = _clause_failure(cfg, graph, rule, changed_nodes, clause)
         if failure:
             general(failure)
@@ -345,7 +378,31 @@ def _clause_failure(cfg: Config, graph: Graph, rule: Rule, changed_nodes: list[N
         if len(good) < need:
             return f"needs {need} changed document(s){describe(clause['changed'], 'matching')}"
         return None
+    if "link_changed" in clause:
+        missing = unchanged_targets(cfg, graph, rule, changed_nodes, clause)
+        if missing:
+            pairs = ", ".join(f"{target.id} (named by {node.id})" for node, target in missing)
+            return f"needs an update of the '{clause['link_changed']}' target(s) {pairs}"
+        return None
     return f"unsupported clause {sorted(clause)} in a diff rule"
+
+
+# bondstone: REQ-DIF-015
+def unchanged_targets(cfg: Config, graph: Graph, rule: Rule, changed_nodes: list[Node],
+                      clause: dict[str, Any]) -> list[tuple[Node, Node]]:
+    """(node, target) for every changed node matching `from` whose `link_changed` target did not change.
+
+    A target that is an item counts as changed when its document changed."""
+    changed = {node.id for node in changed_nodes}
+    out = []
+    for node in changed_nodes:
+        if not node.id or not matches(cfg, node, clause.get("from"), rule.context_pack):
+            continue
+        for target in targets(cfg, graph, node, clause["link_changed"]):
+            document = document_of(graph, target.id) if target.id else None
+            if target.id not in changed and (document is None or document.id not in changed):
+                out.append((node, target))
+    return out
 
 
 # --------------------------------------------------------------------------- traced regions

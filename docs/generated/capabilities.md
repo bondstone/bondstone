@@ -8,6 +8,7 @@
 | [CAP-code-traceability](../capabilities/code-traceability.md) | Code traceability | active | Adam Dworzyński |
 | [CAP-diff-checks](../capabilities/diff-checks.md) | Checks against a base commit | active | Adam Dworzyński |
 | [CAP-graph](../capabilities/graph.md) | Documents, items and links | active | Adam Dworzyński |
+| [CAP-known-violations](../capabilities/known-violations.md) | Known violations | draft | Adam Dworzyński |
 | [CAP-library](../capabilities/library.md) | Library | active | Adam Dworzyński |
 | [CAP-pack-tooling](../capabilities/pack-tooling.md) | Pack tooling | active | Adam Dworzyński |
 | [CAP-profiles](../capabilities/profiles.md) | Profiles, packs and bridges | active | Adam Dworzyński |

@@ -13,6 +13,7 @@
 6. After you edit documents by hand, run `bondstone gen`. It rewrites the generated files listed below. Never edit those files or this one yourself.
 7. Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, run that command. `bondstone explain <rule>` says what a rule wants.
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
+9. Never create `.bondstone/known.json`, add an entry to it or run `bondstone baseline --known` yourself: the file lists the violations a repository had when it adopted a rule, and it may only shrink. After you fix a known violation, run `bondstone baseline --known --prune`, which only removes entries.
 
 Active packs and bridges: adr@1.0.0 (pack), ost@1.0.0 (pack), capability@1.0.0 (pack), ost-capability@1.0.0 (bridge), adr-capability@1.0.0 (bridge)
 

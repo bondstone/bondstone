@@ -688,3 +688,109 @@ def test_code_must_be_true(project):
     standard(project, rules=[{**DIFF_RULE, "on_change": {"code": False}}])
     assert [d.message for d in load_config(project.root).errors] == [
         "rules[0].on_change.code: expected true, got false"]
+
+
+# --------------------------------------------------------------------------- link targets of a changed node
+
+LINKED_RULE = {
+    "id": "capability-updates-its-decisions",
+    "description": "A capability that changes updates the decisions that constrain it.",
+    "on_change": {"paths": ["docs/capabilities/**"]},
+    "require": [{"link_changed": "constrained_by", "from": {"type": "capability:Capability", "status": "active"}}],
+    "exempt": {"trailer": "Decision-Impact"},
+}
+
+
+@pytest.fixture
+def linked(repo) -> Project:
+    """CAP-a is constrained by the proposed ADR-001, CAP-b by nothing."""
+    repo.write("docs/capabilities/a.md", capability("CAP-a", "AA", extra="constrained_by: [ADR-001]\n"))
+    standard(repo, code={"include": ["src/**/*.py"]}, rules=[LINKED_RULE])
+    repo.commit("add the rule and the link")
+    return repo
+
+
+def linked_violations(project: Project, **options):
+    return [(d.rule, d.node) for d in check(project, base="HEAD", **options) if d.rule.startswith("profile/")]
+
+
+def test_a_changed_node_whose_link_target_did_not_change(linked):
+    linked.edit("docs/capabilities/a.md", "## Purpose\n\np", "## Purpose\n\nMore.")
+    diag = one(linked, "profile/capability-updates-its-decisions")
+    assert (diag.node, diag.path) == ("CAP-a", "docs/capabilities/a.md")
+    assert diag.message.endswith("(CAP-a changed, and ADR-001, which it names under 'constrained_by', was not updated)")
+
+
+def test_the_clause_holds_when_the_target_changed_too(linked):
+    linked.edit("docs/capabilities/a.md", "## Purpose\n\np", "## Purpose\n\nMore.")
+    linked.edit("docs/adr/ADR-001-a.md", "## Context\n\nc", "## Context\n\nMore.")
+    assert linked_violations(linked) == []
+
+
+def test_only_nodes_that_match_from_are_asked(linked):
+    linked.edit("docs/capabilities/a.md", "status: active", "status: deprecated")
+    assert linked_violations(linked) == []
+    linked.edit("docs/capabilities/b.md", "## Purpose\n\np", "## Purpose\n\nMore.")  # active, no links
+    assert linked_violations(linked) == []
+
+
+def test_a_trailer_exempts_the_node_that_changed(linked):
+    linked.edit("docs/capabilities/a.md", "## Purpose\n\np", "## Purpose\n\nMore.")
+    linked.git("add", "--all")
+    linked.git("commit", "--quiet", "-m", "wording\n\nDecision-Impact: none [CAP-a] (wording only)")
+    found = [(d.rule, d.severity) for d in check(linked, base="HEAD~1") if d.node == "CAP-a"]
+    assert found == [("bondstone/exemption-used", "info")]
+
+
+def test_a_target_that_is_an_item_changes_with_its_document(repo):
+    repo.bridge("covers", """
+        id: covers
+        version: 1.0.0
+        requires: {adr: "^1", capability: "^1"}
+        links:
+          covers: {from: adr:Decision, to: capability:Requirement}
+    """)
+    rule = {"id": "decision-updates-requirements", "on_change": {"paths": ["docs/adr/**"]},
+            "require": [{"link_changed": "covers"}]}
+    standard(repo, bridges=["adr-capability@1", "covers@1"], rules=[rule])
+    repo.write("docs/adr/ADR-001-a.md", adr("ADR-001", "proposed", extra="covers: [REQ-AA-001]\n"))
+    repo.commit("link a decision to a requirement")
+    repo.edit("docs/adr/ADR-001-a.md", "## Context\n\nc", "## Context\n\nMore.")
+    assert linked_violations(repo) == [("profile/decision-updates-requirements", "ADR-001")]
+    repo.edit("docs/capabilities/a.md", "## Purpose\n\np", "## Purpose\n\nMore.")
+    assert linked_violations(repo) == []
+
+
+def test_link_changed_inside_any(linked):
+    rule = {**LINKED_RULE, "require": [{"any": [
+        {"link_changed": "constrained_by"}, {"changed": {"type": "adr:Decision"}, "min": 1}]}]}
+    standard(linked, code={"include": ["src/**/*.py"]}, rules=[rule])
+    linked.commit("either")
+    linked.edit("docs/capabilities/a.md", "## Purpose\n\np", "## Purpose\n\nMore.")
+    diag = one(linked, "profile/capability-updates-its-decisions")
+    assert "needs an update of the 'constrained_by' target(s) ADR-001 (named by CAP-a)" in diag.message
+    linked.edit("docs/adr/ADR-002-b.md", "owner: me", "owner: you")
+    assert linked_violations(linked) == []
+
+
+def test_link_changed_must_name_a_link_and_belongs_to_diff_rules(project):
+    from bondstone.config import load_config
+    standard(project, rules=[
+        {**LINKED_RULE, "require": [{"link_changed": "constrains"}]},
+        {"id": "node-rule", "when": {"type": "adr:Decision"}, "require": [{"link_changed": "constrained_by"}]},
+    ])
+    assert [d.message for d in load_config(project.root).errors] == [
+        "profile/capability-updates-its-decisions: unknown link 'constrains'",
+        "profile/node-rule: clause `link_changed` is not available in a node rule (`when`)",
+    ]
+
+
+def test_context_names_the_targets_that_must_change(linked):
+    from bondstone.config import load_config
+    from bondstone.context import context_for, to_text
+    from bondstone.graph import build_graph
+    cfg = load_config(linked.root)
+    text = to_text(context_for(cfg, build_graph(cfg), ["docs/capabilities/a.md"]))
+    assert ("      asks that every document that a changed document matching type=capability:Capability "
+            "status=active names under `constrained_by` changes too\n"
+            "      must change: ADR-001\n") in text

@@ -23,7 +23,8 @@ that `check` applies, so the answers and the gate cannot disagree.
 packs, bridges, presets and the profile declare, followed by the engine rules. Each rule MUST
 show the severity that `check` applies, after the overrides of presets and the profile, and
 say when that differs from the rule's default and which preset set it. A rule that is locked,
-where it is declared or by a preset, is marked as locked.
+where it is declared or by a preset, is marked as locked, and a rule that was declared or
+locked without known violations says so.
 
 #### Scenario: Overridden rule
 
@@ -37,7 +38,8 @@ where it is declared or by a preset, is marked as locked.
 rule its description, hint, selector and clauses and the manifest that declares it, and for a
 diff rule one sentence per clause that says in words what it asks; for an engine rule when it
 fires, why, and the fix. It MUST say whether the effective severity is the default or was set
-by a preset or the profile, and name the preset that locks the rule. A diff rule that watches
+by a preset or the profile, name the preset that locks the rule, and say when the rule
+accepts no known violations. A diff rule that watches
 the repository's code (`on_change: {code: true}`) is explained with the profile's code globs.
 An unknown rule id MUST be refused with the closest known ids.
 
@@ -73,8 +75,8 @@ its file changed.
 
 `bondstone context` SHALL list every diff rule that the given or changed files trigger, by
 its `paths` or as the repository's code, with
-its effective severity, what each clause asks for, its hint, and for a traced clause the
-documents that must change. A file that does not exist yet counts as added. A rule overridden
+its effective severity, what each clause asks for, its hint, and for a traced clause and a
+`link_changed` clause the documents that must change. A file that does not exist yet counts as added. A rule overridden
 to `ignore` MUST be left out. When a rule can be exempted, the output names the trailer and
 says to add one only when the user asks for it.
 
@@ -94,8 +96,11 @@ an item type they say that it is added by hand, with which heading, and what eac
 id stands for. For a type whose status is derived from files they say which file gives which
 status, and that the status is never written in frontmatter. The workflow says to run `gen` after editing documents and that `check --base`
 includes uncommitted changes. A rule overridden to `ignore` MUST be left out. The instructions MUST tell the agent never to
-weaken the profile to make a check pass and, when a rule can be exempted, not to add an
-exemption trailer unless the user asked for one. Writing the file again without a change of
+weaken the profile to make a check pass, never to create or extend `.bondstone/known.json`
+(only `bondstone baseline --known --prune` is theirs to run, after fixing a known violation)
+and, when a rule can be exempted, not to add an exemption trailer unless the user asked for
+one. When the repository has known violations, the instructions say how many and how `check`
+shows them. Writing the file again without a change of
 the configuration changes nothing; `--output -` prints it instead.
 
 #### Scenario: Overridden severity

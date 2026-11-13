@@ -91,7 +91,7 @@ columns, or that writes outside the repository, a trait that names a status its 
 does not declare, and a malformed id or path template. It SHALL also report a view whose keys
 do not fit its layout, such as a matrix without `rows`, `cols` and `via`, and a type whose
 `derived-status` trait is combined with `lifecycle`, sits on an embedded type or names a file
-outside the document's folder.
+outside the document's folder. A malformed `.bondstone/known.json` is reported the same way.
 
 #### Scenario: Rule on an unknown type
 
@@ -119,7 +119,7 @@ for every node when it names none, up to and including its `expires` date. A wai
 `rule`, `reason` or `expires`, for an unknown rule or for a locked rule (locked where it is
 declared, or by a preset) MUST be reported as
 `bondstone/waiver-invalid`, an expired one as `bondstone/waiver-expired`, and one that matches
-nothing as `bondstone/waiver-unused`.
+nothing as `bondstone/waiver-unused`. Waivers are applied before known violations.
 
 #### Scenario: Expired waiver
 
@@ -228,7 +228,8 @@ Bondstone SHALL treat every rule a preset lists under `lock` as locked at the se
 force after that preset, whether a pack, a bridge, a preset or the engine defines the rule. A
 later preset or the profile may raise the severity of a locked rule; lowering it or waiving it
 MUST be a configuration error or an invalid waiver. A `lock` entry for an unknown rule MUST be
-a configuration error.
+a configuration error. An entry is a rule id, or `{rule: ID, allow_known: false}` for a rule
+that must also hold for existing documents ([CAP-known-violations](known-violations.md)).
 
 #### Scenario: An organisation's rule
 

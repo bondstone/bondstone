@@ -161,7 +161,7 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
         link, error = cfg.resolve_link_key(qname, key)
         if error:
             graph.diagnostics.append(diagnostic("bondstone/link-ambiguous", error, path,
-                                                doc.field_lines.get(key), node.id))
+                                                doc.field_lines.get(key), node.id, key=key))
         elif link:
             refs = [LinkRef(str(target), doc.field_lines.get(key)) for target in as_list(value)
                     if target is not None]
@@ -196,7 +196,8 @@ def _derive_status(cfg: Config, graph: Graph, node: Node) -> None:
         del node.fields["status"]
         graph.diagnostics.append(diagnostic(
             "bondstone/field-unknown", f"`status` cannot be set for {node.type}: it is derived from files",
-            node.path, node.field_lines.get("status", 1), node.id, hint="Remove `status` from the frontmatter."))
+            node.path, node.field_lines.get("status", 1), node.id, hint="Remove `status` from the frontmatter.",
+            key="status"))
     status = None
     for name, condition in derived.items():
         (kind, relative), = condition.items()
@@ -231,7 +232,7 @@ def _add_items(cfg: Config, graph: Graph, parent: Node, doc: ParsedDoc) -> None:
             "bondstone/item-heading",
             f"level-{items.level} heading '{heading.title}' is not an item; "
             f"expected '{items.heading_template}'",
-            parent.path, heading.line, parent.id))
+            parent.path, heading.line, parent.id, key=heading.title))
     for parsed in scan.items:
         item = Node(
             id=parsed.id, type=items.type, path=parent.path, line=parsed.line,

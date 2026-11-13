@@ -35,6 +35,7 @@ library package, and its own changes are planned as Spec Kit features under [`sp
 | `bondstone check --base REF [--no-exemptions]` | Also check the changes since REF: lifecycles, immutability and diff rules. |
 | `bondstone gen` | Regenerate views. |
 | `bondstone baseline [REF]` | Record the commit whose documents count as already adopted. |
+| `bondstone baseline --known [--prune]` | Record the current violations, so that only new ones fail; `--prune` removes the fixed ones. |
 | `bondstone profile check [--format text\|json]` | Validate the profile, packs and bridges. |
 | `bondstone new TYPE --title T [--set k=v]` | Scaffold a document with the next id at the right path. |
 | `bondstone status ID STATUS` | Change the status of a document or an item, if its lifecycle allows the step. |
@@ -196,7 +197,8 @@ current branch left REF. Three kinds of checks need that:
   only changes in the fields its type allows.
 - **Diff rules.** A rule with `on_change` fires when matching files changed. With
   `traced: true` it asks for an update of exactly the documents that are tagged in the changed
-  regions of code.
+  regions of code. A clause `link_changed: modifies` asks that every document a changed node
+  names under that link changed too.
 
 A diff rule that declares `exempt: {trailer: Spec-Impact}` can be skipped for one change by a
 commit trailer with a reason. The exemption stays visible as `bondstone/exemption-used`:
@@ -214,6 +216,40 @@ When a repository adopts bondstone, its existing documents look new against an o
 `bondstone baseline` records the adoption commit in the profile, and documents that are absent
 at the base are compared with their version at that commit. CI needs the full history for
 this: `fetch-depth: 0` with `actions/checkout`.
+
+## Adopting with existing problems
+
+Old documents break rules. Fixing them all first blocks adoption, and lowering a severity also
+removes the gate for new work. `bondstone baseline --known` records the current violations in
+`.bondstone/known.json` instead:
+
+```json
+{
+  "bondstone": 1,
+  "created": "2026-11-13",
+  "entries": [
+    {"rule": "bondstone/section-missing", "node": "ADR-004", "key": "Alternatives considered"},
+    {"rule": "bondstone/untyped-document", "path": "docs/notes.md"}
+  ]
+}
+```
+
+An entry is the rule, the node (or the file, when there is no node) and a key that names the
+problem. It has no line number, so editing the document elsewhere does not break the match.
+
+- A violation that matches an entry is reported as `info`, marked `[known]`, and does not fail.
+  Any other violation fails, also in a document that has known ones.
+- An entry whose problem is fixed is reported as `bondstone/known-stale` until
+  `bondstone baseline --known --prune` removes it. `--prune` never adds an entry.
+- With `--base`, entries added since the base are `bondstone/known-grew`, an error: recording
+  a new violation cannot hide it. The change that adds the profile itself is exempt, so a
+  repository adopts bondstone in one commit. A deliberate reset overrides that rule in the
+  profile in the same change.
+- Rules about a change (diff rules, lifecycles, immutability) are never recorded. A rule can
+  refuse known violations with `allow_known: false`, and a preset can lock one that way:
+  `lock: [{rule: adr/alternatives-considered, allow_known: false}]`.
+
+The generated agent instructions tell agents never to create or extend the file.
 
 ## Bondstone on bondstone
 

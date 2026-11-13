@@ -33,6 +33,5 @@ views:
 
 waivers:
   # Accepted decisions that no capability applies yet, because the phase that builds them has not started.
-  - {rule: adr-capability/accepted-decision-is-applied, node: ADR-006, reason: "Known violations arrive in phase 5.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-011, reason: "Git sources and the lock file arrive in phase 5.", expires: 2027-06-30}
   - {rule: adr-capability/accepted-decision-is-applied, node: ADR-014, reason: "Portfolio links come after v1.", expires: 2027-06-30}

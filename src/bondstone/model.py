@@ -57,6 +57,8 @@ class Diagnostic:
     hint: str | None = None
     fix: dict[str, Any] | None = None
     exempted_by: dict[str, str] | None = None  # the commit trailer that exempts a diff-rule violation
+    key: str | None = None  # names the specific problem without line numbers; part of the fingerprint
+    known: bool = False  # recorded in `.bondstone/known.json`: reported as info
 
     def to_dict(self) -> dict[str, Any]:
         """JSON form: stable key order, absent values left out."""
@@ -70,6 +72,7 @@ class Diagnostic:
             "hint": self.hint,
             "fix": self.fix,
             "exempted_by": self.exempted_by,
+            "known": True if self.known else None,
         }
         return {key: value for key, value in ordered.items() if value is not None}
 

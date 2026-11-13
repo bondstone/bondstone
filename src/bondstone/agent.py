@@ -33,6 +33,7 @@ class RuleInfo:
     declared_in: str | None  # manifest of a declared rule; None for engine rules
     hint: str | None = None
     locked_by: str | None = None  # the pack, bridge or preset that locks the rule
+    allow_known: bool | None = None  # False when the rule or a preset refuses known violations
 
     def to_dict(self) -> dict[str, Any]:
         return {key: value for key, value in asdict(self).items() if value is not None}
@@ -48,7 +49,16 @@ def _info(cfg: Config, rule: Rule | EngineRule) -> RuleInfo:
     lock = cfg.locks.get(rule_id)
     return RuleInfo(rule_id, kind, cfg.severity(rule_id, default), default,
                     cfg.override_sources.get(rule_id, "default"), locked or lock is not None, description,
-                    declared_in, hint, lock.by if lock is not None else None)
+                    declared_in, hint, lock.by if lock is not None else None,
+                    False if _refuses_known(cfg, rule) else None)
+
+
+# bondstone: REQ-KNV-007
+def _refuses_known(cfg: Config, rule: Rule | EngineRule) -> bool:
+    """Whether a rule that could have known violations was declared or locked with `allow_known: false`."""
+    if isinstance(rule, Rule):
+        return rule.kind != "diff" and (rule.qid in cfg.no_known or rule.spec.get("allow_known") is False)
+    return rule.known and rule.id in cfg.no_known
 
 
 # bondstone: REQ-AGT-001
@@ -65,6 +75,8 @@ def rules_text(rules: list[RuleInfo]) -> str:
             notes.append(f"default: {rule.default}" + ("" if rule.set_by == "profile" else f", set by {rule.set_by}"))
         if rule.locked:
             notes.append("locked")
+        if rule.allow_known is False:
+            notes.append("no known violations")
         suffix = f" [{'; '.join(notes)}]" if notes else ""
         lines.append(f"{rule.severity:<6} {rule.id}: {rule.description}{suffix}")
     return "\n".join(lines) + "\n"
@@ -80,6 +92,9 @@ def _find(cfg: Config, rule_id: str) -> Rule | EngineRule:
     suggestions = list(dict.fromkeys(suffix + close))
     hint = f"; did you mean {', '.join(suggestions)}?" if suggestions else "; `bondstone rules` lists them"
     raise Refused(f"unknown rule '{rule_id}'{hint}")
+
+
+_NO_KNOWN = "Known violations: not accepted; `.bondstone/known.json` cannot record violations of this rule."
 
 
 def _severity_line(info: RuleInfo) -> str:
@@ -100,7 +115,7 @@ def explain(cfg: Config, rule_id: str) -> dict[str, Any]:
             out["asks"] = [f"When {watched} change, it asks that {describe_clause(clause)}."
                            for clause in rule.spec.get("require") or []]
         out["spec"] = {key: value for key, value in rule.spec.items()
-                       if key not in ("id", "description", "severity", "locked", "hint")}
+                       if key not in ("id", "description", "severity", "locked", "allow_known", "hint")}
     else:
         out.update({"fires": rule.fires, "why": rule.why, "fix": rule.fix})
         if rule.note:
@@ -121,6 +136,8 @@ def explain_text(cfg: Config, rule_id: str) -> str:
             lines.append(f"Locked by preset {info.locked_by}: it can be raised but not lowered or waived.")
         elif info.locked:
             lines.append("This rule cannot be overridden or waived.")
+        if info.allow_known is False:
+            lines.append(_NO_KNOWN)
         return "\n".join(lines) + "\n"
     lines = [f"{info.id} ({info.kind} rule, declared in {info.declared_in})",
              _severity_line(info) + ("; locked: it can be raised but not lowered or waived" if info.locked else "")]
@@ -129,6 +146,8 @@ def explain_text(cfg: Config, rule_id: str) -> str:
     lines += data.get("asks", [])
     if info.hint:
         lines.append(f"Hint: {info.hint}")
+    if info.allow_known is False:
+        lines.append(_NO_KNOWN)
     lines += ["", yaml.safe_dump(data["spec"], sort_keys=False, allow_unicode=True, width=100).rstrip()]
     return "\n".join(lines) + "\n"
 
@@ -166,6 +185,11 @@ def _workflow(cfg: Config) -> list[str]:
         "It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, "
         "run that command. `bondstone explain <rule>` says what a rule wants.",
         "Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.",
+        "Never create `.bondstone/known.json`, add an entry to it or run `bondstone baseline --known` yourself: "
+        "the file lists the violations a repository had when it adopted a rule, and it may only shrink. "
+        + (f"It has {len(cfg.known.entries)} entr{'y' if len(cfg.known.entries) == 1 else 'ies'} here; `check` "
+           "reports those violations as info, marked `known`, and they do not fail. " if cfg.known else "")
+        + "After you fix a known violation, run `bondstone baseline --known --prune`, which only removes entries.",
     ]
     if trailers:
         names = ", ".join(f"`{name}`" for name in trailers)

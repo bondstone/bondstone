@@ -39,7 +39,7 @@
       "additionalProperties": false
     },
     "clause": {
-      "description": "One requirement of a rule. Exactly one of link, incoming, field, section, contains, items, covered, file_field, any, changed or exists names the kind.",
+      "description": "One requirement of a rule. Exactly one of link, incoming, field, section, contains, items, covered, file_field, any, changed, exists or link_changed names the kind.",
       "type": "object",
       "properties": {
         "link": {"type": "string"},
@@ -75,7 +75,11 @@
         "any": {"type": "array", "items": {"$ref": "#/$defs/clause"}, "minItems": 1},
         "changed": {"$ref": "#/$defs/selector"},
         "traced": {"type": "boolean"},
-        "exists": {"$ref": "#/$defs/selector"}
+        "exists": {"$ref": "#/$defs/selector"},
+        "link_changed": {
+          "description": "Diff rules: the name of a link. Every document that a changed node (matching `from`) names under this link changed too.",
+          "type": "string"
+        }
       },
       "additionalProperties": false
     },
@@ -91,6 +95,10 @@
         "description": {"type": "string"},
         "severity": {"$ref": "#/$defs/severity"},
         "locked": {"type": "boolean"},
+        "allow_known": {
+          "description": "false: the rule must hold from the first day, so `.bondstone/known.json` cannot record its violations.",
+          "type": "boolean"
+        },
         "hint": {"type": "string"},
         "fix": {
           "type": "object",
