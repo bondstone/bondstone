@@ -1,5 +1,5 @@
 id: speckit-capability
-version: 1.0.0
+version: 1.1.0
 bondstone: ">=1.0"
 description: Folds Spec Kit features into living capability specs and their requirements.
 
@@ -43,6 +43,18 @@ rules:
           - {link: modifies, min: 1}
           - {link: delivers, min: 1}
     hint: List the capabilities under `modifies` or the requirements under `delivers` in the frontmatter of spec.md.
+
+  # bondstone: REQ-SKT-006
+  - id: implemented-feature-updates-its-capabilities
+    description: A change to an implemented feature updates the capabilities it modifies.
+    severity: warn
+    on_change: {paths: ["specs/**"]}
+    require:
+      - link_changed: modifies
+        from: {type: speckit:Feature, status: implemented}
+    hint: >-
+      Fold the change into the capability's document in the same change. A feature is
+      implemented from the moment its last task is ticked.
 
 views:
   - id: delivery

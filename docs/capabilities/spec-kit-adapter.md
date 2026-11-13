@@ -59,6 +59,19 @@ a requirement.
 - When the last task in its `tasks.md` is ticked
 - Then `speckit-capability/implemented-feature-delivers-covered-requirements` is an error
 
+### REQ-SKT-006: Update the capabilities when an implemented feature changes
+
+The bridge `speckit-capability` SHALL warn, with `--base`, about a change to an implemented
+feature that does not also change every capability the feature `modifies`. A feature is
+implemented from the change that ticks its last task, so that change folds the feature into
+its capabilities.
+
+#### Scenario: The last task is ticked and the capability is untouched
+
+- Given a feature with `modifies: [CAP-a]` and one open task
+- When a change ticks that task and does not edit CAP-a
+- Then `speckit-capability/implemented-feature-updates-its-capabilities` is a warning on the feature
+
 ### REQ-SKT-004: Rest an implemented feature on accepted decisions
 
 The bridge `speckit-adr` SHALL let a feature name the decisions it is `decided_by`, and an

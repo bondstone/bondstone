@@ -14,11 +14,12 @@ from typing import Any
 import yaml
 
 from . import __version__, agent, context, edit, export, packs, packtest
-from .baseline import record_baseline
+from .baseline import record_baseline, record_known
 from .config import Config, load_config
 from .format import FORMATS, JSON_VERSION, render
 from .git import GitRepository
 from .graph import build_graph
+from .known import KNOWN_PATH
 from .model import ERROR, IGNORE, PROFILE_PATH, WARN, EnvironmentProblem, Refused
 from .resolve import find_root, resolve
 from .rules import fails, run_check
@@ -78,8 +79,30 @@ def cmd_baseline(args: argparse.Namespace) -> int:
     cfg = _config(args)
     if cfg is None:
         return EXIT_CONFIG
-    commit = record_baseline(cfg.root, GitRepository(cfg.root), args.ref)
+    if args.prune and not args.known:
+        raise Refused("--prune only applies to `baseline --known`")
+    if args.known:
+        if args.ref is not None:
+            raise Refused("`baseline --known` records the working tree; it takes no REF")
+        return _known(cfg, args.prune)
+    commit = record_baseline(cfg.root, GitRepository(cfg.root), args.ref or "HEAD")
     print(f"baseline: {commit}")
+    return EXIT_OK
+
+
+# bondstone: REQ-KNV-001, REQ-KNV-005
+def _known(cfg: Config, prune: bool) -> int:
+    result = record_known(cfg, prune)
+    if prune:
+        print(f"removed {result.removed} known violation(s) that no longer occur; {result.entries} remain")
+    elif result.entries:
+        print(f"recorded {result.entries} known violation(s) in {KNOWN_PATH} ({result.added} new)")
+    else:
+        print("no violations to record")
+    if result.deleted:
+        print(f"deleted {KNOWN_PATH}: it had no entries left")
+    if result.refused and not prune:
+        print(f"{result.refused} violation(s) were not recorded: their rules do not accept known violations")
     return EXIT_OK
 
 
@@ -310,9 +333,14 @@ def build_parser() -> argparse.ArgumentParser:
     gen.set_defaults(func=cmd_gen)
 
     # bondstone: CLI-baseline
-    baseline = commands.add_parser("baseline", parents=[common],
-                                   help="record the commit whose documents count as already adopted")
-    baseline.add_argument("ref", nargs="?", default="HEAD", metavar="REF", help="the commit (default: HEAD)")
+    baseline = commands.add_parser(
+        "baseline", parents=[common],
+        help="record the commit whose documents count as already adopted, or with --known the current violations")
+    baseline.add_argument("ref", nargs="?", default=None, metavar="REF", help="the commit (default: HEAD)")
+    baseline.add_argument("--known", action="store_true",
+                          help="record the current violations in .bondstone/known.json instead of a commit")
+    baseline.add_argument("--prune", action="store_true",
+                          help="with --known, only remove the entries that no longer occur")
     baseline.set_defaults(func=cmd_baseline)
 
     setting = argparse.ArgumentParser(add_help=False)

@@ -122,7 +122,9 @@ It SHALL report every section the type requires and the document lacks.
 
 Bondstone SHALL report a link whose target does not exist, whose target has a type the link
 does not allow, that points at its own document, or whose number of targets is below the
-link's `min` or above its `max`.
+link's `min` or above its `max`. Each of these diagnostics, like those about fields, sections
+and item headings, carries a key that names the problem without a line number (the target,
+the link, the field, the section), which is what a known violation is matched by.
 
 #### Scenario: Broken link
 

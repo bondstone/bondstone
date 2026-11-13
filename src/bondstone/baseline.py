@@ -7,11 +7,18 @@ version."""
 
 from __future__ import annotations
 
+import datetime as dt
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
+from .config import Config
 from .git import Repository
-from .model import PROFILE_PATH, EnvironmentProblem
+from .graph import build_graph
+from .known import KNOWN_PATH, Entry, fingerprint
+from .known import write as write_known
+from .model import ERROR, PROFILE_PATH, WARN, EnvironmentProblem
+from .rules import run_check
 
 _BASELINE_LINE = re.compile(r"^baseline:.*$", re.M)
 _FORMAT_LINE = re.compile(r"^bondstone:.*$", re.M)
@@ -36,3 +43,48 @@ def record_baseline(root: Path, repo: Repository, ref: str = "HEAD") -> str:
         text = f"{line}\n{text}"
     path.write_text(text, encoding="utf-8")
     return commit
+
+
+# --------------------------------------------------------------------------- known violations
+
+
+@dataclass
+class Recorded:
+    """What `bondstone baseline --known` did."""
+
+    entries: int  # entries in the file now
+    added: int = 0
+    removed: int = 0
+    refused: int = 0  # violations of rules that do not accept known violations
+    deleted: bool = False  # the last entry went, and the file with it
+
+
+# bondstone: REQ-KNV-001, REQ-KNV-005
+def record_known(cfg: Config, prune: bool = False, today: dt.date | None = None) -> Recorded:
+    """Write the repository's current violations to `known.json`, or with `prune` only drop what is fixed.
+
+    Recording keeps the entries that still match and adds every other error and warning whose
+    rule accepts known violations. Pruning never adds an entry. Checks that need a base commit
+    are not run: a known violation is a state of the documents, not a change."""
+    today = today or dt.date.today()
+    diagnostics = run_check(cfg, build_graph(cfg), today=today)
+    before = set(cfg.known.entries)
+    matching = {fingerprint(d) for d in diagnostics if d.known}
+    fresh: set[Entry] = set()
+    refused = 0
+    for diag in diagnostics:
+        if diag.known or diag.severity not in (ERROR, WARN):
+            continue
+        if cfg.accepts_known(diag.rule):
+            fresh.add(fingerprint(diag))
+        elif diag.rule not in ("bondstone/known-stale", "bondstone/known-grew"):
+            refused += 1
+    entries = matching if prune else matching | fresh
+    result = Recorded(len(entries), len(entries - before), len(before - entries), refused)
+    path = cfg.root / KNOWN_PATH
+    if entries:
+        write_known(cfg.root, sorted(entries), cfg.known.created or today.isoformat())
+    elif path.is_file():
+        path.unlink()
+        result.deleted = True
+    return result

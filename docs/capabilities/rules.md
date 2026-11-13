@@ -33,7 +33,9 @@ A type name without a pack prefix MUST resolve inside the pack that declares the
 
 Bondstone SHALL evaluate a rule with `when` for every node its selector matches and report
 each clause of `require` that does not hold: `link` and `incoming` with `min` or `all`,
-`field`, `section`, `contains`, `items`, `covered`, `file_field` and `any`.
+`field`, `section`, `contains`, `items`, `covered`, `file_field` and `any`. Each report carries
+a key that says what the failed clause asks for, which is what a known violation is matched
+by.
 
 #### Scenario: Accepted decision without alternatives
 
@@ -68,8 +70,8 @@ node's field named by `equals`, or with the literal `value`.
 ### REQ-RUL-005: Keep a catalogue of engine rules
 
 Bondstone SHALL list every `bondstone/...` rule it can emit in one catalogue, with its default
-severity, when it fires, why and how to fix it. Every engine rule except `bondstone/profile`
-MUST be overridable down to `ignore`.
+severity, when it fires, why and how to fix it, and whether its violations may be recorded as
+known. Every engine rule except `bondstone/profile` MUST be overridable down to `ignore`.
 
 #### Scenario: Engine rule switched off
 

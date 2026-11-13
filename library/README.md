@@ -12,7 +12,7 @@ loaded unless a profile names it, and a pack with the same id in one of the prof
 | `capability` | pack | Living capability specs whose requirements are traced to code. |
 | `adr-capability` | bridge | Capabilities are constrained by decisions; accepted decisions are applied. |
 | `speckit` | pack | Spec Kit features (`specs/NNN-name/`) with a status derived from their files; tested with Spec Kit 1.4.0. Ships a Spec Kit preset that adds the frontmatter. |
-| `speckit-capability` | bridge | Features modify capabilities and deliver requirements; an implemented feature delivers only active, tagged requirements. |
+| `speckit-capability` | bridge | Features modify capabilities and deliver requirements; an implemented feature delivers only active, tagged requirements, and a change to it updates the capabilities it modifies. |
 | `speckit-adr` | bridge | Features rest on decisions; an implemented feature rests only on accepted ones. |
 | `cli` | pack | One reference document per command, tagged in the code that implements it. |
 | `cli-capability` | bridge | Commands implement capabilities; a stable command implements at least one active capability. |

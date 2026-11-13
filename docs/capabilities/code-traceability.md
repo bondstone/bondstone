@@ -72,7 +72,8 @@ nodes in the listed statuses MUST be reported.
 ### REQ-TRC-005: Warn about tags on retired nodes
 
 Bondstone SHALL report a tag on a node whose status is listed in the trait's `retired` as
-`bondstone/tag-retired`.
+`bondstone/tag-retired`. A diagnostic about a tag is identified by the tagged id and the file
+of the tag, not by its line, so that a known violation still matches after the code moves.
 
 #### Scenario: Removed requirement still tagged
 

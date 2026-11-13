@@ -13,9 +13,10 @@
 6. After you edit documents by hand, run `bondstone gen`. It rewrites the generated files listed below. Never edit those files or this one yourself.
 7. Before you finish, run `bondstone check --base <upstream branch> --format json` and fix every error. It compares your working tree, committed or not, with that branch. When a diagnostic has `fix.command`, run that command. `bondstone explain <rule>` says what a rule wants.
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
-9. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
+9. Never create `.bondstone/known.json`, add an entry to it or run `bondstone baseline --known` yourself: the file lists the violations a repository had when it adopted a rule, and it may only shrink. After you fix a known violation, run `bondstone baseline --known --prune`, which only removes entries.
+10. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
 
-Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), speckit@1.0.0 (pack), cli@1.0.0 (pack), release@1.0.0 (pack), adr-capability@1.0.0 (bridge), speckit-capability@1.0.0 (bridge), speckit-adr@1.0.0 (bridge), cli-capability@1.0.0 (bridge), release-speckit@1.0.0 (bridge), starter@1.0.0 (preset), starter-speckit@1.0.0 (preset)
+Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), speckit@1.0.0 (pack), cli@1.0.0 (pack), release@1.0.0 (pack), adr-capability@1.0.0 (bridge), speckit-capability@1.1.0 (bridge), speckit-adr@1.0.0 (bridge), cli-capability@1.0.0 (bridge), release-speckit@1.0.0 (bridge), starter@1.0.0 (preset), starter-speckit@1.0.0 (preset)
 
 ## Document types
 
@@ -121,6 +122,7 @@ Severities are the effective ones, after this repository's overrides.
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
 - **`speckit-capability/implemented-feature-delivers-covered-requirements`** (error): An implemented feature delivers only requirements that are active and tagged in code. _Tag the code with `bondstone: REQ-...`, and remove `Status: planned` from the requirement with `bondstone status REQ-... active`._
 - **`speckit-capability/implemented-feature-is-folded-in`** (warn): An implemented feature names the capabilities it modifies or the requirements it delivers. _List the capabilities under `modifies` or the requirements under `delivers` in the frontmatter of spec.md._
+- **`speckit-capability/implemented-feature-updates-its-capabilities`** (warn): A change to an implemented feature updates the capabilities it modifies. _Fold the change into the capability's document in the same change. A feature is implemented from the moment its last task is ticked._
 - **`speckit-adr/implemented-feature-rests-on-accepted-decisions`** (error): An implemented feature rests only on accepted decisions. _Accept the decision with `bondstone status ADR-... accepted` before the last task is ticked, or point to the decision that replaced it._
 - **`cli-capability/stable-command-implements-capability`** (error): A stable command implements at least one capability. _List the capabilities the command exposes under `implements`._
 - **`cli-capability/stable-command-on-active-capability`** (error): A stable command exposes only active capabilities. _Activate the capability, or keep the command experimental until it is._
@@ -209,6 +211,8 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
   `bondstone status REQ-... active`.
 - Before you tick the last task of a feature, check that every requirement under `delivers`
   is active and tagged in code: from that tick on the feature is `implemented`.
+- The change that ticks the last task, and any later change to an implemented feature, also
+  updates every capability under `modifies`.
 
 ## Guidance from `speckit-adr`
 

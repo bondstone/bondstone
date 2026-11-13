@@ -6,3 +6,5 @@
   `bondstone status REQ-... active`.
 - Before you tick the last task of a feature, check that every requirement under `delivers`
   is active and tagged in code: from that tick on the feature is `implemented`.
+- The change that ticks the last task, and any later change to an implemented feature, also
+  updates every capability under `modifies`.

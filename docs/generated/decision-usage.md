@@ -8,7 +8,7 @@
 | [ADR-003](../adr/ADR-003-name-severities-error-warn-info-ignore.md) | Name severities error, warn, info and ignore | accepted | [CAP-profiles](../capabilities/profiles.md), [CAP-rules](../capabilities/rules.md) |
 | [ADR-004](../adr/ADR-004-share-standards-with-presets.md) | Share standards across repositories with presets | accepted | [CAP-profiles](../capabilities/profiles.md) |
 | [ADR-005](../adr/ADR-005-exempt-a-change-with-a-commit-trailer.md) | Exempt a change from a diff rule with a commit trailer | accepted | [CAP-diff-checks](../capabilities/diff-checks.md) |
-| [ADR-006](../adr/ADR-006-adopt-with-known-violations.md) | Adopt with known violations that may only shrink | accepted |  |
+| [ADR-006](../adr/ADR-006-adopt-with-known-violations.md) | Adopt with known violations that may only shrink | accepted | [CAP-known-violations](../capabilities/known-violations.md) |
 | [ADR-007](../adr/ADR-007-verify-the-fold-into-living-docs.md) | Verify that changes are folded into living docs, do not merge them | accepted | [CAP-spec-kit-adapter](../capabilities/spec-kit-adapter.md) |
 | [ADR-008](../adr/ADR-008-declare-ids-and-paths-with-templates.md) | Declare ids and paths with one template each | accepted | [CAP-graph](../capabilities/graph.md) |
 | [ADR-009](../adr/ADR-009-make-coverage-depend-on-status.md) | Make code coverage depend on status | accepted | [CAP-code-traceability](../capabilities/code-traceability.md) |

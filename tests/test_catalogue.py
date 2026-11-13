@@ -22,7 +22,7 @@ def test_every_rule_the_engine_emits_is_in_the_catalogue_and_the_other_way_round
 
 
 def test_catalogue_entries_are_complete_and_unique():
-    assert len(BY_ID) == len(ENGINE_RULES) == 43
+    assert len(BY_ID) == len(ENGINE_RULES) == 45
     for rule in ENGINE_RULES:
         assert rule.id.startswith("bondstone/")
         assert rule.severity in SEVERITIES

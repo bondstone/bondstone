@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "known.schema.json",
+  "title": "bondstone known.json",
+  "description": "Violations that existed when the repository adopted a rule. `bondstone baseline --known` writes the file; entries are only ever removed.",
+  "type": "object",
+  "properties": {
+    "bondstone": {"const": 1, "x-error": "expected the format version 1"},
+    "created": {"description": "The day the file was first written.", "type": "string"},
+    "entries": {
+      "type": "array",
+      "items": {
+        "description": "One violation: the rule, the node (or the file, for a violation without a node) and a key that names the problem.",
+        "type": "object",
+        "properties": {
+          "rule": {"type": "string", "minLength": 1},
+          "node": {"type": "string", "minLength": 1},
+          "path": {"type": "string", "minLength": 1},
+          "key": {"type": "string"}
+        },
+        "required": ["rule"],
+        "additionalProperties": false,
+        "maxProperties": 3,
+        "x-error": "expected `rule`, one of `node` and `path`, and an optional `key`"
+      }
+    }
+  },
+  "required": ["bondstone", "entries"],
+  "additionalProperties": false
+}

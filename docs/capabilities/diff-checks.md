@@ -112,7 +112,8 @@ MUST NOT be evaluated.
 For a triggered diff rule, bondstone SHALL report a `changed` clause when fewer than `min`
 changed documents match its selector, an `exists` clause when fewer than `min` documents match
 at all, and an `any` clause when none of its alternatives holds. The message MUST name the
-changed files, at most five of them.
+changed files, at most five of them. With `--base`, bondstone also reports a `known.json`
+that grew ([CAP-known-violations](known-violations.md)).
 
 #### Scenario: Code changed, no spec changed
 
@@ -201,3 +202,18 @@ by work on the feature and not only by an edit of its main file.
 - Given a rule that asks for a changed feature when code changes, and a feature whose status comes from `tasks.md`
 - When a change edits code and ticks a task in that feature's `tasks.md`
 - Then the rule is satisfied
+
+### REQ-DIF-015: Ask that the link targets of a changed node change too
+
+For a `link_changed: LINK` clause, bondstone SHALL report every changed node that matches the
+clause's `from` selector, once for each node it names under LINK that did not change in the
+same range. A target that is an item counts as changed when its document changed. The
+diagnostic is reported on the changed node, so a trailer can exempt it by that node's id.
+Inside `any` the clause holds when no such target is left. A `link_changed` that names an
+unknown link, or that stands in a node rule, MUST be a configuration error.
+
+#### Scenario: A feature that does not update its capability
+
+- Given a rule with `link_changed: modifies` for implemented features, and a feature with `modifies: [CAP-sync]`
+- When a change edits the feature and not `CAP-sync`
+- Then the rule is reported on the feature and names `CAP-sync`

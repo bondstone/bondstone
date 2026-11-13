@@ -31,6 +31,7 @@
 | [REQ-DIF-012](../capabilities/diff-checks.md#req-dif-012-reject-malformed-exemptions-and-allow-strict-runs) | Reject malformed exemptions and allow strict runs | active | CAP-diff-checks |  |
 | [REQ-DIF-013](../capabilities/diff-checks.md#req-dif-013-trigger-diff-rules-on-the-repositorys-code) | Trigger diff rules on the repository's code | active | CAP-diff-checks |  |
 | [REQ-DIF-014](../capabilities/diff-checks.md#req-dif-014-count-a-change-to-a-companion-file-as-a-change-to-the-document) | Count a change to a companion file as a change to the document | active | CAP-diff-checks | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
+| [REQ-DIF-015](../capabilities/diff-checks.md#req-dif-015-ask-that-the-link-targets-of-a-changed-node-change-too) | Ask that the link targets of a changed node change too | active | CAP-diff-checks | [003-known-violations](../../specs/003-known-violations/spec.md) |
 | [REQ-GRA-001](../capabilities/graph.md#req-gra-001-read-markdown-with-yaml-frontmatter) | Read Markdown with YAML frontmatter | active | CAP-graph |  |
 | [REQ-GRA-002](../capabilities/graph.md#req-gra-002-derive-the-id-pattern-and-the-path-glob-from-templates) | Derive the id pattern and the path glob from templates | active | CAP-graph |  |
 | [REQ-GRA-003](../capabilities/graph.md#req-gra-003-require-every-document-to-state-its-type) | Require every document to state its type | active | CAP-graph |  |
@@ -42,6 +43,14 @@
 | [REQ-GRA-009](../capabilities/graph.md#req-gra-009-check-links-against-their-definition) | Check links against their definition | active | CAP-graph |  |
 | [REQ-GRA-010](../capabilities/graph.md#req-gra-010-require-the-path-to-carry-the-id) | Require the path to carry the id | active | CAP-graph | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
 | [REQ-GRA-011](../capabilities/graph.md#req-gra-011-derive-a-status-from-files) | Derive a status from files | active | CAP-graph | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
+| [REQ-KNV-001](../capabilities/known-violations.md#req-knv-001-record-the-current-violations) | Record the current violations | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-002](../capabilities/known-violations.md#req-knv-002-identify-a-violation-without-line-numbers) | Identify a violation without line numbers | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-003](../capabilities/known-violations.md#req-knv-003-report-a-known-violation-as-info) | Report a known violation as info | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-004](../capabilities/known-violations.md#req-knv-004-report-entries-that-match-nothing) | Report entries that match nothing | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-005](../capabilities/known-violations.md#req-knv-005-prune-without-adding) | Prune without adding | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-006](../capabilities/known-violations.md#req-knv-006-catch-a-file-that-grew) | Catch a file that grew | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-007](../capabilities/known-violations.md#req-knv-007-let-a-rule-refuse-known-violations) | Let a rule refuse known violations | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
+| [REQ-KNV-008](../capabilities/known-violations.md#req-knv-008-reject-a-malformed-file) | Reject a malformed file | active | CAP-known-violations | [003-known-violations](../../specs/003-known-violations/spec.md) |
 | [REQ-LIB-001](../capabilities/library.md#req-lib-001-document-commands-with-the-cli-pack) | Document commands with the cli pack | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
 | [REQ-LIB-002](../capabilities/library.md#req-lib-002-tie-commands-to-capabilities) | Tie commands to capabilities | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
 | [REQ-LIB-003](../capabilities/library.md#req-lib-003-record-releases-and-generate-the-changelog) | Record releases and generate the changelog | active | CAP-library | [002-cli-and-release-packs](../../specs/002-cli-and-release-packs/spec.md) |
@@ -89,6 +98,7 @@
 | [REQ-SKT-003](../capabilities/spec-kit-adapter.md#req-skt-003-fold-an-implemented-feature-into-the-capabilities) | Fold an implemented feature into the capabilities | active | CAP-spec-kit-adapter | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
 | [REQ-SKT-004](../capabilities/spec-kit-adapter.md#req-skt-004-rest-an-implemented-feature-on-accepted-decisions) | Rest an implemented feature on accepted decisions | active | CAP-spec-kit-adapter | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
 | [REQ-SKT-005](../capabilities/spec-kit-adapter.md#req-skt-005-ask-for-a-feature-when-code-changes) | Ask for a feature when code changes | active | CAP-spec-kit-adapter | [001-spec-kit-adapter](../../specs/001-spec-kit-adapter/spec.md) |
+| [REQ-SKT-006](../capabilities/spec-kit-adapter.md#req-skt-006-update-the-capabilities-when-an-implemented-feature-changes) | Update the capabilities when an implemented feature changes | active | CAP-spec-kit-adapter | [003-known-violations](../../specs/003-known-violations/spec.md) |
 | [REQ-TRC-001](../capabilities/code-traceability.md#req-trc-001-find-tags-in-code) | Find tags in code | active | CAP-code-traceability |  |
 | [REQ-TRC-002](../capabilities/code-traceability.md#req-trc-002-know-the-region-of-code-a-tag-annotates) | Know the region of code a tag annotates | active | CAP-code-traceability |  |
 | [REQ-TRC-003](../capabilities/code-traceability.md#req-trc-003-reject-tags-that-point-nowhere) | Reject tags that point nowhere | active | CAP-code-traceability |  |

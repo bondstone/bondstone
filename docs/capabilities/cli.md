@@ -53,7 +53,9 @@ reading documents, and report configuration errors and configuration warnings.
 ### REQ-CLI-004: Record the baseline
 
 `bondstone baseline [REF]` SHALL record the commit that REF names, HEAD by default, as the
-profile's baseline and print it.
+profile's baseline and print it. With `--known` it records the current violations instead,
+and with `--known --prune` it removes the recorded ones that no longer occur
+([CAP-known-violations](known-violations.md)).
 
 #### Scenario: Baseline at HEAD
 
@@ -66,7 +68,8 @@ profile's baseline and print it.
 With `--format text`, the default, bondstone SHALL print one line per diagnostic,
 `path:line: severity rule: message`, followed by an indented hint when the diagnostic has
 one, and a last line with the number of errors, warnings and nodes. Diagnostics are ordered by
-path and line.
+path and line. A known violation is marked `[known]`, and the last line says how many of the
+info diagnostics are known.
 
 #### Scenario: Broken link
 
@@ -78,8 +81,9 @@ path and line.
 
 With `--format json`, bondstone SHALL print one object with `version`, `summary` and
 `diagnostics`. Each diagnostic has `rule`, `severity` and `message`, and `path`, `line`,
-`node`, `hint`, `fix` and `exempted_by` when they apply. `version` MUST change when a key
-changes its meaning or goes away.
+`node`, `hint`, `fix`, `exempted_by` and `known` when they apply. The summary has `known`
+when there are known violations. `version` MUST change when a key changes its meaning or goes
+away.
 
 #### Scenario: Fix command
 

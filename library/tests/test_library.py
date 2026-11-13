@@ -1,14 +1,21 @@
 """What bondstone-library ships: every pack and bridge with a valid and an invalid fixture."""
 
 import datetime as dt
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 import yaml
 
 import bondstone_library
+from bondstone.config import load_config
+from bondstone.git import GitRepository
+from bondstone.graph import build_graph
 from bondstone.packtest import run_fixtures
 from bondstone.resolve import installed_sources
+from bondstone.rules import run_check
 
 TODAY = dt.date(2026, 11, 10)
 SOURCE = bondstone_library.source()
@@ -85,3 +92,39 @@ def test_the_frontmatter_the_preset_adds_is_what_the_packs_expect():
     feature = yaml.safe_load((SOURCE / "speckit" / "pack.yaml").read_text(encoding="utf-8"))["types"]["Feature"]
     assert feature["path"] == "specs/{id}/spec.md" and "title" in feature["fields"]
     assert list(feature["traits"]["derived-status"]) == ["implemented", "planned", "specified"]
+
+
+# ----------------------------------------------------------------------- rules that need history
+
+GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
+           "GIT_AUTHOR_NAME": "Test", "GIT_AUTHOR_EMAIL": "test@example.invalid",
+           "GIT_COMMITTER_NAME": "Test", "GIT_COMMITTER_EMAIL": "test@example.invalid"}
+
+
+def committed(fixture: Path, target: Path) -> Path:
+    """A fixture copied into a git repository with one commit."""
+    shutil.copytree(fixture, target)
+    for args in (["init", "--quiet"], ["add", "--all"], ["commit", "--quiet", "--message", "first"]):
+        subprocess.run(["git", *args], cwd=target, check=True, env={**os.environ, **GIT_ENV})
+    return target
+
+
+def changed_since_head(root: Path) -> list[tuple[str, str, str | None]]:
+    cfg = load_config(root)
+    assert cfg.errors == []
+    found = run_check(cfg, build_graph(cfg), today=TODAY, repo=GitRepository(root), base="HEAD")
+    return [(d.rule, d.severity, d.node) for d in found]
+
+
+# bondstone: REQ-SKT-006
+def test_a_change_to_an_implemented_feature_updates_its_capabilities(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
+    root = committed(SOURCE / "speckit-capability" / "fixtures" / "valid", tmp_path / "repo")
+    assert changed_since_head(root) == []
+    spec = root / "specs" / "001-do-it" / "spec.md"
+    spec.write_text(spec.read_text(encoding="utf-8") + "\nOne more sentence.\n", encoding="utf-8")
+    assert changed_since_head(root) == [
+        ("speckit-capability/implemented-feature-updates-its-capabilities", "warn", "001-do-it")]
+    capability = root / "docs" / "capabilities" / "a.md"
+    capability.write_text(capability.read_text(encoding="utf-8") + "\nMore.\n", encoding="utf-8")
+    assert changed_since_head(root) == []

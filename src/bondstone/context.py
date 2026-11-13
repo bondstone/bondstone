@@ -14,7 +14,7 @@ from .config import Config, as_list
 from .git import ADDED, DELETED, MODIFIED, Change, Repository
 from .graph import Graph, code_files, scan_tags
 from .model import IGNORE, PART_OF, Node, Refused
-from .rules.diff import ChangeSet, document_of, fired_by, traced_ids
+from .rules.diff import ChangeSet, document_of, fired_by, traced_ids, unchanged_targets
 from .select import describe, matches
 
 
@@ -162,6 +162,9 @@ def _collect(cfg: Config, graph: Graph, paths: list[str], tags: dict[str, list[t
 def _rules(cfg: Config, graph: Graph, changes: list[Change], traced: dict[str, set[str]]) -> list[RuleNote]:
     """The diff rules these changes trigger; `traced` maps a path to the tag ids touched in it."""
     notes = []
+    touched = {path for change in changes for path in (change.path, change.old_path) if path}
+    changed_nodes = [node for node in graph.nodes
+                     if node.path in touched or any(path in touched for path in node.companions)]
     for rule in cfg.rules:
         severity = cfg.severity(rule.qid, rule.severity)
         if rule.kind != "diff" or severity == IGNORE:
@@ -173,6 +176,11 @@ def _rules(cfg: Config, graph: Graph, changes: list[Change], traced: dict[str, s
         must_change: list[str] = []
         for clause in rule.spec.get("require") or []:
             asks.append(describe_clause(clause))
+            if "link_changed" in clause:
+                for _, target in unchanged_targets(cfg, graph, rule, changed_nodes, clause):
+                    document = document_of(graph, target.id) or target
+                    if document.id and document.id not in must_change:
+                        must_change.append(document.id)
             if clause.get("traced"):
                 for change in triggering:
                     for ref in sorted(traced.get(change.path, ())):
@@ -192,6 +200,9 @@ def describe_clause(clause: dict[str, Any]) -> str:
         return "one of: " + "; or ".join(describe_clause(alternative) for alternative in clause["any"])
     if "exists" in clause:
         return f"{int(clause.get('min', 1))} document(s){describe(clause['exists'], 'matching')} exist"
+    if "link_changed" in clause:
+        who = describe(clause.get("from"), "matching")
+        return f"every document that a changed document{who} names under `{clause['link_changed']}` changes too"
     selector = describe(clause.get("changed"), "matching")
     if clause.get("traced"):
         extra = f", and at least {clause['min']} such document(s) change" if "min" in clause else ""

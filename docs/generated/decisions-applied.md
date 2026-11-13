@@ -8,6 +8,7 @@
 | [CAP-code-traceability](../capabilities/code-traceability.md) Code traceability |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |
 | [CAP-diff-checks](../capabilities/diff-checks.md) Checks against a base commit |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |  |
 | [CAP-graph](../capabilities/graph.md) Documents, items and links |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |  | ✓ |  |  |
+| [CAP-known-violations](../capabilities/known-violations.md) Known violations |  |  |  |  |  | ✓ |  |  |  |  |  |  |  |  |  |  |  |
 | [CAP-library](../capabilities/library.md) Library |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [CAP-pack-tooling](../capabilities/pack-tooling.md) Pack tooling |  |  |  |  |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |
 | [CAP-profiles](../capabilities/profiles.md) Profiles, packs and bridges |  | ✓ | ✓ | ✓ |  |  |  |  |  |  |  | ✓ |  |  |  |  |  |

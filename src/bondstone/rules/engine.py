@@ -46,7 +46,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 out.append(diagnostic(
                     "bondstone/field-invalid",
                     f"status '{node.status}' is not one of {', '.join(statuses)}",
-                    node.path, node.field_lines.get("status", node.line), node.id))
+                    node.path, node.field_lines.get("status", node.line), node.id, key="status"))
         else:
             if node.type not in validators:
                 validators[node.type] = Draft202012Validator(cfg.schema_for(node.type),
@@ -70,7 +70,7 @@ def check_nodes(cfg: Config, graph: Graph) -> list[Diagnostic]:
             if section not in present:
                 out.append(diagnostic(
                     "bondstone/section-missing", f"{node.type} requires a '{section}' section",
-                    node.path, node.line, node.id, hint=f"Add a heading '## {section}'."))
+                    node.path, node.line, node.id, hint=f"Add a heading '## {section}'.", key=section))
     return out
 
 
@@ -122,7 +122,8 @@ def _schema_diagnostic(cfg: Config, node: Node, error: Any) -> Diagnostic:
     if error.validator == "required":
         found = re.match(r"'(.+)' is a required property", error.message)
         name = found.group(1) if found else "?"
-        return diagnostic("bondstone/field-missing", f"missing required field '{name}'", node.path, 1, node.id)
+        return diagnostic("bondstone/field-missing", f"missing required field '{name}'", node.path, 1, node.id,
+                          key=name)
     if error.validator == "additionalProperties":
         properties = error.schema.get("properties") or {}
         extras = [key for key in node.fields if key not in properties]
@@ -130,11 +131,12 @@ def _schema_diagnostic(cfg: Config, node: Node, error: Any) -> Diagnostic:
         return diagnostic(
             "bondstone/field-unknown", f"unknown key(s) {', '.join(extras)} for {node.type}",
             node.path, node.field_lines.get(extras[0], 1) if extras else 1, node.id,
-            hint=f"Fields: {', '.join(sorted(properties))}. Links: {', '.join(links) or 'none'}.")
+            hint=f"Fields: {', '.join(sorted(properties))}. Links: {', '.join(links) or 'none'}.",
+            key=", ".join(extras))
     key = ".".join(str(part) for part in error.path) or "?"
     top = str(error.path[0]) if error.path else None
     return diagnostic("bondstone/field-invalid", f"field '{key}': {error.message}",
-                      node.path, node.field_lines.get(top, 1) if top else 1, node.id)
+                      node.path, node.field_lines.get(top, 1) if top else 1, node.id, key=key)
 
 
 # --------------------------------------------------------------------------- links
@@ -154,26 +156,27 @@ def check_links(cfg: Config, graph: Graph) -> list[Diagnostic]:
                 if target is None:
                     out.append(diagnostic("bondstone/link-broken",
                                           f"{link.name} -> '{ref.target}': no such document",
-                                          node.path, ref.line, node.id))
+                                          node.path, ref.line, node.id, key=ref.target))
                 elif link.to_types and target.type not in link.to_types:
                     out.append(diagnostic("bondstone/link-type",
                                           f"{link.name} -> {ref.target} is a {target.type}; "
                                           f"expected {', '.join(link.to_types)}",
-                                          node.path, ref.line, node.id))
+                                          node.path, ref.line, node.id, key=ref.target))
                 elif ref.target == node.id:
                     out.append(diagnostic("bondstone/link-self", f"{link.name} points to itself",
-                                          node.path, ref.line, node.id))
+                                          node.path, ref.line, node.id, key=link.name))
         for link in cfg.links_from(node.type):
             count = len(node.links.get(link.qname, []))
             if count < link.min:
                 out.append(diagnostic(
                     "bondstone/link-min",
                     f"needs at least {link.min} '{link.name}' link(s) to {', '.join(link.to_types)}; has {count}",
-                    node.path, node.line, node.id, hint=f"Add `{link.name}: [<id>]` to the frontmatter."))
+                    node.path, node.line, node.id, hint=f"Add `{link.name}: [<id>]` to the frontmatter.",
+                    key=link.name))
             if link.max is not None and count > link.max:
                 out.append(diagnostic(
                     "bondstone/link-max", f"at most {link.max} '{link.name}' link(s) allowed; has {count}",
-                    node.path, node.field_lines.get(link.name, node.line), node.id))
+                    node.path, node.field_lines.get(link.name, node.line), node.id, key=link.name))
     return out
 
 
@@ -208,7 +211,8 @@ def check_supersedable(cfg: Config, graph: Graph) -> list[Diagnostic]:
                         else f"Set `status: {SUPERSEDED}` in {target.path}; "
                              f"its lifecycle does not allow that step from '{target.status}'.",
                         # one command resolves it when the lifecycle allows the step
-                        fix={"command": ["bondstone", "status", target.id, SUPERSEDED]} if allowed else None))
+                        fix={"command": ["bondstone", "status", target.id, SUPERSEDED]} if allowed else None,
+                        key=node.id))
         for target_id, sources in superseded_by.items():
             if len(sources) > 1:
                 target = graph.by_id.get(target_id)
@@ -249,18 +253,19 @@ def check_code(cfg: Config, graph: Graph) -> list[Diagnostic]:
         node = graph.by_id.get(tag.id)
         if node is None:
             out.append(diagnostic("bondstone/code-ref-unknown", f"code references unknown id '{tag.id}'",
-                                  tag.path, tag.line))
+                                  tag.path, tag.line, key=tag.id))
             continue
         tracing = cfg.types[node.type].traits.get("code-traceable")
         if tracing is None:
             out.append(diagnostic("bondstone/code-ref-not-traceable",
                                   f"{tag.id} is {node.type}, a type that is not code-traceable",
-                                  tag.path, tag.line, tag.id))
+                                  tag.path, tag.line, tag.id, key=tag.path))
         elif node.status in as_list(tracing.get("retired")):
             out.append(diagnostic(
                 "bondstone/tag-retired",
                 f"code is tagged with {tag.id}, which has status '{node.status}'",
-                tag.path, tag.line, tag.id, hint="Remove the tag, or the code if it is no longer needed."))
+                tag.path, tag.line, tag.id, hint="Remove the tag, or the code if it is no longer needed.",
+                key=tag.path))
     for node in graph.nodes:
         tracing = cfg.types[node.type].traits.get("code-traceable")
         if tracing is None or not node.id or node.covered:
