@@ -208,10 +208,37 @@ def _git(*args: str, cwd: Path | None = None, check: bool = True) -> str | None:
         raise EnvironmentProblem("the `git` command was not found") from None
     if result.returncode != 0:
         if check:
-            detail = (result.stderr.strip().splitlines() or [f"git {args[0]} failed"])[-1]
-            raise EnvironmentProblem(detail)
+            lines = [line.strip() for line in result.stderr.splitlines() if line.strip()] or [f"git {args[0]} failed"]
+            # git puts the reason on the line that starts with fatal: or error:; what follows is advice
+            detail = next((line for line in lines if line.startswith(("fatal:", "error:"))), lines[-1])
+            raise EnvironmentProblem(scrub(detail))
         return None
     return result.stdout
+
+
+_CREDENTIALS = re.compile(r"(?<=://)[^/@\s'\"]+@")
+_NO_ACCESS = ("could not read Username", "could not read Password", "terminal prompts disabled",
+              "Authentication failed", "not found", "Permission denied", "access denied", "403",
+              "does not appear to be a git repository", "Could not read from remote repository")
+
+
+# bondstone: REQ-PRF-020
+def scrub(text: str) -> str:
+    """A message of git without the user name and password that a URL may carry, such as a token from CI."""
+    return _CREDENTIALS.sub("", text)
+
+
+# bondstone: REQ-PRF-020
+def explain(source: GitSource, detail: str) -> str:
+    """Git's reason for a failed fetch, with what it usually means when the repository could not be read.
+
+    A host answers the same for a repository that does not exist and for a private one that
+    the credentials cannot read, so the message names both."""
+    if any(marker.lower() in detail.lower() for marker in _NO_ACCESS):
+        return (f"{detail}. The repository {source.repo} does not exist, or it is private and git has no "
+                "credentials that can read it: set up a git credential helper, or in CI a token through "
+                "`url.<base>.insteadOf` (see `docs/cli/update.md`)")
+    return detail
 
 
 def _mirror(source: GitSource) -> Path:
@@ -237,11 +264,16 @@ def fetch(source: GitSource, commit: str | None = None) -> str:
             try:
                 _git("fetch", "--quiet", source.url, source.ref, cwd=mirror)
             except EnvironmentProblem as exc:
-                raise EnvironmentProblem(f"cannot fetch '{source.ref}' from {source.url}: {exc}") from None
+                raise EnvironmentProblem(
+                    f"cannot fetch '{source.ref}' from {source.url}: {explain(source, str(exc))}") from None
         commit = (_git("rev-parse", "--verify", "FETCH_HEAD^{commit}", cwd=mirror) or "").strip()
     elif _git("cat-file", "-e", f"{commit}^{{commit}}", cwd=mirror, check=False) is None:
         if _git("fetch", "--quiet", "--depth", "1", source.url, commit, cwd=mirror, check=False) is None:
-            _git("fetch", "--quiet", source.url, source.ref, cwd=mirror, check=False)
+            try:
+                _git("fetch", "--quiet", source.url, source.ref, cwd=mirror)
+            except EnvironmentProblem as exc:
+                raise EnvironmentProblem(
+                    f"cannot fetch commit {commit[:12]} of {source.url}: {explain(source, str(exc))}") from None
         if _git("cat-file", "-e", f"{commit}^{{commit}}", cwd=mirror, check=False) is None:
             raise EnvironmentProblem(
                 f"cannot fetch commit {commit[:12]} of {source.url}: the remote does not have it at '{source.ref}'")

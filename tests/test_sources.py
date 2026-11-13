@@ -375,3 +375,46 @@ def test_packs_lists_what_a_git_source_holds(user, capsys):
     code, out, _ = run(capsys, user, "packs", "--format", "json")
     listed = json.loads(out)["components"]
     assert code == 0 and [(c["id"], c["source"], c["in_use"]) for c in listed] == [("adr", PACKS, True)]
+
+
+# --------------------------------------------------------------------------- private repositories
+
+
+def test_credentials_in_a_url_never_reach_a_message():
+    from bondstone.sources import scrub
+    assert scrub("fatal: unable to access 'https://x-access-token:ghs_secret@github.com/acme/p/': 403") == \
+        "fatal: unable to access 'https://github.com/acme/p/': 403"
+    assert scrub("https://user@host.test/a and https://u:p@host.test/b") == "https://host.test/a and https://host.test/b"
+    assert scrub("fatal: couldn't find remote ref v9") == "fatal: couldn't find remote ref v9"
+
+
+@pytest.mark.parametrize("detail", [
+    "fatal: could not read Username for 'https://github.com': terminal prompts disabled",
+    "fatal: Authentication failed for 'https://github.com/acme/p/'",
+    "fatal: repository 'https://github.com/acme/p/' not found",
+])
+def test_a_repository_git_cannot_read_is_explained(detail):
+    from bondstone.sources import explain
+    message = explain(parse_git_source("github.com/acme/p//packs@v1"), detail)
+    assert message.startswith(detail + ". The repository github.com/acme/p does not exist, or it is private")
+    assert "docs/cli/update.md" in message
+
+
+def test_other_failures_are_left_as_git_says_them():
+    from bondstone.sources import explain
+    assert explain(parse_git_source("github.com/acme/p@v9"), "fatal: couldn't find remote ref v9") == \
+        "fatal: couldn't find remote ref v9"
+
+
+def test_a_missing_repository_is_explained_by_update(user, capsys):
+    user.profile(packs=["adr@1"], sources=["git.test/acme/missing//packs@v1"])
+    code, _, err = run(capsys, user, "update")
+    assert code == 3 and "does not exist, or it is private and git has no credentials" in err
+
+
+def test_a_pinned_commit_that_cannot_be_fetched_says_why(user, remote, capsys, tmp_path):
+    run(capsys, user, "update")
+    shutil.rmtree(tmp_path / "cache")
+    shutil.rmtree(remote.root)
+    code, _, err = run(capsys, user, "update", "--locked")
+    assert code == 3 and "cannot fetch commit" in err and "does not exist, or it is private" in err

@@ -8,3 +8,4 @@
   - [004-waive-and-report](../../specs/004-waive-and-report/spec.md) Waive and report _(implemented)_
   - [005-sarif-output](../../specs/005-sarif-output/spec.md) SARIF output _(implemented)_
   - [006-git-sources](../../specs/006-git-sources/spec.md) Git sources _(implemented)_
+  - [007-private-sources](../../specs/007-private-sources/spec.md) Private git sources _(implemented)_

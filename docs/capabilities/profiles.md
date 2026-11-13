@@ -322,7 +322,18 @@ their commit. `bondstone update --locked` SHALL fetch exactly the pinned commits
 cached files that differ and leave the lock as it is; it MUST refuse a lock that does not pin
 a source or whose hashes the pinned commit does not have. A source without components MUST be
 refused, and a ref or a repository that cannot be fetched is an environment error. Git is
-never asked for a password, so a job cannot hang.
+never asked for a password, so a job cannot hang. Private repositories are read with the
+credentials git already has, from a credential helper or a URL rewritten with
+`url.<base>.insteadOf`; bondstone keeps no credentials of its own. When git cannot read a
+repository, the message says that it does not exist or that git has no credentials for it,
+and a user name or password that a URL carries MUST NOT appear in a message, in the lock or
+in the cache.
+
+#### Scenario: A private repository without credentials
+
+- Given a git source in a private repository and no credential helper
+- When `bondstone update` runs
+- Then it exits with 3 at once, and says that the repository does not exist or that git has no credentials for it
 
 #### Scenario: A moved tag does not move the lock
 
