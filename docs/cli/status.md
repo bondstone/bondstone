@@ -2,7 +2,7 @@
 id: CLI-status
 type: cli:Command
 title: status
-status: experimental
+status: stable
 synopsis: bondstone status [--format text|json] ID STATUS
 json_output: true
 implements: [CAP-scaffolding]

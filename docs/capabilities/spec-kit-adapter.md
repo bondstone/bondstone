@@ -2,7 +2,7 @@
 id: CAP-spec-kit-adapter
 type: capability:Capability
 title: Spec Kit adapter
-status: draft
+status: active
 owner: Adam Dworzyński
 code: SKT
 depends_on: [CAP-graph, CAP-rules, CAP-diff-checks, CAP-profiles]

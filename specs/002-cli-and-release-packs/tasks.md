@@ -27,4 +27,5 @@ description: "Task list for the CLI and release packs"
 ## Phase 3: Polish
 
 - [x] T008 Describe the library's components in `docs/capabilities/library.md` and trace each to its manifest
-- [ ] T009 Move the command documents to `stable` and activate CAP-library after review (follow-up pull request)
+- [x] T009 Move the command documents to `stable` and activate CAP-library after review (follow-up pull request)
+- [x] T010 Trace `adr`, `capability`, `adr-capability` and `starter` to requirements in `docs/capabilities/library.md`

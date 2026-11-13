@@ -4,7 +4,7 @@ id: "002-cli-and-release-packs"   # the name of this feature's folder under spec
 type: speckit:Feature
 title: "CLI and release packs"
 modifies: [CAP-library]     # capabilities this feature changes
-delivers: [REQ-LIB-001, REQ-LIB-002, REQ-LIB-003, REQ-LIB-004, REQ-LIB-005]     # requirements this feature implements
+delivers: [REQ-LIB-001, REQ-LIB-002, REQ-LIB-003, REQ-LIB-004, REQ-LIB-005, REQ-LIB-006, REQ-LIB-007, REQ-LIB-008, REQ-LIB-009]     # requirements this feature implements
 decided_by: [ADR-012]   # decisions this feature rests on
 ---
 

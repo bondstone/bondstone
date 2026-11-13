@@ -2,7 +2,7 @@
 id: CAP-pack-tooling
 type: capability:Capability
 title: Pack tooling
-status: draft
+status: active
 owner: Adam Dworzyński
 code: PKT
 depends_on: [CAP-profiles, CAP-rules]

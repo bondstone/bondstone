@@ -2,7 +2,7 @@
 id: CLI-graph
 type: cli:Command
 title: graph
-status: experimental
+status: stable
 synopsis: bondstone graph [--format json|mermaid] [--type TYPE]
 json_output: true
 implements: [CAP-agent-guidance]

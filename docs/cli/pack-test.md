@@ -2,7 +2,7 @@
 id: CLI-pack-test
 type: cli:Command
 title: pack test
-status: experimental
+status: stable
 synopsis: bondstone pack test [--format text|json] DIR...
 json_output: true
 implements: [CAP-pack-tooling]

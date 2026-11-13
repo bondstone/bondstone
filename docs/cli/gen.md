@@ -2,7 +2,7 @@
 id: CLI-gen
 type: cli:Command
 title: gen
-status: experimental
+status: stable
 synopsis: bondstone gen
 implements: [CAP-views]
 ---

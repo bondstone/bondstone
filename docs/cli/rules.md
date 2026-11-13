@@ -2,7 +2,7 @@
 id: CLI-rules
 type: cli:Command
 title: rules
-status: experimental
+status: stable
 synopsis: bondstone rules [--format text|json]
 json_output: true
 implements: [CAP-agent-guidance]

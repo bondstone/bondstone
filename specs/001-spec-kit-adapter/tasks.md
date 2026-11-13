@@ -44,4 +44,4 @@ description: "Task list for the Spec Kit adapter"
 
 ## Phase 5: Polish
 
-- [ ] T017 Accept ADR-017 and activate CAP-spec-kit-adapter after review (follow-up pull request)
+- [x] T017 Accept ADR-017 and activate CAP-spec-kit-adapter after review (follow-up pull request)

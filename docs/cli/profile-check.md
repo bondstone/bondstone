@@ -2,7 +2,7 @@
 id: CLI-profile-check
 type: cli:Command
 title: profile check
-status: experimental
+status: stable
 synopsis: bondstone profile check [--format text|json]
 json_output: true
 implements: [CAP-profiles]

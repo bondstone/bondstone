@@ -7,6 +7,7 @@ requires:
   adr: "^1"
   capability: "^1"
 
+# bondstone: REQ-LIB-008
 links:
   constrained_by:
     from: capability:Capability

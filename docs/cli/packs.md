@@ -2,7 +2,7 @@
 id: CLI-packs
 type: cli:Command
 title: packs
-status: experimental
+status: stable
 synopsis: bondstone packs [--format text|json]
 json_output: true
 implements: [CAP-pack-tooling]
