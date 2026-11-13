@@ -1,0 +1,33 @@
+schema_version: "1.0"
+
+preset:
+  id: "bondstone"
+  name: "Bondstone frontmatter"
+  version: "1.0.0"
+  description: "Adds the frontmatter block that bondstone reads to every feature specification."
+  author: "bondstone"
+  repository: "https://github.com/bondstone/bondstone"
+  license: "MIT"
+
+requires:
+  # The Spec Kit release this preset was tested with (bondstone ADR-017). Patch releases are
+  # accepted; a new minor release is tested before the upper bound is raised.
+  speckit_version: ">=1.4.0,<1.5"
+
+# bondstone: REQ-SKT-002
+provides:
+  templates:
+    - type: "template"
+      name: "spec-template"
+      file: "templates/spec-frontmatter.md"
+      description: "Frontmatter with the feature's id, type and links to capabilities, requirements and decisions"
+      strategy: "prepend"
+    - type: "command"
+      name: "speckit.specify"
+      file: "commands/specify-bondstone.md"
+      description: "Tells the agent to fill in the frontmatter and to run bondstone check"
+      strategy: "append"
+
+tags:
+  - "bondstone"
+  - "traceability"

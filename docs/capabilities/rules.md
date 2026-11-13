@@ -81,6 +81,8 @@ MUST be overridable down to `ignore`.
 
 Bondstone SHALL require a `status` from the lifecycle's `statuses` on every node whose type
 has the `lifecycle` trait, and an `owner` on every document whose type has the `owned` trait.
+A type with the `derived-status` trait needs no `status` in frontmatter: its status is one of
+the statuses that trait names, or none.
 
 #### Scenario: Unknown status
 

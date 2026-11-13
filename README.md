@@ -20,12 +20,12 @@ The engine ships no packs. A profile finds its packs and bridges in two places, 
 1. the folders it lists under `sources` (default `.bondstone/packs`), for packs that live in
    the repository;
 2. installed packages that register a folder of packs, such as
-   [`bondstone-library`](library/README.md) (`adr`, `capability`, their bridge and the
-   `starter` preset so far).
+   [`bondstone-library`](library/README.md): decisions, capability specs, the Spec Kit
+   adapter and the presets `starter` and `starter-speckit`.
 
 [`examples/habit-tracker`](examples/habit-tracker) is a complete setup with three local packs
 (`adr`, `capability`, `ost`) and two bridges. Bondstone's own documentation runs on the
-library package.
+library package, and its own changes are planned as Spec Kit features under [`specs/`](specs).
 
 ## Commands
 
@@ -128,6 +128,24 @@ rules:
 `bondstone init --preset starter` creates a profile that extends the library's `starter`
 preset: decisions, living capability specs, and the rule that a change to tagged code updates
 the capability it implements.
+
+## Spec Kit
+
+The library's `speckit` pack reads each [Spec Kit](https://github.com/github/spec-kit) feature
+folder `specs/NNN-name/` as one document, with a status taken from its files: `specified`
+with `spec.md`, `planned` with `plan.md`, `implemented` when every task in `tasks.md` is
+ticked. Two bridges then ask of an implemented feature that the requirements it delivers are
+active and tagged in code, and that the decisions it rests on are accepted.
+
+```bash
+specify init --here                      # Spec Kit 1.4.0
+specify preset add --dev "$(python -c 'import bondstone_library; print(bondstone_library.speckit_preset())')"
+bondstone init --preset starter-speckit
+```
+
+The Spec Kit preset adds the frontmatter block bondstone reads to every new `spec.md`. The
+bondstone preset adds a rule that a change to code comes with a changed feature; it is a
+warning until a profile raises it. See the [pack's README](library/src/bondstone_library/packs/speckit/README.md).
 
 ## Testing a pack
 

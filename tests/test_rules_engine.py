@@ -61,9 +61,34 @@ def test_id_pattern_overrides_the_derived_pattern(project):
         types:
           Note: {id: "N-{n}", id_pattern: "^N-[a-z]+$", path: "notes/{id}.md"}
     """).profile(packs=["p"])
-    project.write("notes/a.md", "---\nid: N-abc\ntype: p:Note\ntitle: A\n---\n")
-    project.write("notes/b.md", "---\nid: N-12\ntype: p:Note\ntitle: B\n---\n")
+    project.write("notes/N-abc.md", "---\nid: N-abc\ntype: p:Note\ntitle: A\n---\n")
+    project.write("notes/N-12.md", "---\nid: N-12\ntype: p:Note\ntitle: B\n---\n")
     assert [d.message for d in check(project)] == ["id 'N-12' does not match ^N-[a-z]+$"]
+
+
+def test_the_path_carries_the_id_when_the_path_template_names_it(project):
+    project.pack("p", """
+        id: p
+        version: 1.0.0
+        types:
+          Note: {id: "N-{n}", path: "notes/{id}-{slug}.md"}
+          Feature: {id: "{n:03d}-{slug}", path: "specs/{id}/spec.md"}
+          Topic: {id: "T-{slug}", path: "topics/{slug}.md"}
+    """).profile(packs=["p"])
+    project.write("notes/N-1-first.md", "---\nid: N-1\ntype: p:Note\n---\n")
+    project.write("notes/N-2.md", "---\nid: N-2\ntype: p:Note\n---\n")
+    project.write("notes/N-30-third.md", "---\nid: N-3\ntype: p:Note\n---\n")
+    project.write("specs/001-login/spec.md", "---\nid: 001-login\ntype: p:Feature\n---\n")
+    project.write("specs/002-logout/spec.md", "---\nid: 002-sign-out\ntype: p:Feature\n---\n")
+    project.write("topics/anything.md", "---\nid: T-other\ntype: p:Topic\n---\n")  # no {id} in the path
+    found = [(d.rule, d.path, d.line, d.message) for d in check(project)]
+    assert found == [
+        ("bondstone/id-path", "notes/N-2.md", 2, "id 'N-2' does not match the path; expected notes/N-2-{slug}.md"),
+        ("bondstone/id-path", "notes/N-30-third.md", 2,
+         "id 'N-3' does not match the path; expected notes/N-3-{slug}.md"),
+        ("bondstone/id-path", "specs/002-logout/spec.md", 2,
+         "id '002-sign-out' does not match the path; expected specs/002-sign-out/spec.md"),
+    ]
 
 
 # --------------------------------------------------------------------------- fields and sections

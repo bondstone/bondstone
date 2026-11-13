@@ -89,7 +89,9 @@ type, a rule that selects an unknown type, link or role, a view that walks an un
 its levels, its link columns or its matrix path, that selects an unknown type for its rows or
 columns, or that writes outside the repository, a trait that names a status its lifecycle
 does not declare, and a malformed id or path template. It SHALL also report a view whose keys
-do not fit its layout, such as a matrix without `rows`, `cols` and `via`.
+do not fit its layout, such as a matrix without `rows`, `cols` and `via`, and a type whose
+`derived-status` trait is combined with `lifecycle`, sits on an embedded type or names a file
+outside the document's folder.
 
 #### Scenario: Rule on an unknown type
 

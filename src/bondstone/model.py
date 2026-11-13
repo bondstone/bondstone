@@ -27,7 +27,7 @@ def rank(severity: str) -> int:
 PROFILE_PATH = ".bondstone/profile.yaml"
 PART_OF = "bondstone:part_of"  # implicit link from an item to its document
 CONFIG_RULE = "bondstone/profile"  # configuration errors; never overridable (exit code 2)
-TRAITS = ("lifecycle", "owned", "immutable", "supersedable", "code-traceable", "indexed")
+TRAITS = ("lifecycle", "derived-status", "owned", "immutable", "supersedable", "code-traceable", "indexed")
 
 
 class BondstoneError(Exception):
@@ -201,6 +201,7 @@ class Node:
     is_item: bool = False
     body_line: int = 1
     covered: bool = False  # tagged in code
+    companions: list[str] = field(default_factory=list)  # other files the node's status is derived from
 
     @property
     def status(self) -> str | None:

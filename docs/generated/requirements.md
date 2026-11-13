@@ -30,6 +30,7 @@
 | [REQ-DIF-011](../capabilities/diff-checks.md#req-dif-011-let-a-commit-trailer-exempt-a-change) | Let a commit trailer exempt a change | CAP-diff-checks |
 | [REQ-DIF-012](../capabilities/diff-checks.md#req-dif-012-reject-malformed-exemptions-and-allow-strict-runs) | Reject malformed exemptions and allow strict runs | CAP-diff-checks |
 | [REQ-DIF-013](../capabilities/diff-checks.md#req-dif-013-trigger-diff-rules-on-the-repositorys-code) | Trigger diff rules on the repository's code | CAP-diff-checks |
+| [REQ-DIF-014](../capabilities/diff-checks.md#req-dif-014-count-a-change-to-a-companion-file-as-a-change-to-the-document) | Count a change to a companion file as a change to the document | CAP-diff-checks |
 | [REQ-GRA-001](../capabilities/graph.md#req-gra-001-read-markdown-with-yaml-frontmatter) | Read Markdown with YAML frontmatter | CAP-graph |
 | [REQ-GRA-002](../capabilities/graph.md#req-gra-002-derive-the-id-pattern-and-the-path-glob-from-templates) | Derive the id pattern and the path glob from templates | CAP-graph |
 | [REQ-GRA-003](../capabilities/graph.md#req-gra-003-require-every-document-to-state-its-type) | Require every document to state its type | CAP-graph |
@@ -39,6 +40,8 @@
 | [REQ-GRA-007](../capabilities/graph.md#req-gra-007-check-that-ids-are-present-well-formed-and-unique) | Check that ids are present, well formed and unique | CAP-graph |
 | [REQ-GRA-008](../capabilities/graph.md#req-gra-008-check-fields-and-sections-against-the-type) | Check fields and sections against the type | CAP-graph |
 | [REQ-GRA-009](../capabilities/graph.md#req-gra-009-check-links-against-their-definition) | Check links against their definition | CAP-graph |
+| [REQ-GRA-010](../capabilities/graph.md#req-gra-010-require-the-path-to-carry-the-id) | Require the path to carry the id | CAP-graph |
+| [REQ-GRA-011](../capabilities/graph.md#req-gra-011-derive-a-status-from-files) | Derive a status from files | CAP-graph |
 | [REQ-PKT-001](../capabilities/pack-tooling.md#req-pkt-001-run-the-fixtures-of-a-pack-a-bridge-or-a-preset) | Run the fixtures of a pack, a bridge or a preset | CAP-pack-tooling |
 | [REQ-PKT-002](../capabilities/pack-tooling.md#req-pkt-002-compare-a-fixture-with-what-it-expects) | Compare a fixture with what it expects | CAP-pack-tooling |
 | [REQ-PKT-003](../capabilities/pack-tooling.md#req-pkt-003-list-the-packs-bridges-and-presets-that-are-available) | List the packs, bridges and presets that are available | CAP-pack-tooling |
@@ -72,6 +75,11 @@
 | [REQ-SCF-004](../capabilities/scaffolding.md#req-scf-004-supersede-a-document) | Supersede a document | CAP-scaffolding |
 | [REQ-SCF-005](../capabilities/scaffolding.md#req-scf-005-edit-only-the-lines-that-change) | Edit only the lines that change | CAP-scaffolding |
 | [REQ-SCF-006](../capabilities/scaffolding.md#req-scf-006-regenerate-views-after-an-edit) | Regenerate views after an edit | CAP-scaffolding |
+| [REQ-SKT-001](../capabilities/spec-kit-adapter.md#req-skt-001-read-a-spec-kit-feature-folder-as-one-node) | Read a Spec Kit feature folder as one node | CAP-spec-kit-adapter |
+| [REQ-SKT-002](../capabilities/spec-kit-adapter.md#req-skt-002-add-the-frontmatter-through-a-spec-kit-preset) | Add the frontmatter through a Spec Kit preset | CAP-spec-kit-adapter |
+| [REQ-SKT-003](../capabilities/spec-kit-adapter.md#req-skt-003-fold-an-implemented-feature-into-the-capabilities) | Fold an implemented feature into the capabilities | CAP-spec-kit-adapter |
+| [REQ-SKT-004](../capabilities/spec-kit-adapter.md#req-skt-004-rest-an-implemented-feature-on-accepted-decisions) | Rest an implemented feature on accepted decisions | CAP-spec-kit-adapter |
+| [REQ-SKT-005](../capabilities/spec-kit-adapter.md#req-skt-005-ask-for-a-feature-when-code-changes) | Ask for a feature when code changes | CAP-spec-kit-adapter |
 | [REQ-TRC-001](../capabilities/code-traceability.md#req-trc-001-find-tags-in-code) | Find tags in code | CAP-code-traceability |
 | [REQ-TRC-002](../capabilities/code-traceability.md#req-trc-002-know-the-region-of-code-a-tag-annotates) | Know the region of code a tag annotates | CAP-code-traceability |
 | [REQ-TRC-003](../capabilities/code-traceability.md#req-trc-003-reject-tags-that-point-nowhere) | Reject tags that point nowhere | CAP-code-traceability |

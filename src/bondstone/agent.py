@@ -217,6 +217,13 @@ def _type_facts(cfg: Config, tdef: Any) -> list[str]:
         if lifecycle.get("transitions"):
             facts.append("allowed status changes: " + "; ".join(
                 f"{source} → {', '.join(str(t) for t in targets)}" for source, targets in lifecycle["transitions"].items()))
+    derived = traits.get("derived-status")
+    if derived:
+        words = {"exists": "`{}` exists", "all_checked": "every task in `{}` is ticked"}
+        steps = [f"`{status}` when " + " and ".join(words[kind].format(path) for kind, path in condition.items())
+                 for status, condition in derived.items()]
+        facts.append("status: taken from the files in the document's folder, never written in frontmatter; "
+                     "the first that holds: " + "; ".join(steps))
     if "owned" in traits:
         facts.append("needs an `owner`")
     if "immutable" in traits:

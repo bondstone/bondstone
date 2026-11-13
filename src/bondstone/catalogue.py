@@ -87,6 +87,11 @@ ENGINE_RULES: tuple[EngineRule, ...] = (
           "An id does not match its type's id template.",
           "Consistent ids keep links and code tags readable and unambiguous.",
           "Rename the id and update the links to it."),
+    _rule("id-path", ERROR,
+          "A document's id is not the one its path carries: the type's path template has `{id}`, "
+          "and the file is somewhere else.",
+          "When the path names the id, a reader finds a document from a link without searching.",
+          "Rename the file or folder to the id, or correct the id."),
     _rule("id-duplicate", ERROR,
           "Two documents or items use the same id.",
           "Links and tags would be ambiguous.",

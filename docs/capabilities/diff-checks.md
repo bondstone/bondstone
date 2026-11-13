@@ -189,3 +189,15 @@ MUST name exactly one of `paths` and `code`.
 - Given a preset rule with `on_change: {code: true}`, used by a profile with `code.include: ["app/**"]`
 - When `app/main.dart` changes
 - Then the rule is evaluated; a change to `tools/build.sh` does not evaluate it
+
+### REQ-DIF-014: Count a change to a companion file as a change to the document
+
+Bondstone SHALL treat a document whose status is derived from files as changed when one of
+those files was added, modified, deleted or renamed, so that a `changed` clause is satisfied
+by work on the feature and not only by an edit of its main file.
+
+#### Scenario: Ticking a task
+
+- Given a rule that asks for a changed feature when code changes, and a feature whose status comes from `tasks.md`
+- When a change edits code and ticks a task in that feature's `tasks.md`
+- Then the rule is satisfied

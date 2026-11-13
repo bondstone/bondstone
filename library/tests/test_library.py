@@ -17,8 +17,9 @@ PRESETS = sorted(p.parent for p in SOURCE.glob("*/preset.yaml"))
 
 
 def test_the_library_ships_these_packs_bridges_and_presets():
-    assert [c.name for c in COMPONENTS] == ["adr", "adr-capability", "capability"]
-    assert [p.name for p in PRESETS] == ["starter"]
+    assert [c.name for c in COMPONENTS] == ["adr", "adr-capability", "capability", "speckit", "speckit-adr",
+                                            "speckit-capability"]
+    assert [p.name for p in PRESETS] == ["starter", "starter-speckit"]
 
 
 def test_the_library_registers_its_folder_with_bondstone():
@@ -50,3 +51,36 @@ def test_every_preset_has_a_fixture_that_passes(preset: Path):
     results = run_fixtures(preset, today=TODAY)
     assert "valid" in [r.case for r in results]
     assert [r.problems for r in results] == [[] for _ in results]
+
+
+# ----------------------------------------------------------------------- the Spec Kit preset
+
+SPECKIT_VERSION = "1.4.0"  # the Spec Kit release the adapter was tested with (ADR-017)
+
+
+def test_the_spec_kit_preset_is_pinned_to_the_tested_release():
+    folder = bondstone_library.speckit_preset()
+    manifest = yaml.safe_load((folder / "preset.yml").read_text(encoding="utf-8"))
+    assert manifest["schema_version"] == "1.0" and manifest["preset"]["id"] == "bondstone"
+    assert manifest["requires"]["speckit_version"] == f">={SPECKIT_VERSION},<1.5"
+    assert SPECKIT_VERSION in (SOURCE / "speckit" / "README.md").read_text(encoding="utf-8")
+    provided = {(item["type"], item["name"]): item for item in manifest["provides"]["templates"]}
+    assert provided[("template", "spec-template")]["strategy"] == "prepend"
+    assert provided[("command", "speckit.specify")]["strategy"] == "append"
+    for item in provided.values():
+        assert (folder / item["file"]).is_file(), item["file"]
+
+
+def test_the_frontmatter_the_preset_adds_is_what_the_packs_expect():
+    """The block must stay a valid bondstone frontmatter, with the links the bridges define."""
+    text = (bondstone_library.speckit_preset() / "templates" / "spec-frontmatter.md").read_text(encoding="utf-8")
+    assert text.startswith("---\n") and text.rstrip().endswith("---")
+    block = yaml.safe_load(text.split("---")[1])
+    assert block["type"] == "speckit:Feature" and set(block) == {"id", "type", "title", "modifies", "delivers", "decided_by"}
+    links = {}
+    for bridge in ("speckit-capability", "speckit-adr"):
+        links.update(yaml.safe_load((SOURCE / bridge / "bridge.yaml").read_text(encoding="utf-8"))["links"])
+    assert {"modifies", "delivers", "decided_by"} == set(links)
+    feature = yaml.safe_load((SOURCE / "speckit" / "pack.yaml").read_text(encoding="utf-8"))["types"]["Feature"]
+    assert feature["path"] == "specs/{id}/spec.md" and "title" in feature["fields"]
+    assert list(feature["traits"]["derived-status"]) == ["implemented", "planned", "specified"]

@@ -51,9 +51,10 @@ leftover placeholders.
 
 `bondstone status ID STATUS` SHALL set the status of a document in its frontmatter, and the
 status of an item in the `Status:` line under its heading, which it adds when the item has
-none. It MUST write the line for the lifecycle's `default` status too. It MUST refuse a status the lifecycle does not have, a
-step the lifecycle's `transitions` do not allow, and a document that is immutable in its
-current status without `status` among the fields that may change.
+none. It MUST write the line for the lifecycle's `default` status too. It MUST refuse a
+status the lifecycle does not have, a step the lifecycle's `transitions` do not allow, a
+document that is immutable in its current status without `status` among the fields that may
+change, and a document whose status is derived from files, naming those files.
 
 #### Scenario: Back to proposed
 

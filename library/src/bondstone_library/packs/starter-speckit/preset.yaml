@@ -1,0 +1,25 @@
+id: starter-speckit
+version: 1.0.0
+bondstone: ">=1.0"
+description: The starter preset for projects that plan their changes with Spec Kit.
+
+# bondstone: REQ-SKT-005
+extends: [starter@1]
+packs: [speckit@1]
+bridges: [speckit-capability@1, speckit-adr@1]
+
+rules:
+  - id: source-change-has-feature
+    description: A change to code comes with a Spec Kit feature.
+    severity: warn
+    on_change: {code: true}
+    require:
+      - changed: {type: speckit:Feature}
+        min: 1
+    exempt: {trailer: Spec-Impact}
+    hint: >-
+      Plan the change as a feature under specs/ (`/speckit.specify`), or tick the tasks of the
+      feature it belongs to. A change with no effect on behaviour may carry the commit trailer
+      "Spec-Impact: none (<reason>)".
+
+instructions: instructions.md

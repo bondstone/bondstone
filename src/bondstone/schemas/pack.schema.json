@@ -122,6 +122,25 @@
                 "retired": {"$ref": "#/$defs/statuses"}
               },
               "additionalProperties": false
+            },
+            "derived-status": {
+              "description": "Statuses taken from files next to the document instead of frontmatter: the first status whose condition holds, in the order written.",
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "exists": {"description": "A file, relative to the document's folder, that exists.", "type": "string"},
+                  "all_checked": {
+                    "description": "A file, relative to the document's folder, with task checkboxes that are all ticked.",
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false,
+                "minProperties": 1,
+                "maxProperties": 1,
+                "x-error": "expected exactly one of `exists` or `all_checked`"
+              },
+              "minProperties": 1
             }
           },
           "additionalProperties": false

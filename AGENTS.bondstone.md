@@ -15,7 +15,7 @@
 8. Never weaken `.bondstone/profile.yaml` (overrides, waivers) to make a check pass. Ask the user instead.
 9. Do not add an exemption trailer (`Spec-Impact`) to a commit unless the user asked for one.
 
-Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), adr-capability@1.0.0 (bridge), starter@1.0.0 (preset)
+Active packs, bridges and presets: adr@1.0.0 (pack), capability@1.0.0 (pack), speckit@1.0.0 (pack), adr-capability@1.0.0 (bridge), speckit-capability@1.0.0 (bridge), speckit-adr@1.0.0 (bridge), starter@1.0.0 (preset), starter-speckit@1.0.0 (preset)
 
 ## Document types
 
@@ -58,12 +58,24 @@ One requirement inside a capability, written as a level-3 heading `### REQ-<CODE
 - allowed status changes: planned → active, removed; active → removed
 - tag the code that implements it with a comment `bondstone: <ID>`; one without a tag in status active is reported (warn); remove the tag in status removed
 
+### `speckit:Feature`
+
+One change planned with Spec Kit: the folder `specs/NNN-name/` with `spec.md`, `plan.md` and `tasks.md`. `spec.md` starts with a frontmatter block that names the feature; Spec Kit's commands write everything else.
+
+- location: `specs/{id}/spec.md`
+- id: `{n:03d}-{slug}`
+- create: `bondstone new speckit:Feature --title "..."`
+- fields: title (required)
+- status: taken from the files in the document's folder, never written in frontmatter; the first that holds: `implemented` when every task in `tasks.md` is ticked; `planned` when `plan.md` exists; `specified` when `spec.md` exists
+- links: `modifies` → capability:Capability; `delivers` → capability:Requirement; `decided_by` → adr:Decision
+
 ## Roles
 
 Rules name roles so that they work across packs.
 
 - `decision`: adr:Decision
 - `living-spec`: capability:Capability
+- `change`: speckit:Feature
 
 ## Rules
 
@@ -75,7 +87,11 @@ Severities are the effective ones, after this repository's overrides.
 - **`capability/active-capability-has-requirements`** (error): An active capability lists at least one requirement.
 - **`adr-capability/constrained-by-live-decision`** (error): Capabilities are constrained only by accepted or proposed decisions. _Point to the decision that superseded it._
 - **`adr-capability/accepted-decision-is-applied`** (warn): An accepted decision constrains at least one capability (otherwise, is it still relevant?).
+- **`speckit-capability/implemented-feature-delivers-covered-requirements`** (error): An implemented feature delivers only requirements that are active and tagged in code. _Tag the code with `bondstone: REQ-...`, and remove `Status: planned` from the requirement with `bondstone status REQ-... active`._
+- **`speckit-capability/implemented-feature-is-folded-in`** (warn): An implemented feature names the capabilities it modifies or the requirements it delivers. _List the capabilities under `modifies` or the requirements under `delivers` in the frontmatter of spec.md._
+- **`speckit-adr/implemented-feature-rests-on-accepted-decisions`** (error): An implemented feature rests only on accepted decisions. _Accept the decision with `bondstone status ADR-... accepted` before the last task is ticked, or point to the decision that replaced it._
 - **`starter/code-change-updates-living-spec`** (error): A change to code updates the living specs that code implements. _Update the capability, or add the commit trailer "Spec-Impact: none (<reason>)" when no behaviour changed._
+- **`starter-speckit/source-change-has-feature`** (error): A change to code comes with a Spec Kit feature. _Plan the change as a feature under specs/ (`/speckit.specify`), or tick the tasks of the feature it belongs to. A change with no effect on behaviour may carry the commit trailer "Spec-Impact: none (<reason>)"._
 
 The engine's own rules (`bondstone/...`) check structure: ids, fields, sections, links, code tags and stale views. `bondstone rules` lists them all.
 
@@ -86,6 +102,9 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
 - `docs/generated/decisions.md` (adr/decision-log)
 - `docs/generated/capabilities.md` (capability/index)
 - `docs/generated/requirements.md` (capability/requirements)
+- `docs/generated/features.md` (speckit/features)
+- `docs/generated/delivery.md` (speckit-capability/delivery)
+- `docs/generated/feature-decisions.md` (speckit-adr/decisions-by-feature)
 - `docs/generated/decisions-applied.md` (profile/decisions-applied)
 - `docs/generated/decision-usage.md` (profile/decision-usage)
 
@@ -108,10 +127,38 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
   Write `Status: planned` under the heading only when the requirement has no code yet, and
   `Status: removed` when it no longer holds but its code is still there.
 
+## Guidance from `speckit`
+
+- Plan a change as a Spec Kit feature: `/speckit.specify`, `/speckit.plan`, `/speckit.tasks`,
+  then `/speckit.implement`. Each feature is a folder `specs/NNN-name/`. Do not create one
+  with `bondstone new`; Spec Kit's commands number the folder and write the files.
+- `spec.md` starts with a frontmatter block: `id` is the folder's name, `type` is
+  `speckit:Feature`, `title` is the feature's name. Keep the block at the top of the file.
+- A feature has no `status` field. It is `specified` when `spec.md` exists, `planned` when
+  `plan.md` exists, and `implemented` when every task in `tasks.md` is ticked. Tick a task
+  only when it is done: rules for implemented features apply from the last tick.
+
 ## Guidance from `adr-capability`
 
 - When a capability's behaviour depends on a decision, list it in `constrained_by`.
 - When an ADR is superseded, move every `constrained_by` reference to the new ADR.
+
+## Guidance from `speckit-capability`
+
+- A feature is the record of one change; the capabilities are what stays true afterwards.
+  When a feature changes behaviour, update the capability in the same change and list it
+  under `modifies` in the feature's frontmatter.
+- A requirement the feature will implement is added to its capability with `Status: planned`
+  and listed under `delivers`. When the code is there and tagged, run
+  `bondstone status REQ-... active`.
+- Before you tick the last task of a feature, check that every requirement under `delivers`
+  is active and tagged in code: from that tick on the feature is `implemented`.
+
+## Guidance from `speckit-adr`
+
+- When planning a feature makes a decision that deserves an ADR, write the ADR and list it
+  under `decided_by` in the feature's frontmatter.
+- A decision a feature rests on must be accepted before the feature's last task is ticked.
 
 ## Guidance from `starter`
 
@@ -120,3 +167,9 @@ The engine's own rules (`bondstone/...`) check structure: ids, fields, sections,
   `bondstone context --for <paths>` lists the capabilities a file is traced to.
 - A change that alters no behaviour, such as a rename or a reformat, may carry the commit
   trailer `Spec-Impact: none (<reason>)` instead. Add it only when the user asks for it.
+
+## Guidance from `starter-speckit`
+
+- Every change to code belongs to a Spec Kit feature under `specs/`. Start one with
+  `/speckit.specify` before you write code, or continue the feature the change belongs to and
+  tick its tasks as you finish them.

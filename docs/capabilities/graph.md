@@ -129,3 +129,30 @@ link's `min` or above its `max`.
 - Given a solution with `addresses: [OPP-9]` and no node `OPP-9`
 - When `bondstone check` runs
 - Then `bondstone/link-broken` is reported at the line of `addresses`
+
+### REQ-GRA-010: Require the path to carry the id
+
+Bondstone SHALL report `bondstone/id-path` for a document whose path does not carry its id,
+when the path template of its type names `{id}`: `docs/adr/{id}-{slug}.md` asks for a file
+name that starts with the id, and `specs/{id}/spec.md` for a folder named after it.
+
+#### Scenario: A feature in the wrong folder
+
+- Given a type with the path `specs/{id}/spec.md` and a document with the id `002-sign-out` in `specs/002-logout/`
+- When `bondstone check` runs
+- Then `bondstone/id-path` says the expected path is `specs/002-sign-out/spec.md`
+
+### REQ-GRA-011: Derive a status from files
+
+Bondstone SHALL give a document of a type with the `derived-status` trait the first status,
+in the order the trait lists them, whose condition holds: `exists: FILE` when that file is in
+the document's folder, `all_checked: FILE` when that file has task checkboxes and every one
+is ticked. A document for which no condition holds has no status. A `status` in the
+frontmatter of such a document MUST be reported, and a type MUST NOT have both `lifecycle`
+and `derived-status`. Rules, selectors and views see a derived status like a written one.
+
+#### Scenario: A Spec Kit feature
+
+- Given the trait `implemented: {all_checked: tasks.md}`, `planned: {exists: plan.md}`, `specified: {exists: spec.md}`
+- When a feature folder has `spec.md`, `plan.md` and a `tasks.md` with one open task
+- Then the feature is `planned`, and `implemented` once the last task is ticked

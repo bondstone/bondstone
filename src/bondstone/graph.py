@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import glob
 import os
+import posixpath
 import re
 from dataclasses import dataclass, field
 
@@ -167,8 +168,55 @@ def _add_document(cfg: Config, graph: Graph, path: str, qname: str, doc: ParsedD
             node.links.setdefault(link.qname, []).extend(refs)
         else:
             node.fields[key] = value
+    _derive_status(cfg, graph, node)
     graph.nodes.append(node)
     _add_items(cfg, graph, node, doc)
+
+
+CHECKBOX = re.compile(r"^\s*[-*+]\s+\[([ xX])\]", re.MULTILINE)
+
+
+def all_checked(text: str) -> bool:
+    """Whether a text has task checkboxes and every one of them is ticked."""
+    boxes = CHECKBOX.findall(text)
+    return bool(boxes) and all(box in "xX" for box in boxes)
+
+
+# bondstone: REQ-GRA-011
+def _derive_status(cfg: Config, graph: Graph, node: Node) -> None:
+    """Give a document of a type with `derived-status` the first status whose condition holds.
+
+    The files the conditions name are the node's companions: a change to one of them is a
+    change to the node. Without a condition that holds the node has no status."""
+    derived = cfg.types[node.type].traits.get("derived-status")
+    if not derived:
+        return
+    folder = posixpath.dirname(node.path)
+    if "status" in node.fields:
+        del node.fields["status"]
+        graph.diagnostics.append(diagnostic(
+            "bondstone/field-unknown", f"`status` cannot be set for {node.type}: it is derived from files",
+            node.path, node.field_lines.get("status", 1), node.id, hint="Remove `status` from the frontmatter."))
+    status = None
+    for name, condition in derived.items():
+        (kind, relative), = condition.items()
+        path = posixpath.normpath(posixpath.join(folder, relative))
+        if path != node.path and path not in node.companions:
+            node.companions.append(path)
+        if status is not None:
+            continue
+        file = cfg.root / path
+        if not file.is_file():
+            continue
+        if kind == "exists":
+            status = name
+        else:
+            try:
+                status = name if all_checked(file.read_text(encoding="utf-8")) else None
+            except (UnicodeDecodeError, OSError):
+                status = None
+    if status is not None:
+        node.fields["status"] = status
 
 
 # bondstone: REQ-GRA-005, REQ-TRC-006

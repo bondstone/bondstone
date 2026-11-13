@@ -1,0 +1,6 @@
+errors:
+- bondstone/field-unknown
+- bondstone/id-path
+- bondstone/field-missing
+- bondstone/id-format
+warnings: []

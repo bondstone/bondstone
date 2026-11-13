@@ -8,7 +8,7 @@ from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
 
 from ..catalogue import diagnostic
-from ..config import Config, as_list, id_regex, qualify
+from ..config import Config, as_list, id_regex, path_regex, qualify
 from ..graph import Graph
 from ..model import ERROR, IGNORE, PART_OF, WARN, Diagnostic, Node
 from ..parse import mask_code
@@ -100,6 +100,13 @@ def _check_id(cfg: Config, node: Node, document: Node | None, seen: dict[str, No
             expected = f"the id template '{template}'" + (f" ({', '.join(known)})" if known else "")
         out.append(diagnostic("bondstone/id-format", f"id '{node.id}' does not match {expected}",
                               node.path, line, node.id))
+    # bondstone: REQ-GRA-010
+    if not node.is_item and tdef.path_template and "{id}" in tdef.path_template \
+            and not re.fullmatch(path_regex(tdef.path_template, node.id), node.path):
+        expected = tdef.path_template.replace("{id}", node.id)
+        out.append(diagnostic("bondstone/id-path", f"id '{node.id}' does not match the path; expected {expected}",
+                              node.path, line, node.id,
+                              hint="Rename the file or folder to the id, or correct the id."))
     if node.id in seen:
         other = seen[node.id]
         out.append(diagnostic("bondstone/id-duplicate",
